@@ -772,6 +772,43 @@ function App() {
       ? quickActionHistory
       : quickActionHistory.filter((entry) => entry.status === historyFilter)
 
+  const copyHistoryToClipboard = useCallback(async () => {
+    if (filteredHistory.length === 0) {
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'history copy skipped',
+        content: 'No quick-action history entries available for current filter.',
+        severity: 'warn',
+      })
+      return
+    }
+
+    const text = filteredHistory
+      .slice(0, 10)
+      .map((entry) => `${entry.method}\t${entry.status}\t${entry.durationMs ?? 0}ms`)
+      .join('\n')
+
+    try {
+      if (!navigator.clipboard?.writeText) {
+        throw new Error('Clipboard API unavailable')
+      }
+      await navigator.clipboard.writeText(text)
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'history copied',
+        content: `Copied ${Math.min(filteredHistory.length, 10)} history entries.`,
+        severity: 'info',
+      })
+    } catch {
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'history copy failed',
+        content: 'Clipboard access failed or is unavailable.',
+        severity: 'warn',
+      })
+    }
+  }, [appendBlock, filteredHistory])
+
   return (
     <div className="dashboard-shell">
       <header className="dashboard-header">
@@ -1066,6 +1103,15 @@ function App() {
                     <option value="skipped">skipped</option>
                   </select>
                 </label>
+                <div className="history-tools">
+                  <button
+                    type="button"
+                    onClick={() => void copyHistoryToClipboard()}
+                    disabled={filteredHistory.length === 0}
+                  >
+                    Copy History
+                  </button>
+                </div>
                 <div className="history-legend" aria-label="History Legend">
                   <span className="history-legend-title">Legend</span>
                   <span className="history-status status-ok">ok</span>

@@ -21,6 +21,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('History Filter')).toBeInTheDocument()
     expect(screen.getByLabelText('History Legend')).toBeInTheDocument()
     expect(screen.getByLabelText('Timestamp Format')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Copy History' })).toBeDisabled()
   })
 
   it('renders gateway action buttons for account/feed listing', () => {
@@ -264,5 +265,25 @@ describe('Dashboard shell', () => {
     fireEvent.change(selector, { target: { value: 'relative' } })
     expect(selector).toHaveValue('relative')
     expect(window.localStorage.getItem('quick-action-timestamp-format-v1')).toBe('relative')
+  })
+
+  it('copies filtered quick-action history to clipboard', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(window.navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    })
+
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Accounts' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Copy History' })).toBeEnabled()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy History' }))
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalledTimes(1)
+    })
   })
 })
