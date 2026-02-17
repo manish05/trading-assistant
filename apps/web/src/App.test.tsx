@@ -547,10 +547,12 @@ describe('Dashboard shell', () => {
     fireEvent.keyDown(input, { key: 'l', altKey: true })
     expect(screen.getByRole('button', { name: 'Lock Reset' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Reset Helper Prefs' })).toBeEnabled()
+    expect(screen.getByText('Helper reset lock unlocked via Alt+L.')).toBeInTheDocument()
 
     fireEvent.keyDown(input, { key: 'l', altKey: true })
     expect(screen.getByRole('button', { name: 'Unlock Reset' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Reset Helper Prefs' })).toBeDisabled()
+    expect(screen.getByText('Helper reset lock locked via Alt+L.')).toBeInTheDocument()
   })
 
   it('toggles import shortcut legend visibility in status panel', () => {
@@ -633,6 +635,7 @@ describe('Dashboard shell', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Quick Unlock Reset' }))
     expect(screen.getByRole('button', { name: 'Quick Lock Reset' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Reset Helper Prefs' })).toBeEnabled()
+    expect(screen.getByText('Helper reset lock unlocked via snapshot.')).toBeInTheDocument()
   })
 
   it('toggles helper reset badge visibility and persists preference', () => {
@@ -676,6 +679,7 @@ describe('Dashboard shell', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Unlock Reset' }))
     expect(screen.getByRole('button', { name: 'Lock Reset' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Reset Helper Prefs' })).toBeEnabled()
+    expect(screen.getByText('Helper reset lock unlocked via controls.')).toBeInTheDocument()
     expect(window.localStorage.getItem('quick-action-helper-reset-lock-v1')).toBe('unlocked')
   })
 

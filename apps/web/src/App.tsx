@@ -475,6 +475,14 @@ function App() {
     [helperDiagnosticsLastResetAt, helperResetStaleThresholdHours],
   )
 
+  const toggleHelperResetLock = useCallback((source: 'Alt+L' | 'controls' | 'snapshot') => {
+    setIsHelperResetLocked((current) => {
+      const next = !current
+      setHintModeLiveNote(`Helper reset lock ${next ? 'locked' : 'unlocked'} via ${source}.`)
+      return next
+    })
+  }, [])
+
   const appendBlock = useCallback((item: BlockItem) => {
     setBlocks((current) => [item, ...current].slice(0, 25))
   }, [])
@@ -1855,11 +1863,7 @@ function App() {
                 onKeyDown={(event) => {
                   if (event.altKey && event.key.toLowerCase() === 'l') {
                     event.preventDefault()
-                    setIsHelperResetLocked((current) => {
-                      const next = !current
-                      setHintModeLiveNote(`Helper reset lock ${next ? 'enabled' : 'disabled'}.`)
-                      return next
-                    })
+                    toggleHelperResetLock('Alt+L')
                     return
                   }
                   if (
@@ -2306,7 +2310,7 @@ function App() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => setIsHelperResetLocked((current) => !current)}
+                        onClick={() => toggleHelperResetLock('snapshot')}
                       >
                         {isHelperResetLocked ? 'Quick Unlock Reset' : 'Quick Lock Reset'}
                       </button>
@@ -2394,7 +2398,7 @@ function App() {
                 <button
                   type="button"
                   className="summary-copy-button"
-                  onClick={() => setIsHelperResetLocked((current) => !current)}
+                  onClick={() => toggleHelperResetLock('controls')}
                 >
                   {isHelperResetLocked ? 'Unlock Reset' : 'Lock Reset'}
                 </button>
