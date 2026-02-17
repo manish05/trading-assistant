@@ -1801,7 +1801,9 @@ function App() {
             </div>
             {showShortcutLegendInStatus ? (
               <div>
-                <dt>Import Shortcut Legend</dt>
+                <dt>
+                  Import Shortcut Legend <span className="legend-mode-indicator">({importHintMode})</span>
+                </dt>
                 <dd className="import-snapshot-badges">
                   <span className="hotkey-chip">Ctrl/Cmd+Enter</span>
                   <span className="hotkey-chip">Esc</span>

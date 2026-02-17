@@ -540,6 +540,11 @@
   gap: 0.3rem;
 }
 
+.legend-mode-indicator {
+  color: #9fb0cc;
+  font-weight: 500;
+}
+
 .timestamp-grid {
   display: grid;
   grid-template-columns: 1fr;

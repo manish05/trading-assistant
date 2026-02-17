@@ -475,10 +475,12 @@ describe('Dashboard shell', () => {
 
   it('toggles import shortcut legend visibility in status panel', () => {
     render(<App />)
-    expect(screen.queryByText('Import Shortcut Legend')).not.toBeInTheDocument()
+    expect(screen.queryByText(/Import Shortcut Legend/)).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Show Legend in Status' }))
-    expect(screen.getByText('Import Shortcut Legend')).toBeInTheDocument()
+    expect(screen.getByText('Import Shortcut Legend', { selector: 'dt' })).toHaveTextContent(
+      'Import Shortcut Legend (detailed)',
+    )
     expect(screen.getByRole('button', { name: 'Hide Legend in Status' })).toBeInTheDocument()
     expect(window.localStorage.getItem('quick-action-status-shortcut-legend-v1')).toBe('visible')
   })
@@ -486,7 +488,9 @@ describe('Dashboard shell', () => {
   it('initializes status shortcut legend visibility from localStorage', () => {
     window.localStorage.setItem('quick-action-status-shortcut-legend-v1', 'visible')
     render(<App />)
-    expect(screen.getByText('Import Shortcut Legend')).toBeInTheDocument()
+    expect(screen.getByText('Import Shortcut Legend', { selector: 'dt' })).toHaveTextContent(
+      'Import Shortcut Legend (detailed)',
+    )
     expect(screen.getByRole('button', { name: 'Hide Legend in Status' })).toBeInTheDocument()
   })
 
