@@ -106,6 +106,15 @@ describe('Dashboard shell', () => {
     expect(
       screen.getByText('lockToggles:0', { selector: '.import-snapshot-badges .import-summary-badge' }),
     ).toBeInTheDocument()
+    expect(
+      screen.getByText('srcAlt+L:0', { selector: '.import-snapshot-badges .import-summary-badge' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText('srcControls:0', { selector: '.import-snapshot-badges .import-summary-badge' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText('srcSnapshot:0', { selector: '.import-snapshot-badges .import-summary-badge' }),
+    ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Use Verbose Diagnostics' })).toBeInTheDocument()
     expect(
       screen.getByText('enabled:1/2', { selector: '.import-snapshot-badges .import-summary-badge' }),
@@ -739,12 +748,17 @@ describe('Dashboard shell', () => {
   it('tracks helper reset lock toggle count in snapshot badge', () => {
     render(<App />)
     expect(screen.getByText('lockToggles:0')).toBeInTheDocument()
+    expect(screen.getByText('srcAlt+L:0')).toBeInTheDocument()
+    expect(screen.getByText('srcControls:0')).toBeInTheDocument()
+    expect(screen.getByText('srcSnapshot:0')).toBeInTheDocument()
     expect(screen.getByText('diagLockToggles:0')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Unlock Reset' }))
     expect(screen.getByText('lockToggles:1')).toBeInTheDocument()
+    expect(screen.getByText('srcControls:1')).toBeInTheDocument()
     expect(screen.getByText('diagLockToggles:1')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Lock Reset' }))
     expect(screen.getByText('lockToggles:2')).toBeInTheDocument()
+    expect(screen.getByText('srcControls:2')).toBeInTheDocument()
     expect(screen.getByText('diagLockToggles:2')).toBeInTheDocument()
   })
 

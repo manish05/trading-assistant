@@ -2361,6 +2361,15 @@ function App() {
                 <span className="import-summary-badge badge-hint-mode">
                   lockToggles:{helperResetLockToggleCount}
                 </span>
+                <span className="import-summary-badge badge-hint-mode">
+                  srcAlt+L:{helperResetLockSourceCounts['Alt+L']}
+                </span>
+                <span className="import-summary-badge badge-hint-mode">
+                  srcControls:{helperResetLockSourceCounts.controls}
+                </span>
+                <span className="import-summary-badge badge-hint-mode">
+                  srcSnapshot:{helperResetLockSourceCounts.snapshot}
+                </span>
                 <div className="import-snapshot-toggles" aria-label="Import Snapshot Toggles">
                   <span
                     className={`quick-toggle-lock-summary ${
