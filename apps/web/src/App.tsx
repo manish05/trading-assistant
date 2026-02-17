@@ -34,6 +34,12 @@ type TradeControlBadge = {
   status?: string
 }
 
+type RiskAlertBadge = {
+  id: string
+  kind: string
+  status?: string
+}
+
 type QuickActionHistory = {
   id: string
   method: string
@@ -531,6 +537,7 @@ function App() {
   const [activeSubscriptionId, setActiveSubscriptionId] = useState<string | null>(null)
   const [feedLifecycle, setFeedLifecycle] = useState<FeedLifecycleBadge[]>([])
   const [tradeControlEvents, setTradeControlEvents] = useState<TradeControlBadge[]>([])
+  const [riskAlerts, setRiskAlerts] = useState<RiskAlertBadge[]>([])
   const [riskEmergencyStopActive, setRiskEmergencyStopActive] = useState<boolean | null>(null)
   const [riskLastEmergencyAction, setRiskLastEmergencyAction] = useState<string | null>(null)
   const [riskLastEmergencyReason, setRiskLastEmergencyReason] = useState<string | null>(null)
@@ -1946,6 +1953,37 @@ function App() {
             ].slice(0, 6),
           )
         }
+        if (parsed.event === 'event.risk.alert') {
+          const payload = parsed.payload ?? {}
+          const status = typeof payload.status === 'string' ? payload.status : undefined
+          let kind = 'risk_alert'
+          if ('kind' in payload && typeof payload.kind === 'string' && payload.kind.length > 0) {
+            kind = payload.kind
+          } else if (
+            'decision' in payload &&
+            payload.decision &&
+            typeof payload.decision === 'object' &&
+            'violations' in payload.decision &&
+            Array.isArray(payload.decision.violations) &&
+            payload.decision.violations.length > 0 &&
+            payload.decision.violations[0] &&
+            typeof payload.decision.violations[0] === 'object' &&
+            'code' in payload.decision.violations[0] &&
+            typeof payload.decision.violations[0].code === 'string'
+          ) {
+            kind = payload.decision.violations[0].code
+          }
+          setRiskAlerts((current) =>
+            [
+              {
+                id: `risk_alert_${Date.now()}`,
+                kind,
+                status,
+              },
+              ...current,
+            ].slice(0, 6),
+          )
+        }
         if (parsed.event === 'event.feed.event') {
           const payload = parsed.payload ?? {}
           const action =
@@ -2916,6 +2954,21 @@ function App() {
                   tradeControlEvents.map((item) => (
                     <span key={item.id} className="lifecycle-badge">
                       {item.action}
+                      {item.status ? `:${item.status}` : ''}
+                    </span>
+                  ))
+                )}
+              </dd>
+            </div>
+            <div>
+              <dt>Risk Alerts</dt>
+              <dd className="badge-row">
+                {riskAlerts.length === 0 ? (
+                  <span className="lifecycle-badge">none</span>
+                ) : (
+                  riskAlerts.map((item) => (
+                    <span key={item.id} className="lifecycle-badge">
+                      {item.kind}
                       {item.status ? `:${item.status}` : ''}
                     </span>
                   ))
