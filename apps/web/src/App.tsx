@@ -73,6 +73,7 @@ const TIMESTAMP_FORMAT_STORAGE_KEY = 'quick-action-timestamp-format-v1'
 const PRESET_IMPORT_MODE_STORAGE_KEY = 'quick-action-preset-import-mode-v1'
 const PRESET_IMPORT_REPORT_EXPANDED_STORAGE_KEY = 'quick-action-preset-import-report-expanded-v1'
 const IMPORT_HINT_VISIBILITY_STORAGE_KEY = 'quick-action-import-hint-visibility-v1'
+const IMPORT_HINT_MODE_STORAGE_KEY = 'quick-action-import-hint-mode-v1'
 const MAX_IMPORT_REPORT_NAMES = 6
 const DEFAULT_PRESET_TEMPLATE: QuickActionPreset = {
   managedAccountId: 'acct_demo_1',
@@ -149,6 +150,14 @@ const readImportHintVisibilityFromStorage = (): boolean => {
   }
   const raw = window.localStorage.getItem(IMPORT_HINT_VISIBILITY_STORAGE_KEY)
   return raw !== 'hidden'
+}
+
+const readImportHintModeFromStorage = (): ImportHintMode => {
+  if (typeof window === 'undefined') {
+    return 'detailed'
+  }
+  const raw = window.localStorage.getItem(IMPORT_HINT_MODE_STORAGE_KEY)
+  return raw === 'compact' ? 'compact' : 'detailed'
 }
 
 const sanitizePreset = (value: unknown): QuickActionPreset | null => {
@@ -276,7 +285,7 @@ function App() {
   const [isImportHintVisible, setIsImportHintVisible] = useState<boolean>(
     readImportHintVisibilityFromStorage,
   )
-  const [importHintMode, setImportHintMode] = useState<ImportHintMode>('detailed')
+  const [importHintMode, setImportHintMode] = useState<ImportHintMode>(readImportHintModeFromStorage)
   const [availablePresetNames, setAvailablePresetNames] = useState<string[]>(() =>
     Object.keys(readPresetStoreFromStorage()).sort(),
   )
@@ -1168,6 +1177,10 @@ function App() {
       isImportHintVisible ? 'visible' : 'hidden',
     )
   }, [isImportHintVisible])
+
+  useEffect(() => {
+    window.localStorage.setItem(IMPORT_HINT_MODE_STORAGE_KEY, importHintMode)
+  }, [importHintMode])
 
   const filteredHistory =
     historyFilter === 'all'

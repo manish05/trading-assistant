@@ -436,6 +436,14 @@ describe('Dashboard shell', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Use Compact Hints' }))
     expect(screen.getByText(/Shortcuts: Ctrl\/Cmd\+Enter import · Esc clear\./)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Use Detailed Hints' })).toBeInTheDocument()
+    expect(window.localStorage.getItem('quick-action-import-hint-mode-v1')).toBe('compact')
+  })
+
+  it('initializes hint mode from localStorage preference', () => {
+    window.localStorage.setItem('quick-action-import-hint-mode-v1', 'compact')
+    render(<App />)
+    expect(screen.getByText(/Shortcuts: Ctrl\/Cmd\+Enter import · Esc clear\./)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Use Detailed Hints' })).toBeInTheDocument()
   })
 
   it('copies import shortcut cheat-sheet to clipboard', async () => {
