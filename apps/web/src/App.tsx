@@ -2271,7 +2271,10 @@ function App() {
               </dd>
             </div>
             <div>
-              <dt>Preset Import Snapshot</dt>
+              <dt>
+                Preset Import Snapshot{' '}
+                <span className="helper-lock-indicator">(lock:{isHelperResetLocked ? 'locked' : 'unlocked'})</span>
+              </dt>
               <dd className="import-snapshot-badges">
                 {presetImportReport ? (
                   <>

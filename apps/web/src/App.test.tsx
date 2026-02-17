@@ -83,6 +83,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Quick Unlock Reset' })).toBeInTheDocument()
     expect(screen.getByLabelText('Quick Toggle Lock Summary')).toHaveTextContent('quickLock:locked')
     expect(screen.getByLabelText('Quick Toggle Lock Summary')).toHaveClass('quick-lock-locked')
+    expect(screen.getByText('Preset Import Snapshot', { selector: 'dt' })).toHaveTextContent(
+      'Preset Import Snapshot (lock:locked)',
+    )
     expect(screen.getByText('Helper Diagnostics', { selector: 'dt' })).toHaveTextContent(
       'Helper Diagnostics (lock:locked)',
     )
@@ -655,6 +658,9 @@ describe('Dashboard shell', () => {
       'title',
       'Quick toggles expanded; reset lock is unlocked.',
     )
+    expect(screen.getByText('Preset Import Snapshot', { selector: 'dt' })).toHaveTextContent(
+      'Preset Import Snapshot (lock:unlocked)',
+    )
   })
 
   it('toggles helper reset badge visibility and persists preference', () => {
@@ -713,6 +719,9 @@ describe('Dashboard shell', () => {
     render(<App />)
     expect(screen.getByRole('button', { name: 'Lock Reset' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Reset Helper Prefs' })).toBeEnabled()
+    expect(screen.getByText('Preset Import Snapshot', { selector: 'dt' })).toHaveTextContent(
+      'Preset Import Snapshot (lock:unlocked)',
+    )
     expect(screen.getByText('Helper Diagnostics', { selector: 'dt' })).toHaveTextContent(
       'Helper Diagnostics (lock:unlocked)',
     )
