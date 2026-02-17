@@ -878,6 +878,17 @@ async def handle_gateway_websocket(
                         },
                     )
                 )
+            if params.action == "disable_live":
+                await websocket.send_json(
+                    _event_frame(
+                        "event.risk.alert",
+                        {
+                            "requestId": frame.id,
+                            "kind": "live_trading_disabled",
+                            "status": "active",
+                        },
+                    )
+                )
             await websocket.send_json(_ok_response(frame.id, payload=emergency_payload))
             continue
 

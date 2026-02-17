@@ -339,6 +339,32 @@ def test_websocket_risk_emergency_stop_emits_trade_control_events(tmp_path) -> N
         close_trade_event = websocket.receive_json()
         close_response = websocket.receive_json()
 
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_risk_resume_after_close",
+                "method": "risk.resume",
+                "params": {},
+            }
+        )
+        _ = websocket.receive_json()
+        _ = websocket.receive_json()
+
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_risk_stop_disable_live",
+                "method": "risk.emergencyStop",
+                "params": {
+                    "action": "disable_live",
+                    "reason": "switching to paper-only mode",
+                },
+            }
+        )
+        disable_risk_event = websocket.receive_json()
+        disable_alert_event = websocket.receive_json()
+        disable_response = websocket.receive_json()
+
     assert cancel_risk_event["type"] == "event"
     assert cancel_risk_event["event"] == "event.risk.emergencyStop"
     assert cancel_trade_event["type"] == "event"
@@ -352,6 +378,13 @@ def test_websocket_risk_emergency_stop_emits_trade_control_events(tmp_path) -> N
     assert close_trade_event["event"] == "event.trade.closed"
     assert close_trade_event["payload"]["scope"] == "all"
     assert close_response["ok"] is True
+
+    assert disable_risk_event["type"] == "event"
+    assert disable_risk_event["event"] == "event.risk.emergencyStop"
+    assert disable_alert_event["type"] == "event"
+    assert disable_alert_event["event"] == "event.risk.alert"
+    assert disable_alert_event["payload"]["kind"] == "live_trading_disabled"
+    assert disable_response["ok"] is True
 
 
 def test_websocket_agent_run_updates_queue_status(tmp_path) -> None:
