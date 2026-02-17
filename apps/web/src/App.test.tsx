@@ -55,6 +55,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Import Mode')).toBeInTheDocument()
     expect(screen.getByLabelText('Import Mode Badge')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Collapse Helper Diagnostics' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Helper Reset Badge')).toHaveTextContent('last reset: never')
     expect(screen.getByText('Ctrl/Cmd+Enter', { selector: '.hotkey-chip' })).toBeInTheDocument()
     expect(screen.getByText('/', { selector: '.hotkey-chip' })).toHaveAttribute(
       'title',
@@ -715,6 +716,7 @@ describe('Dashboard shell', () => {
     expect(window.localStorage.getItem('quick-action-helper-diagnostics-reset-at-v1')).toBeTruthy()
     expect(screen.queryByText('resetAge:never')).not.toBeInTheDocument()
     expect(screen.getByText(/resetAge:/)).toBeInTheDocument()
+    expect(screen.getByLabelText('Helper Reset Badge')).not.toHaveTextContent('last reset: never')
   })
 
   it('reports accepted and rejected preset names after import', async () => {

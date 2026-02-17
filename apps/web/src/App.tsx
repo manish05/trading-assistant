@@ -1736,6 +1736,12 @@ function App() {
                   ? 'Collapse Helper Diagnostics'
                   : 'Expand Helper Diagnostics'}
               </button>
+              <span className="helper-reset-badge" aria-label="Helper Reset Badge">
+                last reset:{' '}
+                {helperDiagnosticsLastResetAt
+                  ? formatTimestamp(helperDiagnosticsLastResetAt, helperResetTimestampFormat)
+                  : 'never'}
+              </span>
             </div>
             {isImportHelperDiagnosticsExpanded && isImportHintVisible ? (
               <p className="preset-import-hint">
