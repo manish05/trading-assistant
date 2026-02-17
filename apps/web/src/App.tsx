@@ -1774,6 +1774,46 @@ function App() {
     }
     return `${formatKindSummary('trade', 't')} · ${formatKindSummary('risk', 'r')} · ${formatKindSummary('feed', 'f')}`
   }, [marketOverlayAverageClose, marketOverlayChartPoints, marketOverlayScopedTimelineAnnotations])
+  const marketOverlayMarkerDeltaDispersionSummary = useMemo(() => {
+    if (marketOverlayScopedTimelineAnnotations.length === 0 || marketOverlayChartPoints.length === 0) {
+      return 'none'
+    }
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1]
+    const baseline = marketOverlayAverageClose
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const pointIndexByTime = new Map(
+      marketOverlayChartPoints.map((point, index) => [point.time, index] as const),
+    )
+    const deltaLatestValues: number[] = []
+    const deltaAverageValues: number[] = []
+    const deltaPreviousValues: number[] = []
+    marketOverlayScopedTimelineAnnotations.forEach((annotation) => {
+      const point = pointByTime.get(annotation.time)
+      if (!point) {
+        return
+      }
+      deltaLatestValues.push(point.value - latestPoint.value)
+      if (baseline !== null) {
+        deltaAverageValues.push(point.value - baseline)
+      }
+      const pointIndex = pointIndexByTime.get(annotation.time) ?? -1
+      if (pointIndex > 0) {
+        const previousPoint = marketOverlayChartPoints[pointIndex - 1]
+        deltaPreviousValues.push(point.value - previousPoint.value)
+      }
+    })
+    const formatSigned = (value: number) => `${value >= 0 ? '+' : ''}${value.toFixed(2)}`
+    const summarize = (label: 'Δlatest' | 'Δavg' | 'Δprev', values: number[]) => {
+      if (values.length === 0) {
+        return `${label}:n/a`
+      }
+      const minimum = Math.min(...values)
+      const maximum = Math.max(...values)
+      const spread = maximum - minimum
+      return `${label}:min:${formatSigned(minimum)}|max:${formatSigned(maximum)}|spread:${spread.toFixed(2)}|n:${values.length}`
+    }
+    return `${summarize('Δlatest', deltaLatestValues)} · ${summarize('Δavg', deltaAverageValues)} · ${summarize('Δprev', deltaPreviousValues)}`
+  }, [marketOverlayAverageClose, marketOverlayChartPoints, marketOverlayScopedTimelineAnnotations])
   const marketOverlayMarkerDeltaExtremes = useMemo(() => {
     if (marketOverlayScopedTimelineAnnotations.length === 0 || marketOverlayChartPoints.length === 0) {
       return 'none'
@@ -4789,6 +4829,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Delta By Kind Summary">
               Delta by kind: {marketOverlayMarkerDeltaByKindSummary}
+            </p>
+            <p aria-label="Overlay Marker Delta Dispersion Summary">
+              Delta dispersion: {marketOverlayMarkerDeltaDispersionSummary}
             </p>
             <p aria-label="Overlay Marker Delta Extremes">
               Delta extremes: {marketOverlayMarkerDeltaExtremes}
