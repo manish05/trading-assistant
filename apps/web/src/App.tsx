@@ -1276,6 +1276,12 @@ function App() {
       `- Helper reset format: ${helperResetTimestampFormat}`,
       `- Helper reset stale-after hours: ${helperResetStaleThresholdHours}`,
       `- Helper reset lock: ${isHelperResetLocked ? 'locked' : 'unlocked'}`,
+      `- Helper lock counter reset at: ${helperLockCountersLastResetAt ?? 'never'}`,
+      `- Helper lock toggle total: ${helperResetLockToggleCount}`,
+      `- Helper lock toggle tone: ${helperResetLockToggleToneClass.replace('counter-tone-', '')}`,
+      `- Helper lock toggle Alt+L: ${helperResetLockSourceCounts['Alt+L']}`,
+      `- Helper lock toggle controls: ${helperResetLockSourceCounts.controls}`,
+      `- Helper lock toggle snapshot: ${helperResetLockSourceCounts.snapshot}`,
     ].join('\n')
     try {
       if (!navigator.clipboard?.writeText) {
@@ -1301,6 +1307,10 @@ function App() {
   }, [
     appendBlock,
     helperResetStaleThresholdHours,
+    helperLockCountersLastResetAt,
+    helperResetLockSourceCounts,
+    helperResetLockToggleCount,
+    helperResetLockToggleToneClass,
     helperResetTimestampFormat,
     isHelperResetLocked,
     presetImportMode,
@@ -1765,6 +1775,57 @@ function App() {
           ],
     [shortcutLegendOrder],
   )
+
+  const copyStatusShortcutLegend = useCallback(async () => {
+    const payload = [
+      'Status Shortcut Legend',
+      `mode=${importHintMode}`,
+      `order=${shortcutLegendOrder}`,
+      `density=${shortcutLegendDensity}`,
+      `legendVisible=${showShortcutLegendInStatus ? 'yes' : 'no'}`,
+      `lockCounterResetAt=${helperLockCountersLastResetAt ?? 'never'}`,
+      `lockToggleTotal=${helperResetLockToggleCount}`,
+      `lockToggleTone=${helperResetLockToggleToneClass.replace('counter-tone-', '')}`,
+      `lockToggleAlt+L=${helperResetLockSourceCounts['Alt+L']}`,
+      `lockToggleControls=${helperResetLockSourceCounts.controls}`,
+      `lockToggleSnapshot=${helperResetLockSourceCounts.snapshot}`,
+      '[Legend]',
+      ...statusLegendShortcuts.map((item) => `${item.label}\t${item.title}\t${item.inlineLabel}`),
+    ].join('\n')
+    try {
+      if (!navigator.clipboard?.writeText) {
+        throw new Error('Clipboard API unavailable')
+      }
+      await navigator.clipboard.writeText(payload)
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'status legend copied',
+        content: `Copied status shortcut legend to clipboard (lock: ${
+          isHelperResetLocked ? 'locked' : 'unlocked'
+        }).`,
+        severity: 'info',
+      })
+    } catch {
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'status legend copy failed',
+        content: 'Clipboard access failed or is unavailable.',
+        severity: 'warn',
+      })
+    }
+  }, [
+    appendBlock,
+    helperLockCountersLastResetAt,
+    helperResetLockSourceCounts,
+    helperResetLockToggleCount,
+    helperResetLockToggleToneClass,
+    importHintMode,
+    isHelperResetLocked,
+    shortcutLegendDensity,
+    shortcutLegendOrder,
+    showShortcutLegendInStatus,
+    statusLegendShortcuts,
+  ])
 
   const copyHistoryToClipboard = useCallback(async () => {
     if (filteredHistory.length === 0) {
@@ -2749,6 +2810,13 @@ function App() {
                       ))}
                     </span>
                   )}
+                  <button
+                    type="button"
+                    className="summary-copy-button"
+                    onClick={() => void copyStatusShortcutLegend()}
+                  >
+                    Copy Status Legend
+                  </button>
                 </dd>
               </div>
             ) : null}

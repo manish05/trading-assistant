@@ -591,8 +591,47 @@ describe('Dashboard shell', () => {
       expect(payload).toContain('Helper reset format: absolute')
       expect(payload).toContain('Helper reset stale-after hours: 24')
       expect(payload).toContain('Helper reset lock: locked')
+      expect(payload).toContain('Helper lock counter reset at: never')
+      expect(payload).toContain('Helper lock toggle total: 0')
+      expect(payload).toContain('Helper lock toggle tone: none')
+      expect(payload).toContain('Helper lock toggle Alt+L: 0')
+      expect(payload).toContain('Helper lock toggle controls: 0')
+      expect(payload).toContain('Helper lock toggle snapshot: 0')
       expect(
         screen.getByText('Copied import shortcut cheat-sheet to clipboard (lock: locked).'),
+      ).toBeInTheDocument()
+    })
+  })
+
+  it('copies status shortcut legend with lock telemetry metadata', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(window.navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    })
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Show Legend in Status' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Copy Status Legend' }))
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalled()
+      const payload = String(writeText.mock.calls[writeText.mock.calls.length - 1][0])
+      expect(payload).toContain('Status Shortcut Legend')
+      expect(payload).toContain('mode=detailed')
+      expect(payload).toContain('order=import-first')
+      expect(payload).toContain('density=chips')
+      expect(payload).toContain('legendVisible=yes')
+      expect(payload).toContain('lockCounterResetAt=never')
+      expect(payload).toContain('lockToggleTotal=0')
+      expect(payload).toContain('lockToggleTone=none')
+      expect(payload).toContain('lockToggleAlt+L=0')
+      expect(payload).toContain('lockToggleControls=0')
+      expect(payload).toContain('lockToggleSnapshot=0')
+      expect(payload).toContain('[Legend]')
+      expect(payload).toContain('Ctrl/Cmd+Enter\tRun preset JSON import')
+      expect(payload).toContain('Alt+L\tToggle helper reset lock')
+      expect(
+        screen.getByText('Copied status shortcut legend to clipboard (lock: locked).'),
       ).toBeInTheDocument()
     })
   })
