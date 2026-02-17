@@ -520,6 +520,40 @@ describe('Dashboard shell', () => {
     expect(screen.queryByText(/Lock telemetry:/)).not.toBeInTheDocument()
   })
 
+  it('shows telemetry for device guard warnings when block telemetry is visible', () => {
+    render(<App />)
+
+    fireEvent.change(screen.getByLabelText('Device ID'), {
+      target: { value: '' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Notify Device' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Unpair Device' }))
+
+    expect(
+      screen.getAllByText(
+        'No managed device id available. Lock telemetry: lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0.',
+      ),
+    ).toHaveLength(2)
+  })
+
+  it('omits device guard warning telemetry when block telemetry is hidden', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Hide Block Telemetry' }))
+
+    fireEvent.change(screen.getByLabelText('Device ID'), {
+      target: { value: '' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Notify Device' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Unpair Device' }))
+
+    expect(screen.getAllByText('No managed device id available.')).toHaveLength(2)
+    expect(
+      screen.queryByText(
+        'No managed device id available. Lock telemetry: lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0.',
+      ),
+    ).not.toBeInTheDocument()
+  })
+
   it('shows gateway-disconnected telemetry when block telemetry is visible', () => {
     const OriginalWebSocket = globalThis.WebSocket
     class ClosedWebSocket {
