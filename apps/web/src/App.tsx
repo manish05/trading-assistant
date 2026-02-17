@@ -1322,6 +1322,49 @@ function App() {
     marketOverlayChartPoints,
     marketOverlayMarkerBasisAgreement,
   ])
+  const marketOverlayMarkerBasisAgreementKindSummary = useMemo(() => {
+    type KindCounts = {
+      trade: number
+      risk: number
+      feed: number
+    }
+    const makeCounts = (): KindCounts => ({
+      trade: 0,
+      risk: 0,
+      feed: 0,
+    })
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const baseline = marketOverlayAverageClose
+    const agreeCounts = makeCounts()
+    const divergeCounts = makeCounts()
+    marketOverlayBucketScopedTimelineAnnotations.forEach((annotation) => {
+      const point = pointByTime.get(annotation.time) ?? null
+      const latestDelta = point && latestPoint ? point.value - latestPoint.value : null
+      const averageDelta = point && baseline !== null ? point.value - baseline : null
+      const latestTone = resolveMarketOverlayDeltaTone(latestDelta)
+      const averageTone = resolveMarketOverlayDeltaTone(averageDelta)
+      if (latestTone === averageTone) {
+        agreeCounts[annotation.kind] += 1
+      } else {
+        divergeCounts[annotation.kind] += 1
+      }
+    })
+    const scopedCounts = marketOverlayAgreementScopedTimelineAnnotations.reduce(
+      (counts, annotation) => {
+        counts[annotation.kind] += 1
+        return counts
+      },
+      makeCounts(),
+    )
+    return `mode:${marketOverlayMarkerBasisAgreement} · scoped:t${scopedCounts.trade}/r${scopedCounts.risk}/f${scopedCounts.feed} · agree:t${agreeCounts.trade}/r${agreeCounts.risk}/f${agreeCounts.feed} · diverge:t${divergeCounts.trade}/r${divergeCounts.risk}/f${divergeCounts.feed}`
+  }, [
+    marketOverlayAgreementScopedTimelineAnnotations,
+    marketOverlayAverageClose,
+    marketOverlayBucketScopedTimelineAnnotations,
+    marketOverlayChartPoints,
+    marketOverlayMarkerBasisAgreement,
+  ])
   const marketOverlayMarkerDeltaFilterSummary = useMemo(() => {
     const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
     const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
@@ -5753,6 +5796,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Basis Agreement Summary">
               Basis agreement: {marketOverlayMarkerBasisAgreementSummary}
+            </p>
+            <p aria-label="Overlay Marker Basis Agreement Kind Summary">
+              Basis agreement kinds: {marketOverlayMarkerBasisAgreementKindSummary}
             </p>
             <p aria-label="Overlay Marker Delta Filter Summary">
               Delta filter: {marketOverlayMarkerDeltaFilterSummary}
