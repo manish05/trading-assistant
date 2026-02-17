@@ -1351,6 +1351,7 @@ function App() {
 
   const copyHelperDiagnosticsSummary = useCallback(async () => {
     const summary = [
+      '[HelperDiagnostics]',
       `expanded=${isImportHelperDiagnosticsExpanded ? 'yes' : 'no'}`,
       `enabled=${Number(isImportHintVisible) + Number(showShortcutLegendInStatus)}/2`,
       `density=${shortcutLegendDensity}`,
@@ -1360,6 +1361,10 @@ function App() {
       `resetBadgeSection=${isHelperResetBadgeSectionExpanded ? 'expanded' : 'collapsed'}`,
       `resetLock=${isHelperResetLocked ? 'locked' : 'unlocked'}`,
       `resetStaleAfterHours=${helperResetStaleThresholdHours}`,
+      `hintVisible=${isImportHintVisible ? 'yes' : 'no'}`,
+      `legendVisible=${showShortcutLegendInStatus ? 'yes' : 'no'}`,
+      `legendOrder=${shortcutLegendOrder}`,
+      '[LockTelemetry]',
       `lockToggleTotal=${helperResetLockToggleCount}`,
       `lockToggleTone=${helperResetLockToggleToneClass.replace('counter-tone-', '')}`,
       `lockToggleAlt+L=${helperResetLockSourceCounts['Alt+L']}`,
@@ -1378,9 +1383,6 @@ function App() {
         '',
       )}`,
       `lockCounterResetAt=${helperLockCountersLastResetAt ?? 'never'}`,
-      `hintVisible=${isImportHintVisible ? 'yes' : 'no'}`,
-      `legendVisible=${showShortcutLegendInStatus ? 'yes' : 'no'}`,
-      `legendOrder=${shortcutLegendOrder}`,
     ].join('\n')
     try {
       if (!navigator.clipboard?.writeText) {
@@ -1427,12 +1429,14 @@ function App() {
       ? formatTimestamp(helperDiagnosticsLastResetAt, helperResetTimestampFormat)
       : 'never'
     const payload = [
+      '[ResetBadge]',
       `last reset=${resetText}`,
       `resetFormat=${helperResetTimestampFormat}`,
       `staleAfterHours=${helperResetStaleThresholdHours}`,
       `resetLock=${isHelperResetLocked ? 'locked' : 'unlocked'}`,
       `resetBadgeVisible=${isHelperResetBadgeVisible ? 'yes' : 'no'}`,
       `resetBadgeSection=${isHelperResetBadgeSectionExpanded ? 'expanded' : 'collapsed'}`,
+      '[LockTelemetry]',
       `lockToggleTotal=${helperResetLockToggleCount}`,
       `lockToggleTone=${helperResetLockToggleToneClass.replace('counter-tone-', '')}`,
       `lockToggleAlt+L=${helperResetLockSourceCounts['Alt+L']}`,

@@ -1026,6 +1026,7 @@ describe('Dashboard shell', () => {
     await waitFor(() => {
       expect(writeText).toHaveBeenCalled()
       const payload = String(writeText.mock.calls[writeText.mock.calls.length - 1][0])
+      expect(payload).toContain('[HelperDiagnostics]')
       expect(payload).toContain('expanded=yes')
       expect(payload).toContain('enabled=1/2')
       expect(payload).toContain('density=chips')
@@ -1044,6 +1045,7 @@ describe('Dashboard shell', () => {
       expect(payload).toContain('lockToggleSnapshot=0')
       expect(payload).toContain('lockToggleSnapshotTone=none')
       expect(payload).toContain('lockCounterResetAt=never')
+      expect(payload).toContain('[LockTelemetry]')
       expect(
         screen.getByText('Copied helper diagnostics summary to clipboard (lock: locked).'),
       ).toBeInTheDocument()
@@ -1062,6 +1064,7 @@ describe('Dashboard shell', () => {
     await waitFor(() => {
       expect(writeText).toHaveBeenCalled()
       const payload = String(writeText.mock.calls[writeText.mock.calls.length - 1][0])
+      expect(payload).toContain('[ResetBadge]')
       expect(payload).toContain('last reset=never')
       expect(payload).toContain('resetFormat=absolute')
       expect(payload).toContain('staleAfterHours=24')
@@ -1076,6 +1079,7 @@ describe('Dashboard shell', () => {
       expect(payload).toContain('lockToggleControlsTone=none')
       expect(payload).toContain('lockToggleSnapshot=0')
       expect(payload).toContain('lockToggleSnapshotTone=none')
+      expect(payload).toContain('[LockTelemetry]')
       expect(payload).toContain('lockCounterResetAt=never')
       expect(
         screen.getByText('Copied helper reset badge text to clipboard (lock: locked).'),
