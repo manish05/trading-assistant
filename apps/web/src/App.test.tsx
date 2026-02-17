@@ -535,6 +535,14 @@ describe('Dashboard shell', () => {
       expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
         'Marker nav: 2/2 · selected:risk:live_trading_disabled:raised',
       )
+      expect(screen.getByRole('button', { name: 'risk:live_trading_disabled:raised' })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      )
+      expect(screen.getByRole('button', { name: 'trade:closed:queued' })).toHaveAttribute(
+        'aria-pressed',
+        'false',
+      )
       expect(screen.getByRole('button', { name: 'Previous Marker' })).toBeEnabled()
       expect(screen.getByRole('button', { name: 'Next Marker' })).toBeDisabled()
       expect(screen.getByLabelText('Overlay Markers')).toHaveTextContent(
@@ -566,9 +574,15 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Markers')).not.toHaveTextContent('trade:closed:queued')
 
     fireEvent.change(screen.getByLabelText('Marker Focus'), { target: { value: 'all' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Previous Marker' }))
+    fireEvent.keyDown(screen.getByRole('button', { name: 'risk:live_trading_disabled:raised' }), {
+      key: 'ArrowLeft',
+    })
     expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
       'Marker nav: 1/2 · selected:trade:closed:queued',
+    )
+    expect(screen.getByRole('button', { name: 'trade:closed:queued' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
     )
     expect(screen.getByRole('button', { name: 'Previous Marker' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Next Marker' })).toBeEnabled()
@@ -580,6 +594,22 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Overlay Marker Drilldown Detail')).toHaveTextContent(
       'tone:positive',
+    )
+
+    fireEvent.keyDown(screen.getByRole('button', { name: 'trade:closed:queued' }), {
+      key: 'ArrowRight',
+    })
+    expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
+      'Marker nav: 2/2 · selected:risk:live_trading_disabled:raised',
+    )
+    expect(screen.getByLabelText('Overlay Correlation Hint')).toHaveTextContent(
+      'Correlation: risk:live_trading_disabled:raised@2.00(t2)',
+    )
+    fireEvent.keyDown(screen.getByRole('button', { name: 'risk:live_trading_disabled:raised' }), {
+      key: 'ArrowLeft',
+    })
+    expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
+      'Marker nav: 1/2 · selected:trade:closed:queued',
     )
 
     fireEvent.change(screen.getByLabelText('Chart Lens'), { target: { value: 'diagnostics' } })

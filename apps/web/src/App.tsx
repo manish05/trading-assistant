@@ -1271,6 +1271,21 @@ function App() {
     setMarketOverlaySelectedMarkerId(next.id)
   }, [canSelectNextMarketOverlayMarker, marketOverlayActiveTimelineIndex, marketOverlayTimelineAnnotations])
 
+  const onMarketOverlayMarkerKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLButtonElement>) => {
+      if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+        event.preventDefault()
+        selectPreviousMarketOverlayMarker()
+        return
+      }
+      if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+        event.preventDefault()
+        selectNextMarketOverlayMarker()
+      }
+    },
+    [selectNextMarketOverlayMarker, selectPreviousMarketOverlayMarker],
+  )
+
   useEffect(() => {
     const container = marketOverlayChartContainerRef.current
     if (!container || typeof window.ResizeObserver === 'undefined') {
@@ -3646,6 +3661,8 @@ function App() {
                     key={annotation.id}
                     className={`overlay-marker-chip overlay-marker-${annotation.kind} overlay-marker-tone-${annotation.tone} ${marketOverlaySelectedMarkerId === annotation.id ? 'is-selected' : ''}`}
                     onClick={() => setMarketOverlaySelectedMarkerId(annotation.id)}
+                    onKeyDown={onMarketOverlayMarkerKeyDown}
+                    aria-pressed={marketOverlaySelectedMarkerId === annotation.id}
                   >
                     {annotation.kind}:{annotation.label}
                   </button>
