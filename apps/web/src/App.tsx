@@ -91,6 +91,8 @@ const IMPORT_SNAPSHOT_TOGGLES_STORAGE_KEY = 'quick-action-import-snapshot-toggle
 const HELPER_DIAGNOSTICS_RESET_AT_STORAGE_KEY = 'quick-action-helper-diagnostics-reset-at-v1'
 const HELPER_RESET_TIMESTAMP_FORMAT_STORAGE_KEY = 'quick-action-helper-reset-timestamp-format-v1'
 const HELPER_RESET_BADGE_VISIBILITY_STORAGE_KEY = 'quick-action-helper-reset-badge-visibility-v1'
+const HELPER_RESET_STALE_THRESHOLD_HOURS_STORAGE_KEY =
+  'quick-action-helper-reset-stale-threshold-hours-v1'
 const MAX_IMPORT_REPORT_NAMES = 6
 const DEFAULT_PRESET_TEMPLATE: QuickActionPreset = {
   managedAccountId: 'acct_demo_1',
@@ -245,6 +247,15 @@ const readHelperResetBadgeVisibleFromStorage = (): boolean => {
   return window.localStorage.getItem(HELPER_RESET_BADGE_VISIBILITY_STORAGE_KEY) !== 'hidden'
 }
 
+const readHelperResetStaleThresholdHoursFromStorage = (): number => {
+  if (typeof window === 'undefined') {
+    return 24
+  }
+  const raw = window.localStorage.getItem(HELPER_RESET_STALE_THRESHOLD_HOURS_STORAGE_KEY)
+  const parsed = raw ? Number.parseInt(raw, 10) : NaN
+  return parsed === 72 ? 72 : 24
+}
+
 const sanitizePreset = (value: unknown): QuickActionPreset | null => {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     return null
@@ -309,7 +320,10 @@ const formatTimestamp = (ts: string, format: TimestampFormat): string => {
   return `${diffDays}d ago`
 }
 
-const resolveHelperResetTone = (ts: string | null): 'tone-none' | 'tone-fresh' | 'tone-stale' => {
+const resolveHelperResetTone = (
+  ts: string | null,
+  staleThresholdHours: number,
+): 'tone-none' | 'tone-fresh' | 'tone-stale' => {
   if (!ts) {
     return 'tone-none'
   }
@@ -318,7 +332,7 @@ const resolveHelperResetTone = (ts: string | null): 'tone-none' | 'tone-fresh' |
     return 'tone-stale'
   }
   const ageMs = Math.max(Date.now() - millis, 0)
-  return ageMs >= 24 * 60 * 60 * 1000 ? 'tone-stale' : 'tone-fresh'
+  return ageMs >= staleThresholdHours * 60 * 60 * 1000 ? 'tone-stale' : 'tone-fresh'
 }
 
 function App() {
@@ -409,6 +423,9 @@ function App() {
   const [isHelperResetBadgeVisible, setIsHelperResetBadgeVisible] = useState<boolean>(
     readHelperResetBadgeVisibleFromStorage,
   )
+  const [helperResetStaleThresholdHours, setHelperResetStaleThresholdHours] = useState<number>(
+    readHelperResetStaleThresholdHoursFromStorage,
+  )
   const [availablePresetNames, setAvailablePresetNames] = useState<string[]>(() =>
     Object.keys(readPresetStoreFromStorage()).sort(),
   )
@@ -435,8 +452,8 @@ function App() {
   }, [])
 
   const helperResetToneClass = useMemo(
-    () => resolveHelperResetTone(helperDiagnosticsLastResetAt),
-    [helperDiagnosticsLastResetAt],
+    () => resolveHelperResetTone(helperDiagnosticsLastResetAt, helperResetStaleThresholdHours),
+    [helperDiagnosticsLastResetAt, helperResetStaleThresholdHours],
   )
 
   const appendBlock = useCallback((item: BlockItem) => {
@@ -1139,6 +1156,7 @@ function App() {
       '- Import mode merge: existing presets keep conflicts',
       `- Active mode: ${presetImportMode}`,
       `- Helper reset format: ${helperResetTimestampFormat}`,
+      `- Helper reset stale-after hours: ${helperResetStaleThresholdHours}`,
     ].join('\n')
     try {
       if (!navigator.clipboard?.writeText) {
@@ -1159,7 +1177,7 @@ function App() {
         severity: 'warn',
       })
     }
-  }, [appendBlock, helperResetTimestampFormat, presetImportMode])
+  }, [appendBlock, helperResetStaleThresholdHours, helperResetTimestampFormat, presetImportMode])
 
   const copyHelperDiagnosticsSummary = useCallback(async () => {
     const summary = [
@@ -1169,6 +1187,7 @@ function App() {
       `resetAt=${helperDiagnosticsLastResetAt ?? 'never'}`,
       `resetFormat=${helperResetTimestampFormat}`,
       `resetBadgeVisible=${isHelperResetBadgeVisible ? 'yes' : 'no'}`,
+      `resetStaleAfterHours=${helperResetStaleThresholdHours}`,
       `hintVisible=${isImportHintVisible ? 'yes' : 'no'}`,
       `legendVisible=${showShortcutLegendInStatus ? 'yes' : 'no'}`,
       `legendOrder=${shortcutLegendOrder}`,
@@ -1198,6 +1217,7 @@ function App() {
     isImportHintVisible,
     helperDiagnosticsLastResetAt,
     isHelperResetBadgeVisible,
+    helperResetStaleThresholdHours,
     helperResetTimestampFormat,
     shortcutLegendDensity,
     shortcutLegendOrder,
@@ -1208,7 +1228,11 @@ function App() {
     const resetText = helperDiagnosticsLastResetAt
       ? formatTimestamp(helperDiagnosticsLastResetAt, helperResetTimestampFormat)
       : 'never'
-    const payload = [`last reset=${resetText}`, `resetFormat=${helperResetTimestampFormat}`].join('\n')
+    const payload = [
+      `last reset=${resetText}`,
+      `resetFormat=${helperResetTimestampFormat}`,
+      `staleAfterHours=${helperResetStaleThresholdHours}`,
+    ].join('\n')
     try {
       if (!navigator.clipboard?.writeText) {
         throw new Error('Clipboard API unavailable')
@@ -1228,7 +1252,7 @@ function App() {
         severity: 'warn',
       })
     }
-  }, [appendBlock, helperDiagnosticsLastResetAt, helperResetTimestampFormat])
+  }, [appendBlock, helperDiagnosticsLastResetAt, helperResetStaleThresholdHours, helperResetTimestampFormat])
 
   const resetHelperDiagnosticsPreferences = useCallback(() => {
     setIsImportHintVisible(true)
@@ -1240,6 +1264,7 @@ function App() {
     setShortcutLegendDensity('chips')
     setHelperDiagnosticsDisplayMode('compact')
     setIsHelperResetBadgeVisible(true)
+    setHelperResetStaleThresholdHours(24)
     setHelperDiagnosticsLastResetAt(new Date().toISOString())
     appendBlock({
       id: `blk_${Date.now()}`,
@@ -1427,6 +1452,13 @@ function App() {
       isHelperResetBadgeVisible ? 'visible' : 'hidden',
     )
   }, [isHelperResetBadgeVisible])
+
+  useEffect(() => {
+    window.localStorage.setItem(
+      HELPER_RESET_STALE_THRESHOLD_HOURS_STORAGE_KEY,
+      String(helperResetStaleThresholdHours),
+    )
+  }, [helperResetStaleThresholdHours])
 
   useEffect(() => {
     window.localStorage.setItem(IMPORT_HINT_MODE_STORAGE_KEY, importHintMode)
@@ -2268,6 +2300,18 @@ function App() {
                   >
                     <option value="absolute">absolute</option>
                     <option value="relative">relative</option>
+                  </select>
+                </label>
+                <label className="helper-reset-format">
+                  Stale After
+                  <select
+                    value={String(helperResetStaleThresholdHours)}
+                    onChange={(event) =>
+                      setHelperResetStaleThresholdHours(Number.parseInt(event.target.value, 10))
+                    }
+                  >
+                    <option value="24">24h</option>
+                    <option value="72">72h</option>
                   </select>
                 </label>
               </dd>

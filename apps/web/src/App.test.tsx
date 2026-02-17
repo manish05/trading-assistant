@@ -90,6 +90,7 @@ describe('Dashboard shell', () => {
       screen.getByText('reset:never', { selector: '.import-snapshot-badges .import-summary-badge' }),
     ).toBeInTheDocument()
     expect(screen.getByLabelText('Reset TS')).toHaveValue('absolute')
+    expect(screen.getByLabelText('Stale After')).toHaveValue('24')
     expect(screen.getByRole('button', { name: 'Copy Helper Summary' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Reset Helper Prefs' })).toBeInTheDocument()
     expect(screen.getByText('Last import: none')).toBeInTheDocument()
@@ -518,6 +519,7 @@ describe('Dashboard shell', () => {
       expect(payload).toContain('Ctrl/Cmd+Enter')
       expect(payload).toContain('Active mode: overwrite')
       expect(payload).toContain('Helper reset format: absolute')
+      expect(payload).toContain('Helper reset stale-after hours: 24')
     })
   })
 
@@ -659,10 +661,34 @@ describe('Dashboard shell', () => {
     )
   })
 
+  it('persists helper reset stale-threshold selection', () => {
+    render(<App />)
+    fireEvent.change(screen.getByLabelText('Stale After'), {
+      target: { value: '72' },
+    })
+    expect(window.localStorage.getItem('quick-action-helper-reset-stale-threshold-hours-v1')).toBe(
+      '72',
+    )
+  })
+
   it('initializes helper reset timestamp format from localStorage', () => {
     window.localStorage.setItem('quick-action-helper-reset-timestamp-format-v1', 'relative')
     render(<App />)
     expect(screen.getByLabelText('Reset TS')).toHaveValue('relative')
+  })
+
+  it('initializes helper reset stale-threshold from localStorage', () => {
+    window.localStorage.setItem('quick-action-helper-reset-stale-threshold-hours-v1', '72')
+    render(<App />)
+    expect(screen.getByLabelText('Stale After')).toHaveValue('72')
+  })
+
+  it('uses stale-threshold preference when calculating helper reset tone', () => {
+    const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
+    window.localStorage.setItem('quick-action-helper-diagnostics-reset-at-v1', twoDaysAgo)
+    window.localStorage.setItem('quick-action-helper-reset-stale-threshold-hours-v1', '72')
+    render(<App />)
+    expect(screen.getByLabelText('Helper Reset Badge')).toHaveClass('tone-fresh')
   })
 
   it('updates helper diagnostics summary counters in status panel', () => {
@@ -731,6 +757,7 @@ describe('Dashboard shell', () => {
       expect(payload).toContain('resetAt=never')
       expect(payload).toContain('resetFormat=absolute')
       expect(payload).toContain('resetBadgeVisible=yes')
+      expect(payload).toContain('resetStaleAfterHours=24')
     })
   })
 
@@ -748,6 +775,7 @@ describe('Dashboard shell', () => {
       const payload = String(writeText.mock.calls[writeText.mock.calls.length - 1][0])
       expect(payload).toContain('last reset=never')
       expect(payload).toContain('resetFormat=absolute')
+      expect(payload).toContain('staleAfterHours=24')
     })
   })
 
@@ -759,6 +787,9 @@ describe('Dashboard shell', () => {
     })
     fireEvent.change(screen.getByLabelText('Legend Density'), {
       target: { value: 'inline' },
+    })
+    fireEvent.change(screen.getByLabelText('Stale After'), {
+      target: { value: '72' },
     })
     fireEvent.click(screen.getByRole('button', { name: 'Use Verbose Diagnostics' }))
     fireEvent.click(screen.getByRole('button', { name: 'Hide Reset Badge' }))
@@ -773,6 +804,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Hide Quick Toggles' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Hide Reset Badge' })).toBeInTheDocument()
     expect(screen.getByLabelText('Helper Reset Badge')).toBeInTheDocument()
+    expect(screen.getByLabelText('Stale After')).toHaveValue('24')
     expect(window.localStorage.getItem('quick-action-helper-diagnostics-reset-at-v1')).toBeTruthy()
     expect(screen.queryByText('resetAge:never')).not.toBeInTheDocument()
     expect(screen.getByText(/resetAge:/)).toBeInTheDocument()
