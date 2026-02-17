@@ -1161,6 +1161,11 @@ describe('Dashboard shell', () => {
     expect(screen.getByText(/resetAge:/)).toBeInTheDocument()
     expect(screen.getByLabelText('Helper Reset Badge')).not.toHaveTextContent('last reset: never')
     expect(screen.getByLabelText('Helper Reset Badge')).toHaveClass('tone-fresh')
+    expect(
+      screen.getByText(
+        'Reset helper diagnostics preferences to defaults (lock toggles: 1, tone: active, reset: never).',
+      ),
+    ).toBeInTheDocument()
   })
 
   it('reports accepted and rejected preset names after import', async () => {
@@ -1367,6 +1372,11 @@ describe('Dashboard shell', () => {
     expect(screen.queryByText('Accepted')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Copy Import Report' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Clear Import Report' })).toBeDisabled()
+    expect(
+      screen.getByText(
+        'Cleared the latest preset import diagnostics (lock toggles: 0, tone: none, reset: never).',
+      ),
+    ).toBeInTheDocument()
   })
 
   it('supports collapsing and expanding preset import report details', async () => {

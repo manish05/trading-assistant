@@ -1204,10 +1204,17 @@ function App() {
       content:
         `Imported ${acceptedNames.length} preset entries (${presetImportMode}). ` +
         `Created ${createdCount}, preserved ${preservedCount}, overwritten ${overwrittenCount}, ` +
-        `rejected ${rejectedNames.length}.`,
+        `rejected ${rejectedNames.length}. Lock telemetry: ${lockTelemetryToastDetailsWithLabel}.`,
       severity: 'info',
     })
-  }, [appendBlock, presetImportInput, presetImportMode, readPresetStore, writePresetStore])
+  }, [
+    appendBlock,
+    lockTelemetryToastDetailsWithLabel,
+    presetImportInput,
+    presetImportMode,
+    readPresetStore,
+    writePresetStore,
+  ])
 
   const copyPresetImportReport = useCallback(async () => {
     if (!presetImportReport) {
@@ -1506,7 +1513,7 @@ function App() {
       appendBlock({
         id: `blk_${Date.now()}`,
         title: 'helper diagnostics reset locked',
-        content: 'Unlock reset controls before resetting helper diagnostics preferences.',
+        content: `Unlock reset controls before resetting helper diagnostics preferences.${lockTelemetryFailureSuffix}`,
         severity: 'warn',
       })
       return
@@ -1526,10 +1533,10 @@ function App() {
     appendBlock({
       id: `blk_${Date.now()}`,
       title: 'helper diagnostics reset',
-      content: 'Reset helper diagnostics preferences to defaults.',
+      content: `Reset helper diagnostics preferences to defaults (${lockTelemetryToastDetailsWithLabel}).`,
       severity: 'info',
     })
-  }, [appendBlock, isHelperResetLocked])
+  }, [appendBlock, isHelperResetLocked, lockTelemetryFailureSuffix, lockTelemetryToastDetailsWithLabel])
 
   const clearPresetImportReport = useCallback(() => {
     if (!presetImportReport) {
@@ -1539,10 +1546,10 @@ function App() {
     appendBlock({
       id: `blk_${Date.now()}`,
       title: 'import report cleared',
-      content: 'Cleared the latest preset import diagnostics.',
+      content: `Cleared the latest preset import diagnostics (${lockTelemetryToastDetailsWithLabel}).`,
       severity: 'info',
     })
-  }, [appendBlock, presetImportReport])
+  }, [appendBlock, lockTelemetryToastDetailsWithLabel, presetImportReport])
 
   useEffect(() => {
     if (!autoRefreshEnabled) {
