@@ -243,7 +243,9 @@ describe('Dashboard shell', () => {
     render(<App />)
 
     fireEvent.click(screen.getByRole('button', { name: 'Refresh Overlay Snapshot' }))
-    expect(screen.getByLabelText('Overlay Snapshot Summary')).toHaveTextContent('Summary: candles:0')
+    expect(screen.getByLabelText('Overlay Snapshot Summary')).toHaveTextContent(
+      'Summary: candles:0 · trend:neutral',
+    )
     expect(screen.getByLabelText('Overlay Snapshot Time')).not.toHaveTextContent('Snapshot: never')
 
     fireEvent.change(screen.getByLabelText('Overlay Mode'), {
@@ -251,7 +253,7 @@ describe('Dashboard shell', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: 'Refresh Overlay Snapshot' }))
     expect(screen.getByLabelText('Overlay Snapshot Summary')).toHaveTextContent(
-      'Summary: candles:0 · tradeEvents:0',
+      'Summary: candles:0 · tradeEvents:0 · trend:neutral',
     )
 
     fireEvent.change(screen.getByLabelText('Overlay Mode'), {
@@ -259,7 +261,7 @@ describe('Dashboard shell', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: 'Refresh Overlay Snapshot' }))
     expect(screen.getByLabelText('Overlay Snapshot Summary')).toHaveTextContent(
-      'Summary: candles:0 · tradeEvents:0 · riskAlerts:0',
+      'Summary: candles:0 · tradeEvents:0 · riskAlerts:0 · trend:neutral',
     )
   })
 
@@ -397,6 +399,11 @@ describe('Dashboard shell', () => {
       expect(screen.getByLabelText('Overlay Trend')).toHaveTextContent('Trend: up (+1.00)')
       expect(screen.getByLabelText('Overlay Trend')).toHaveClass('overlay-trend-up')
     })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh Overlay Snapshot' }))
+    expect(screen.getByLabelText('Overlay Snapshot Summary')).toHaveTextContent(
+      'Summary: candles:2 · tradeEvents:1 · riskAlerts:1 · trend:up (+1.00)',
+    )
 
     sendSpy.mockRestore()
   })

@@ -2743,14 +2743,21 @@ function App() {
     const candles = lastFetchedCandlesCount ?? 0
     const tradeEvents = tradeControlEvents.length
     const alerts = riskAlerts.length
+    const trendLabel = marketOverlayTrend.label
     const summaryByMode: Record<MarketOverlayMode, string> = {
-      'price-only': `candles:${candles}`,
-      'with-trades': `candles:${candles} · tradeEvents:${tradeEvents}`,
-      'with-risk': `candles:${candles} · tradeEvents:${tradeEvents} · riskAlerts:${alerts}`,
+      'price-only': `candles:${candles} · trend:${trendLabel}`,
+      'with-trades': `candles:${candles} · tradeEvents:${tradeEvents} · trend:${trendLabel}`,
+      'with-risk': `candles:${candles} · tradeEvents:${tradeEvents} · riskAlerts:${alerts} · trend:${trendLabel}`,
     }
     setMarketOverlaySnapshotSummary(summaryByMode[marketOverlayMode])
     setMarketOverlaySnapshotAt(new Date().toISOString())
-  }, [lastFetchedCandlesCount, marketOverlayMode, riskAlerts.length, tradeControlEvents.length])
+  }, [
+    lastFetchedCandlesCount,
+    marketOverlayMode,
+    marketOverlayTrend.label,
+    riskAlerts.length,
+    tradeControlEvents.length,
+  ])
 
   return (
     <div className="dashboard-shell">
