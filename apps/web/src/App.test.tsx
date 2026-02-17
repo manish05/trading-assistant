@@ -1871,6 +1871,166 @@ describe('Dashboard shell', () => {
     sendSpy.mockRestore()
   })
 
+  it('includes lock telemetry in risk alert event blocks', async () => {
+    const sendSpy = vi
+      .spyOn(WebSocket.prototype, 'send')
+      .mockImplementation(function (
+        this: WebSocket,
+        data: string | ArrayBufferLike | Blob | ArrayBufferView<ArrayBufferLike>,
+      ) {
+        if (typeof data !== 'string') {
+          return
+        }
+        const payload = JSON.parse(data) as {
+          type?: string
+          id?: string
+          method?: string
+        }
+        if (payload.type === 'req' && payload.method === 'risk.preview' && payload.id) {
+          queueMicrotask(() => {
+            this.onmessage?.(
+              new MessageEvent('message', {
+                data: JSON.stringify({
+                  type: 'event',
+                  event: 'event.risk.alert',
+                  payload: {
+                    requestId: payload.id,
+                    decision: {
+                      allowed: false,
+                      violations: [
+                        {
+                          code: 'MAX_DAILY_LOSS',
+                          message: 'Daily loss limit reached.',
+                        },
+                      ],
+                    },
+                  },
+                }),
+              }),
+            )
+          })
+          queueMicrotask(() => {
+            this.onmessage?.(
+              new MessageEvent('message', {
+                data: JSON.stringify({
+                  type: 'res',
+                  id: payload.id,
+                  ok: true,
+                  payload: {
+                    allowed: false,
+                    violations: [
+                      {
+                        code: 'MAX_DAILY_LOSS',
+                        message: 'Daily loss limit reached.',
+                      },
+                    ],
+                  },
+                }),
+              }),
+            )
+          })
+        }
+      })
+
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Risk Preview' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('event.risk.alert')).toBeInTheDocument()
+    })
+
+    const eventCard = screen.getByText('event.risk.alert').closest('article')
+    expect(eventCard).not.toBeNull()
+    expect(
+      within(eventCard as HTMLElement).getByText(
+        /\[LockTelemetry\] lock toggles: 0, tone: none, reset: never; sources: Alt\+L=0, controls=0, snapshot=0/,
+      ),
+    ).toBeInTheDocument()
+
+    sendSpy.mockRestore()
+  })
+
+  it('omits lock telemetry in risk alert event blocks when block telemetry is hidden', async () => {
+    const sendSpy = vi
+      .spyOn(WebSocket.prototype, 'send')
+      .mockImplementation(function (
+        this: WebSocket,
+        data: string | ArrayBufferLike | Blob | ArrayBufferView<ArrayBufferLike>,
+      ) {
+        if (typeof data !== 'string') {
+          return
+        }
+        const payload = JSON.parse(data) as {
+          type?: string
+          id?: string
+          method?: string
+        }
+        if (payload.type === 'req' && payload.method === 'risk.preview' && payload.id) {
+          queueMicrotask(() => {
+            this.onmessage?.(
+              new MessageEvent('message', {
+                data: JSON.stringify({
+                  type: 'event',
+                  event: 'event.risk.alert',
+                  payload: {
+                    requestId: payload.id,
+                    decision: {
+                      allowed: false,
+                      violations: [
+                        {
+                          code: 'MAX_DAILY_LOSS',
+                          message: 'Daily loss limit reached.',
+                        },
+                      ],
+                    },
+                  },
+                }),
+              }),
+            )
+          })
+          queueMicrotask(() => {
+            this.onmessage?.(
+              new MessageEvent('message', {
+                data: JSON.stringify({
+                  type: 'res',
+                  id: payload.id,
+                  ok: true,
+                  payload: {
+                    allowed: false,
+                    violations: [
+                      {
+                        code: 'MAX_DAILY_LOSS',
+                        message: 'Daily loss limit reached.',
+                      },
+                    ],
+                  },
+                }),
+              }),
+            )
+          })
+        }
+      })
+
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Hide Block Telemetry' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Risk Preview' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('event.risk.alert')).toBeInTheDocument()
+    })
+
+    const eventCard = screen.getByText('event.risk.alert').closest('article')
+    expect(eventCard).not.toBeNull()
+    expect(within(eventCard as HTMLElement).getByText(/"MAX_DAILY_LOSS"/)).toBeInTheDocument()
+    expect(
+      within(eventCard as HTMLElement).queryByText(
+        /\[LockTelemetry\] lock toggles: 0, tone: none, reset: never; sources: Alt\+L=0, controls=0, snapshot=0/,
+      ),
+    ).not.toBeInTheDocument()
+
+    sendSpy.mockRestore()
+  })
+
   it('avoids duplicate block-key warnings when timestamps collide', async () => {
     const dateSpy = vi.spyOn(Date, 'now').mockReturnValue(1_777_777_777_777)
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
