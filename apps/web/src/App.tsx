@@ -757,12 +757,21 @@ function App() {
       appendBlock({
         id: `blk_${Date.now()}`,
         title: `${method} response`,
-        content: JSON.stringify(response.payload ?? {}, null, 2),
+        content:
+          `${JSON.stringify(response.payload ?? {}, null, 2)}\n\n` +
+          `[LockTelemetry] ${lockTelemetryToastDetailsWithLabelAndSources}`,
         severity: 'info',
       })
       return response.payload ?? {}
     },
-    [appendBlock, lockTelemetryFailureSuffix, minRequestGapMsInput, patchHistory, pushHistory],
+    [
+      appendBlock,
+      lockTelemetryFailureSuffix,
+      lockTelemetryToastDetailsWithLabelAndSources,
+      minRequestGapMsInput,
+      patchHistory,
+      pushHistory,
+    ],
   )
 
   const sendPing = useCallback(() => {
