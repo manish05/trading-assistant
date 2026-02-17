@@ -580,6 +580,11 @@ function App() {
     [lockTelemetryToastDetailsWithLabel],
   )
 
+  const withLockTelemetrySection = useCallback(
+    (lines: string[]): string[] => [...lines, '[LockTelemetry]', ...lockTelemetrySummaryLines],
+    [lockTelemetrySummaryLines],
+  )
+
   const toggleHelperResetLock = useCallback((source: 'Alt+L' | 'controls' | 'snapshot') => {
     const now = Date.now()
     const lockEntry: QuickActionHistory = {
@@ -1217,14 +1222,12 @@ function App() {
       `created=${presetImportReport.createdCount}`,
       `preserved=${presetImportReport.preservedCount}`,
       `overwritten=${presetImportReport.overwrittenCount}`,
-      '[LockTelemetry]',
-      ...lockTelemetrySummaryLines,
     ]
     try {
       if (!navigator.clipboard?.writeText) {
         throw new Error('Clipboard API unavailable')
       }
-      await navigator.clipboard.writeText(summaryLines.join('\n'))
+      await navigator.clipboard.writeText(withLockTelemetrySection(summaryLines).join('\n'))
       appendBlock({
         id: `blk_${Date.now()}`,
         title: 'import report copied',
@@ -1242,9 +1245,9 @@ function App() {
   }, [
     appendBlock,
     lockTelemetryFailureSuffix,
-    lockTelemetrySummaryLines,
     lockTelemetryToastDetailsWithLabel,
     presetImportReport,
+    withLockTelemetrySection,
   ])
 
   const lastImportSummaryText = useMemo(() => {
@@ -1268,14 +1271,12 @@ function App() {
       '[ImportNames]',
       `accepted:${presetImportReport.accepted.join(',')}`,
       `rejected:${presetImportReport.rejected.join(',')}`,
-      '[LockTelemetry]',
-      ...lockTelemetrySummaryLines,
     ].join('\n')
     try {
       if (!navigator.clipboard?.writeText) {
         throw new Error('Clipboard API unavailable')
       }
-      await navigator.clipboard.writeText(payload)
+      await navigator.clipboard.writeText(withLockTelemetrySection(payload.split('\n')).join('\n'))
       appendBlock({
         id: `blk_${Date.now()}`,
         title: 'import names copied',
@@ -1293,9 +1294,9 @@ function App() {
   }, [
     appendBlock,
     lockTelemetryFailureSuffix,
-    lockTelemetrySummaryLines,
     lockTelemetryToastDetailsWithLabel,
     presetImportReport,
+    withLockTelemetrySection,
   ])
 
   const copyLastImportSummary = useCallback(async () => {
@@ -1313,7 +1314,7 @@ function App() {
         throw new Error('Clipboard API unavailable')
       }
       await navigator.clipboard.writeText(
-        [lastImportSummaryText, '[LockTelemetry]', ...lockTelemetrySummaryLines].join('\n'),
+        withLockTelemetrySection([lastImportSummaryText]).join('\n'),
       )
       appendBlock({
         id: `blk_${Date.now()}`,
@@ -1333,9 +1334,9 @@ function App() {
     appendBlock,
     lastImportSummaryText,
     lockTelemetryFailureSuffix,
-    lockTelemetrySummaryLines,
     lockTelemetryToastDetailsWithLabel,
     presetImportReport,
+    withLockTelemetrySection,
   ])
 
   const copyImportShortcutCheatSheet = useCallback(async () => {
@@ -1408,31 +1409,12 @@ function App() {
       `hintVisible=${isImportHintVisible ? 'yes' : 'no'}`,
       `legendVisible=${showShortcutLegendInStatus ? 'yes' : 'no'}`,
       `legendOrder=${shortcutLegendOrder}`,
-      '[LockTelemetry]',
-      `lockToggleTotal=${helperResetLockToggleCount}`,
-      `lockToggleTone=${helperResetLockToggleToneClass.replace('counter-tone-', '')}`,
-      `lockToggleAlt+L=${helperResetLockSourceCounts['Alt+L']}`,
-      `lockToggleAlt+LTone=${resolveLockCounterTone(helperResetLockSourceCounts['Alt+L']).replace(
-        'counter-tone-',
-        '',
-      )}`,
-      `lockToggleControls=${helperResetLockSourceCounts.controls}`,
-      `lockToggleControlsTone=${resolveLockCounterTone(helperResetLockSourceCounts.controls).replace(
-        'counter-tone-',
-        '',
-      )}`,
-      `lockToggleSnapshot=${helperResetLockSourceCounts.snapshot}`,
-      `lockToggleSnapshotTone=${resolveLockCounterTone(helperResetLockSourceCounts.snapshot).replace(
-        'counter-tone-',
-        '',
-      )}`,
-      `lockCounterResetAt=${helperLockCountersLastResetAt ?? 'never'}`,
     ].join('\n')
     try {
       if (!navigator.clipboard?.writeText) {
         throw new Error('Clipboard API unavailable')
       }
-      await navigator.clipboard.writeText(summary)
+      await navigator.clipboard.writeText(withLockTelemetrySection(summary.split('\n')).join('\n'))
       appendBlock({
         id: `blk_${Date.now()}`,
         title: 'helper summary copied',
@@ -1454,13 +1436,9 @@ function App() {
     isImportHelperDiagnosticsExpanded,
     isImportHintVisible,
     helperDiagnosticsLastResetAt,
-    helperLockCountersLastResetAt,
     isHelperResetBadgeSectionExpanded,
     isHelperResetBadgeVisible,
     isHelperResetLocked,
-    helperResetLockSourceCounts,
-    helperResetLockToggleCount,
-    helperResetLockToggleToneClass,
     helperResetStaleThresholdHours,
     helperResetTimestampFormat,
     lockTelemetryFailureSuffix,
@@ -1468,6 +1446,7 @@ function App() {
     shortcutLegendDensity,
     shortcutLegendOrder,
     showShortcutLegendInStatus,
+    withLockTelemetrySection,
   ])
 
   const copyHelperResetBadge = useCallback(async () => {
@@ -1482,31 +1461,12 @@ function App() {
       `resetLock=${isHelperResetLocked ? 'locked' : 'unlocked'}`,
       `resetBadgeVisible=${isHelperResetBadgeVisible ? 'yes' : 'no'}`,
       `resetBadgeSection=${isHelperResetBadgeSectionExpanded ? 'expanded' : 'collapsed'}`,
-      '[LockTelemetry]',
-      `lockToggleTotal=${helperResetLockToggleCount}`,
-      `lockToggleTone=${helperResetLockToggleToneClass.replace('counter-tone-', '')}`,
-      `lockToggleAlt+L=${helperResetLockSourceCounts['Alt+L']}`,
-      `lockToggleAlt+LTone=${resolveLockCounterTone(helperResetLockSourceCounts['Alt+L']).replace(
-        'counter-tone-',
-        '',
-      )}`,
-      `lockToggleControls=${helperResetLockSourceCounts.controls}`,
-      `lockToggleControlsTone=${resolveLockCounterTone(helperResetLockSourceCounts.controls).replace(
-        'counter-tone-',
-        '',
-      )}`,
-      `lockToggleSnapshot=${helperResetLockSourceCounts.snapshot}`,
-      `lockToggleSnapshotTone=${resolveLockCounterTone(helperResetLockSourceCounts.snapshot).replace(
-        'counter-tone-',
-        '',
-      )}`,
-      `lockCounterResetAt=${helperLockCountersLastResetAt ?? 'never'}`,
     ].join('\n')
     try {
       if (!navigator.clipboard?.writeText) {
         throw new Error('Clipboard API unavailable')
       }
-      await navigator.clipboard.writeText(payload)
+      await navigator.clipboard.writeText(withLockTelemetrySection(payload.split('\n')).join('\n'))
       appendBlock({
         id: `blk_${Date.now()}`,
         title: 'helper reset badge copied',
@@ -1526,10 +1486,6 @@ function App() {
   }, [
     appendBlock,
     helperDiagnosticsLastResetAt,
-    helperLockCountersLastResetAt,
-    helperResetLockSourceCounts,
-    helperResetLockToggleCount,
-    helperResetLockToggleToneClass,
     isHelperResetBadgeSectionExpanded,
     isHelperResetBadgeVisible,
     isHelperResetLocked,
@@ -1537,6 +1493,7 @@ function App() {
     lockTelemetryFailureSuffix,
     helperResetStaleThresholdHours,
     helperResetTimestampFormat,
+    withLockTelemetrySection,
   ])
 
   const resetHelperDiagnosticsPreferences = useCallback(() => {
@@ -1868,13 +1825,9 @@ function App() {
       `order=${shortcutLegendOrder}`,
       `density=${shortcutLegendDensity}`,
       `legendVisible=${showShortcutLegendInStatus ? 'yes' : 'no'}`,
-      '[LockTelemetry]',
-      `lockCounterResetAt=${helperLockCountersLastResetAt ?? 'never'}`,
-      `lockToggleTotal=${helperResetLockToggleCount}`,
-      `lockToggleTone=${helperResetLockToggleToneClass.replace('counter-tone-', '')}`,
-      `lockToggleAlt+L=${helperResetLockSourceCounts['Alt+L']}`,
-      `lockToggleControls=${helperResetLockSourceCounts.controls}`,
-      `lockToggleSnapshot=${helperResetLockSourceCounts.snapshot}`,
+    ]
+    const payloadWithTelemetry = [
+      ...withLockTelemetrySection(payload),
       '[Legend]',
       ...statusLegendShortcuts.map((item) => `${item.label}\t${item.title}\t${item.inlineLabel}`),
     ].join('\n')
@@ -1882,7 +1835,7 @@ function App() {
       if (!navigator.clipboard?.writeText) {
         throw new Error('Clipboard API unavailable')
       }
-      await navigator.clipboard.writeText(payload)
+      await navigator.clipboard.writeText(payloadWithTelemetry)
       appendBlock({
         id: `blk_${Date.now()}`,
         title: 'status legend copied',
@@ -1901,10 +1854,6 @@ function App() {
     }
   }, [
     appendBlock,
-    helperLockCountersLastResetAt,
-    helperResetLockSourceCounts,
-    helperResetLockToggleCount,
-    helperResetLockToggleToneClass,
     importHintMode,
     isHelperResetLocked,
     lockTelemetryFailureSuffix,
@@ -1913,6 +1862,7 @@ function App() {
     shortcutLegendOrder,
     showShortcutLegendInStatus,
     statusLegendShortcuts,
+    withLockTelemetrySection,
   ])
 
   const copyHistoryToClipboard = useCallback(async () => {
@@ -1927,13 +1877,7 @@ function App() {
     }
 
     const text = [
-      '[LockTelemetry]',
-      `filter=${historyFilter}`,
-      `lockCounterResetAt=${helperLockCountersLastResetAt ?? 'never'}`,
-      `lockToggleTotal=${helperResetLockToggleCount}`,
-      `lockToggleAlt+L=${helperResetLockSourceCounts['Alt+L']}`,
-      `lockToggleControls=${helperResetLockSourceCounts.controls}`,
-      `lockToggleSnapshot=${helperResetLockSourceCounts.snapshot}`,
+      ...withLockTelemetrySection([`filter=${historyFilter}`]),
       '[Entries]',
       ...filteredHistory
         .slice(0, 10)
@@ -1963,11 +1907,9 @@ function App() {
     appendBlock,
     filteredHistory,
     lockTelemetryFailureSuffix,
-    helperLockCountersLastResetAt,
-    helperResetLockSourceCounts,
-    helperResetLockToggleCount,
     historyFilter,
     lockTelemetryToastDetailsWithLabel,
+    withLockTelemetrySection,
   ])
 
   return (
