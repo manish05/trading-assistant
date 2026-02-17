@@ -1269,6 +1269,11 @@ describe('Dashboard shell', () => {
       expect(payload).toContain('lockToggleAlt+L=0')
       expect(payload).toContain('lockToggleControls=0')
       expect(payload).toContain('lockToggleSnapshot=0')
+      expect(
+        screen.getByText(
+          'Preset import report copied to clipboard (lock toggles: 0, tone: none, reset: never).',
+        ),
+      ).toBeInTheDocument()
     })
   })
 

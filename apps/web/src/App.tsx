@@ -1209,7 +1209,10 @@ function App() {
       appendBlock({
         id: `blk_${Date.now()}`,
         title: 'import report copied',
-        content: 'Preset import report copied to clipboard.',
+        content: `Preset import report copied to clipboard (lock toggles: ${helperResetLockToggleCount}, tone: ${helperResetLockToggleToneClass.replace(
+          'counter-tone-',
+          '',
+        )}, reset: ${helperLockCountersLastResetAt ?? 'never'}).`,
         severity: 'info',
       })
     } catch {
@@ -1220,7 +1223,14 @@ function App() {
         severity: 'warn',
       })
     }
-  }, [appendBlock, lockTelemetrySummaryLines, presetImportReport])
+  }, [
+    appendBlock,
+    helperLockCountersLastResetAt,
+    helperResetLockToggleCount,
+    helperResetLockToggleToneClass,
+    lockTelemetrySummaryLines,
+    presetImportReport,
+  ])
 
   const lastImportSummaryText = useMemo(() => {
     if (!presetImportReport) {
