@@ -287,6 +287,7 @@ function App() {
   )
   const [importHintMode, setImportHintMode] = useState<ImportHintMode>(readImportHintModeFromStorage)
   const [hintModeLiveNote, setHintModeLiveNote] = useState<string>('')
+  const [showShortcutLegendInStatus, setShowShortcutLegendInStatus] = useState<boolean>(false)
   const [availablePresetNames, setAvailablePresetNames] = useState<string[]>(() =>
     Object.keys(readPresetStoreFromStorage()).sort(),
   )
@@ -1527,6 +1528,12 @@ function App() {
               >
                 {importHintMode === 'detailed' ? 'Use Compact Hints' : 'Use Detailed Hints'}
               </button>
+              <button
+                type="button"
+                onClick={() => setShowShortcutLegendInStatus((current) => !current)}
+              >
+                {showShortcutLegendInStatus ? 'Hide Legend in Status' : 'Show Legend in Status'}
+              </button>
               <button type="button" onClick={() => void copyImportShortcutCheatSheet()}>
                 Copy Shortcut Cheat Sheet
               </button>
@@ -1772,6 +1779,16 @@ function App() {
                 )}
               </dd>
             </div>
+            {showShortcutLegendInStatus ? (
+              <div>
+                <dt>Import Shortcut Legend</dt>
+                <dd className="import-snapshot-badges">
+                  <span className="hotkey-chip">Ctrl/Cmd+Enter</span>
+                  <span className="hotkey-chip">Esc</span>
+                  <span className="hotkey-chip">/</span>
+                </dd>
+              </div>
+            ) : null}
             <div>
               <dt>Quick Action Timestamps</dt>
               <dd className="timestamp-grid">

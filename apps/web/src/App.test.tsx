@@ -62,6 +62,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByText(/overwrites conflicting presets\./)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Hide Hints' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Use Compact Hints' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Show Legend in Status' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Copy Shortcut Cheat Sheet' })).toBeInTheDocument()
     expect(screen.getByText('Last import: none')).toBeInTheDocument()
   })
@@ -470,6 +471,15 @@ describe('Dashboard shell', () => {
       expect(payload).toContain('Ctrl/Cmd+Enter')
       expect(payload).toContain('Active mode: overwrite')
     })
+  })
+
+  it('toggles import shortcut legend visibility in status panel', () => {
+    render(<App />)
+    expect(screen.queryByText('Import Shortcut Legend')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Show Legend in Status' }))
+    expect(screen.getByText('Import Shortcut Legend')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Hide Legend in Status' })).toBeInTheDocument()
   })
 
   it('reports accepted and rejected preset names after import', async () => {
