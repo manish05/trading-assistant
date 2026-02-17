@@ -38,6 +38,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Register Push' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Notify Device' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Unpair Device' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Device Notify Message')).toHaveValue('Dashboard test notification')
     expect(screen.getByRole('button', { name: 'Subscribe Feed' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Unsubscribe Feed' })).toBeDisabled()
     expect(screen.getByLabelText('Refresh Interval (sec)')).toBeInTheDocument()
@@ -193,6 +194,9 @@ describe('Dashboard shell', () => {
     fireEvent.change(screen.getByLabelText('Device Rotate Push Token'), {
       target: { value: 'push_rotate_custom' },
     })
+    fireEvent.change(screen.getByLabelText('Device Notify Message'), {
+      target: { value: 'custom-notify-message' },
+    })
     fireEvent.change(screen.getByLabelText('Feed Topic'), {
       target: { value: 'market.tick' },
     })
@@ -258,7 +262,7 @@ describe('Dashboard shell', () => {
       const deviceNotifyTest = payloads.find((payload) => payload.method === 'devices.notifyTest')
       expect(deviceNotifyTest?.params).toMatchObject({
         deviceId: 'dev_custom_9',
-        message: 'Dashboard test notification',
+        message: 'custom-notify-message',
       })
 
       const feedSubscribe = payloads.find((payload) => payload.method === 'feeds.subscribe')

@@ -49,6 +49,7 @@ type QuickActionPreset = {
   managedDeviceLabel: string
   managedDevicePairPushToken: string
   managedDeviceRotatePushToken: string
+  managedDeviceNotifyMessage: string
   feedTopic: string
   feedSymbol: string
   feedTimeframe: string
@@ -109,6 +110,7 @@ const DEFAULT_PRESET_TEMPLATE: QuickActionPreset = {
   managedDeviceLabel: 'Dashboard iPhone',
   managedDevicePairPushToken: 'push_dashboard_1',
   managedDeviceRotatePushToken: 'push_dashboard_rotated',
+  managedDeviceNotifyMessage: DEVICE_NOTIFY_TEST_MESSAGE,
   feedTopic: 'market.candle.closed',
   feedSymbol: 'ETHUSDm',
   feedTimeframe: '5m',
@@ -314,6 +316,7 @@ const sanitizePreset = (value: unknown): QuickActionPreset | null => {
     managedDeviceLabel: pick('managedDeviceLabel'),
     managedDevicePairPushToken: pick('managedDevicePairPushToken'),
     managedDeviceRotatePushToken: pick('managedDeviceRotatePushToken'),
+    managedDeviceNotifyMessage: pick('managedDeviceNotifyMessage'),
     feedTopic: pick('feedTopic'),
     feedSymbol: pick('feedSymbol'),
     feedTimeframe: pick('feedTimeframe'),
@@ -423,6 +426,9 @@ function App() {
   )
   const [managedDeviceRotatePushToken, setManagedDeviceRotatePushToken] = useState<string>(
     DEFAULT_PRESET_TEMPLATE.managedDeviceRotatePushToken,
+  )
+  const [managedDeviceNotifyMessage, setManagedDeviceNotifyMessage] = useState<string>(
+    DEFAULT_PRESET_TEMPLATE.managedDeviceNotifyMessage,
   )
   const [autoRefreshEnabled, setAutoRefreshEnabled] = useState<boolean>(false)
   const [refreshSecondsInput, setRefreshSecondsInput] = useState<string>(
@@ -1012,9 +1018,15 @@ function App() {
 
     await sendRequest('devices.notifyTest', {
       deviceId: managedDeviceId,
-      message: DEVICE_NOTIFY_TEST_MESSAGE,
+      message: managedDeviceNotifyMessage.trim() || DEVICE_NOTIFY_TEST_MESSAGE,
     })
-  }, [appendBlock, lockTelemetryFailureSuffix, managedDeviceId, sendRequest])
+  }, [
+    appendBlock,
+    lockTelemetryFailureSuffix,
+    managedDeviceId,
+    managedDeviceNotifyMessage,
+    sendRequest,
+  ])
 
   const sendDeviceUnpair = useCallback(async () => {
     if (!managedDeviceId) {
@@ -1100,6 +1112,7 @@ function App() {
       managedDeviceLabel,
       managedDevicePairPushToken,
       managedDeviceRotatePushToken,
+      managedDeviceNotifyMessage,
       feedTopic,
       feedSymbol,
       feedTimeframe,
@@ -1118,6 +1131,7 @@ function App() {
     managedDevicePairPushToken,
     managedDevicePlatform,
     managedDeviceRotatePushToken,
+    managedDeviceNotifyMessage,
     managedProviderAccountId,
     minRequestGapMsInput,
     refreshSecondsInput,
@@ -1133,6 +1147,7 @@ function App() {
     setManagedDeviceLabel(preset.managedDeviceLabel)
     setManagedDevicePairPushToken(preset.managedDevicePairPushToken)
     setManagedDeviceRotatePushToken(preset.managedDeviceRotatePushToken)
+    setManagedDeviceNotifyMessage(preset.managedDeviceNotifyMessage)
     setFeedTopic(preset.feedTopic)
     setFeedSymbol(preset.feedSymbol)
     setFeedTimeframe(preset.feedTimeframe)
@@ -2191,6 +2206,13 @@ function App() {
                 <input
                   value={managedDeviceRotatePushToken}
                   onChange={(event) => setManagedDeviceRotatePushToken(event.target.value)}
+                />
+              </label>
+              <label>
+                Device Notify Message
+                <input
+                  value={managedDeviceNotifyMessage}
+                  onChange={(event) => setManagedDeviceNotifyMessage(event.target.value)}
                 />
               </label>
               <label>
