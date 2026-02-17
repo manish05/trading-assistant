@@ -451,6 +451,22 @@ describe('Dashboard shell', () => {
     expect(clearButton).toBeDisabled()
   })
 
+  it('imports presets via Ctrl+Enter keyboard shortcut', async () => {
+    render(<App />)
+    const importTextarea = screen.getByLabelText('Import Presets JSON')
+
+    fireEvent.change(importTextarea, {
+      target: {
+        value: '{"shortcut-template":{"feedSymbol":"ETHUSDm"}}',
+      },
+    })
+    fireEvent.keyDown(importTextarea, { key: 'Enter', ctrlKey: true })
+
+    await waitFor(() => {
+      expect(screen.getByRole('option', { name: 'shortcut-template' })).toBeInTheDocument()
+    })
+  })
+
   it('truncates long import report name lists with overflow counter', async () => {
     render(<App />)
     const manyPresets = Object.fromEntries(

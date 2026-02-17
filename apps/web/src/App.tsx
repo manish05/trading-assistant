@@ -1348,6 +1348,12 @@ function App() {
               <textarea
                 value={presetImportInput}
                 onChange={(event) => setPresetImportInput(event.target.value)}
+                onKeyDown={(event) => {
+                  if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+                    event.preventDefault()
+                    importPresetsJson()
+                  }
+                }}
                 placeholder='{"preset_name": { ... }}'
               />
             </label>
