@@ -63,6 +63,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
       'Timeline buckets: mode:none · scope:all-buckets · buckets:0 · latest:none · count:0',
     )
+    expect(screen.getByLabelText('Overlay Marker Bucket Delta Summary')).toHaveTextContent(
+      'Bucket deltas: mode:none · buckets:n/a · latestAvg:n/a · previousAvg:n/a · Δbucket:n/a',
+    )
     expect(screen.getByLabelText('Overlay Marker Scope Summary')).toHaveTextContent(
       'Scope: visible:t0/r0/f0 · selectedKind:none',
     )
@@ -517,6 +520,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
       'Timeline buckets: mode:none · scope:all-buckets · buckets:0 · latest:none · count:0',
     )
+    expect(screen.getByLabelText('Overlay Marker Bucket Delta Summary')).toHaveTextContent(
+      'Bucket deltas: mode:none · buckets:n/a · latestAvg:n/a · previousAvg:n/a · Δbucket:n/a',
+    )
     expect(screen.getByLabelText('Overlay Marker Scope Summary')).toHaveTextContent(
       'Scope: visible:t0/r0/f0 · selectedKind:none',
     )
@@ -594,6 +600,9 @@ describe('Dashboard shell', () => {
       )
       expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
         'Timeline buckets: mode:none · scope:all-buckets · buckets:2 · latest:t2 · count:2',
+      )
+      expect(screen.getByLabelText('Overlay Marker Bucket Delta Summary')).toHaveTextContent(
+        'Bucket deltas: mode:none · buckets:n/a · latestAvg:n/a · previousAvg:n/a · Δbucket:n/a',
       )
       expect(screen.getByLabelText('Overlay Marker Scope Summary')).toHaveTextContent(
         'Scope: visible:t1/r1/f0 · selectedKind:risk',
@@ -971,6 +980,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
       `Timeline buckets: mode:60s · scope:all-buckets · buckets:1 · latest:${expectedBucket} · count:2`,
     )
+    expect(screen.getByLabelText('Overlay Marker Bucket Delta Summary')).toHaveTextContent(
+      'Bucket deltas: mode:60s · buckets:1 · latestAvg:1.50 · previousAvg:n/a · Δbucket:n/a',
+    )
     expect(screen.getByRole('button', { name: 'Previous Bucket' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Next Bucket' })).toBeDisabled()
     expect(screen.getByLabelText('Overlay Marker Timeline')).toHaveTextContent(
@@ -982,6 +994,9 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
       `Timeline buckets: mode:60s · scope:latest-bucket · buckets:1 · latest:${expectedBucket} · count:2`,
+    )
+    expect(screen.getByLabelText('Overlay Marker Bucket Delta Summary')).toHaveTextContent(
+      'Bucket deltas: mode:60s · buckets:1 · latestAvg:1.50 · previousAvg:n/a · Δbucket:n/a',
     )
 
     fakeNow += 120_000
@@ -1001,6 +1016,9 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
       `Timeline buckets: mode:60s · scope:latest-bucket · buckets:2 · latest:${latestBucketAfterUpdate} · count:1`,
+    )
+    expect(screen.getByLabelText('Overlay Marker Bucket Delta Summary')).toHaveTextContent(
+      'Bucket deltas: mode:60s · buckets:1 · latestAvg:2.00 · previousAvg:n/a · Δbucket:n/a',
     )
 
     fireEvent.change(screen.getByLabelText('Marker Age'), { target: { value: 'last-60s' } })
@@ -1024,6 +1042,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
       `Timeline buckets: mode:60s · scope:latest-bucket · buckets:1 · latest:${latestBucketAfterUpdate} · count:1`,
     )
+    expect(screen.getByLabelText('Overlay Marker Bucket Delta Summary')).toHaveTextContent(
+      'Bucket deltas: mode:60s · buckets:1 · latestAvg:2.00 · previousAvg:n/a · Δbucket:n/a',
+    )
 
     fireEvent.change(screen.getByLabelText('Marker Age'), { target: { value: 'last-300s' } })
     await waitFor(() => {
@@ -1039,6 +1060,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
       `Timeline buckets: mode:60s · scope:latest-bucket · buckets:2 · latest:${latestBucketAfterUpdate} · count:1`,
     )
+    expect(screen.getByLabelText('Overlay Marker Bucket Delta Summary')).toHaveTextContent(
+      'Bucket deltas: mode:60s · buckets:1 · latestAvg:2.00 · previousAvg:n/a · Δbucket:n/a',
+    )
 
     fireEvent.change(screen.getByLabelText('Bucket Scope'), { target: { value: 'all-buckets' } })
     await waitFor(() => {
@@ -1048,6 +1072,9 @@ describe('Dashboard shell', () => {
     })
     expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
       `Timeline buckets: mode:60s · scope:all-buckets · buckets:2 · latest:${latestBucketAfterUpdate} · count:3`,
+    )
+    expect(screen.getByLabelText('Overlay Marker Bucket Delta Summary')).toHaveTextContent(
+      'Bucket deltas: mode:60s · buckets:2 · latestAvg:2.00 · previousAvg:1.00 · Δbucket:+1.00 (+100.00%)',
     )
     expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
       'Marker nav: 3/3 · selected:trade:closed:queued',

@@ -1605,6 +1605,43 @@ function App() {
     marketOverlayScopedTimelineAnnotations.length,
     marketOverlayTimelineAnnotations,
   ])
+  const marketOverlayMarkerBucketDeltaSummary = useMemo(() => {
+    if (marketOverlayMarkerBucket === 'none') {
+      return 'mode:none · buckets:n/a · latestAvg:n/a · previousAvg:n/a · Δbucket:n/a'
+    }
+    if (marketOverlayScopedTimelineAnnotations.length === 0 || marketOverlayChartPoints.length === 0) {
+      return `mode:${marketOverlayMarkerBucket} · buckets:0 · latestAvg:n/a · previousAvg:n/a · Δbucket:n/a`
+    }
+    const bucketSizeMs = marketOverlayMarkerBucket === '30s' ? 30_000 : 60_000
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const grouped = new Map<number, { sum: number; count: number }>()
+    marketOverlayScopedTimelineAnnotations.forEach((annotation) => {
+      const point = pointByTime.get(annotation.time)
+      if (!point) {
+        return
+      }
+      const bucketStart = Math.floor(annotation.timestamp / bucketSizeMs) * bucketSizeMs
+      const current = grouped.get(bucketStart) ?? { sum: 0, count: 0 }
+      grouped.set(bucketStart, { sum: current.sum + point.value, count: current.count + 1 })
+    })
+    if (grouped.size === 0) {
+      return `mode:${marketOverlayMarkerBucket} · buckets:0 · latestAvg:n/a · previousAvg:n/a · Δbucket:n/a`
+    }
+    const orderedBuckets = [...grouped.entries()].sort((a, b) => b[0] - a[0])
+    const latestAvg = orderedBuckets[0][1].sum / orderedBuckets[0][1].count
+    const previousAvg =
+      orderedBuckets.length > 1 ? orderedBuckets[1][1].sum / orderedBuckets[1][1].count : null
+    const deltaBucket = previousAvg === null ? null : latestAvg - previousAvg
+    const deltaBucketPct =
+      deltaBucket !== null && previousAvg !== null && previousAvg !== 0
+        ? (deltaBucket / previousAvg) * 100
+        : null
+    const deltaBucketLabel =
+      deltaBucket === null
+        ? 'n/a'
+        : `${deltaBucket >= 0 ? '+' : ''}${deltaBucket.toFixed(2)} (${deltaBucketPct === null ? 'n/a' : `${deltaBucketPct >= 0 ? '+' : ''}${deltaBucketPct.toFixed(2)}%`})`
+    return `mode:${marketOverlayMarkerBucket} · buckets:${orderedBuckets.length} · latestAvg:${latestAvg.toFixed(2)} · previousAvg:${previousAvg === null ? 'n/a' : previousAvg.toFixed(2)} · Δbucket:${deltaBucketLabel}`
+  }, [marketOverlayChartPoints, marketOverlayMarkerBucket, marketOverlayScopedTimelineAnnotations])
   const marketOverlayChartMarkers = useMemo(() => {
     if (marketOverlayChartPoints.length === 0 || marketOverlayScopedTimelineAnnotations.length === 0) {
       return [] as MarketOverlayChartMarker[]
@@ -4354,6 +4391,9 @@ function App() {
             </div>
             <p aria-label="Overlay Marker Timeline Bucket Summary">
               Timeline buckets: {marketOverlayMarkerBucketSummary}
+            </p>
+            <p aria-label="Overlay Marker Bucket Delta Summary">
+              Bucket deltas: {marketOverlayMarkerBucketDeltaSummary}
             </p>
             <p aria-label="Overlay Marker Scope Summary">
               Scope: {marketOverlayMarkerScopeSummary}
