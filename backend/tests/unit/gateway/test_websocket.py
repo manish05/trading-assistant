@@ -384,6 +384,41 @@ def test_gateway_device_pair_and_notify_methods(tmp_path) -> None:
     assert notify_response["payload"]["status"] == "queued"
 
 
+def test_gateway_config_and_plugin_status_methods(tmp_path) -> None:
+    client = TestClient(create_app(data_dir=tmp_path))
+
+    with client.websocket_connect("/ws") as websocket:
+        websocket.send_json(_connect_payload())
+        _ = websocket.receive_json()
+
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_config_get_1",
+                "method": "config.get",
+                "params": {},
+            }
+        )
+        config_response = websocket.receive_json()
+
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_plugins_status_1",
+                "method": "plugins.status",
+                "params": {},
+            }
+        )
+        plugins_response = websocket.receive_json()
+
+    assert config_response["ok"] is True
+    assert "gateway" in config_response["payload"]
+    assert "plugins" in config_response["payload"]
+
+    assert plugins_response["ok"] is True
+    assert "enabledPlugins" in plugins_response["payload"]
+
+
 def test_gateway_trades_place_blocks_when_risk_rejects(tmp_path) -> None:
     client = TestClient(create_app(data_dir=tmp_path))
 

@@ -10,9 +10,11 @@ from starlette.websockets import WebSocketDisconnect
 
 from app.audit.store import AuditStore
 from app.backtesting.simulator import BacktestCandle, BacktestSimulator, TradeSignal
+from app.config.loader import AppConfig
 from app.devices.registry import DeviceRegistry
 from app.gateway.models import GatewayConnectParams
 from app.memory.index import MemoryIndex
+from app.plugins.registry import ResolvedPlugins
 from app.protocol.frames import RequestFrame, parse_gateway_frame
 from app.queues.agent_queue import AgentQueue, AgentRequest, QueueSettings
 from app.risk.engine import AccountRiskSnapshot, RiskEngine, RiskPolicy, TradeIntent
@@ -157,8 +159,10 @@ async def handle_gateway_websocket(
     started_at: datetime,
     agent_queues: dict[str, AgentQueue],
     audit_store: AuditStore,
+    app_config: AppConfig,
     device_registry: DeviceRegistry,
     memory_index: MemoryIndex,
+    resolved_plugins: ResolvedPlugins,
     trade_execution_service: TradeExecutionService,
 ) -> None:
     await websocket.accept()
@@ -268,6 +272,28 @@ async def handle_gateway_websocket(
                             "name": SERVER_NAME,
                             "version": "0.1.0",
                         },
+                    },
+                )
+            )
+            continue
+
+        if frame.method == "config.get":
+            await websocket.send_json(
+                _ok_response(
+                    frame.id,
+                    payload=app_config.model_dump(mode="json"),
+                )
+            )
+            continue
+
+        if frame.method == "plugins.status":
+            await websocket.send_json(
+                _ok_response(
+                    frame.id,
+                    payload={
+                        "enabledPlugins": sorted(resolved_plugins.enabled_plugins),
+                        "activeSlots": resolved_plugins.active_slots,
+                        "diagnostics": resolved_plugins.diagnostics,
                     },
                 )
             )

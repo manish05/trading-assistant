@@ -46,6 +46,24 @@ class AppConfig(BaseModel):
 _ENV_PATTERN = re.compile(r"\$\{([A-Z0-9_]+)\}")
 
 
+def default_config() -> AppConfig:
+    return AppConfig(
+        gateway=GatewayConfig(
+            host="0.0.0.0",
+            port=18789,
+            auth=GatewayAuthConfig(
+                mode="token",
+                token=os.getenv("GATEWAY_TOKEN", "dev-token"),
+            ),
+        ),
+        plugins=PluginsConfig(
+            allow=[],
+            deny=[],
+            slots={"memory": "sqlite_fts"},
+        ),
+    )
+
+
 def load_config(config_path: str | Path) -> AppConfig:
     path = Path(config_path)
     if not path.exists():
