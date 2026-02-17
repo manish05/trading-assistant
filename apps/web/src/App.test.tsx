@@ -1673,6 +1673,8 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Feed Symbol')).toHaveValue('LTCUSDm')
     expect(screen.getByLabelText('Account ID')).toHaveValue('acct_demo_1')
     expect(screen.getByLabelText('Feed Timeframe')).toHaveValue('5m')
+    expect(screen.getByLabelText('Emergency Action')).toHaveValue('pause_trading')
+    expect(screen.getByLabelText('Emergency Reason')).toHaveValue('dashboard emergency stop trigger')
   })
 
   it('respects merge mode when importing conflicting presets', async () => {
