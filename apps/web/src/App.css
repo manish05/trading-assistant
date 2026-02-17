@@ -196,6 +196,33 @@
   padding: 0.35rem 0.6rem;
 }
 
+.import-mode-indicator {
+  display: inline-flex;
+  align-items: center;
+}
+
+.import-mode-badge {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #2d4a7e;
+  border-radius: 999px;
+  padding: 0.12rem 0.42rem;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  background: #162744;
+  color: #dbe7fb;
+}
+
+.import-mode-badge.mode-overwrite {
+  border-color: #8a2f3e;
+  background: #3b1720;
+}
+
+.import-mode-badge.mode-merge {
+  border-color: #20673f;
+  background: #123822;
+}
+
 .preset-import {
   margin-top: 0.55rem;
   display: flex;

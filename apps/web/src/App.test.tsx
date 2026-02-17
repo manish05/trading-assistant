@@ -46,6 +46,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Export Presets JSON' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Import Presets JSON' })).toBeInTheDocument()
     expect(screen.getByLabelText('Import Mode')).toBeInTheDocument()
+    expect(screen.getByLabelText('Import Mode Badge')).toBeInTheDocument()
   })
 
   it('sends account and feed management requests', async () => {
@@ -382,6 +383,19 @@ describe('Dashboard shell', () => {
     expect(overwrittenRow).not.toBeNull()
     expect(within(preservedRow as HTMLElement).getByText('1')).toBeInTheDocument()
     expect(within(overwrittenRow as HTMLElement).getByText('0')).toBeInTheDocument()
+  })
+
+  it('updates import mode badge styling when mode changes', () => {
+    render(<App />)
+
+    const badge = screen.getByLabelText('Import Mode Badge')
+    expect(within(badge).getByText('overwrite')).toHaveClass('mode-overwrite')
+
+    fireEvent.change(screen.getByLabelText('Import Mode'), {
+      target: { value: 'merge' },
+    })
+
+    expect(within(badge).getByText('merge')).toHaveClass('mode-merge')
   })
 
   it('reports accepted and rejected preset names after import', async () => {

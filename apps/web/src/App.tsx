@@ -1218,6 +1218,11 @@ function App() {
                   <option value="merge">merge</option>
                 </select>
               </label>
+              <div className="import-mode-indicator" aria-label="Import Mode Badge">
+                <span className={`import-mode-badge mode-${presetImportMode}`}>
+                  {presetImportMode}
+                </span>
+              </div>
             </div>
             <label className="preset-import">
               Import Presets JSON
@@ -1235,7 +1240,9 @@ function App() {
                 </div>
                 <div>
                   <strong>Mode</strong>
-                  <span>{presetImportReport.mode}</span>
+                  <span className={`import-mode-badge mode-${presetImportReport.mode}`}>
+                    {presetImportReport.mode}
+                  </span>
                 </div>
                 <div>
                   <strong>Accepted</strong>
