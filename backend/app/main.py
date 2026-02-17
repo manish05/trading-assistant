@@ -32,8 +32,18 @@ def create_app(
             slots=config.plugins.slots,
         )
     )
-    plugin_registry.register_plugin(PluginRecord(plugin_id="sqlite_fts", kind="memory"))
-    plugin_registry.register_plugin(PluginRecord(plugin_id="metaapi_mcp", kind="connector"))
+    backend_root = Path(__file__).resolve().parents[1]
+    workspace_root = backend_root.parent
+    plugin_registry.discover_from_roots(
+        [
+            backend_root / "plugins",
+            workspace_root / "plugins",
+        ]
+    )
+    if not plugin_registry.has_plugin("sqlite_fts"):
+        plugin_registry.register_plugin(PluginRecord(plugin_id="sqlite_fts", kind="memory"))
+    if not plugin_registry.has_plugin("metaapi_mcp"):
+        plugin_registry.register_plugin(PluginRecord(plugin_id="metaapi_mcp", kind="connector"))
     resolved_plugins = plugin_registry.resolve()
 
     app = FastAPI(title="OpenClaw Inspired Platform Backend")
