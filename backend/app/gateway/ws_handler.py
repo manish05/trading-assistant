@@ -1,6 +1,6 @@
 from dataclasses import asdict
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Literal
 from uuid import uuid4
 
 from fastapi import WebSocket
@@ -20,7 +20,16 @@ from app.plugins.registry import ResolvedPlugins
 from app.protocol.frames import RequestFrame, parse_gateway_frame
 from app.queues.agent_queue import AgentQueue, AgentRequest, QueueSettings
 from app.queues.snapshot_store import QueueSnapshotStore
-from app.risk.engine import AccountRiskSnapshot, RiskEngine, RiskPolicy, TradeIntent
+from app.risk.control import RiskControlState
+from app.risk.engine import (
+    AccountRiskSnapshot,
+    RiskDecision,
+    RiskEngine,
+    RiskPolicy,
+    RiskViolation,
+    TradeIntent,
+    ViolationCode,
+)
 from app.trades.service import TradeExecutionService
 
 PROTOCOL_VERSION = 1
@@ -56,6 +65,13 @@ class RiskPreviewParams(BaseModel):
     intent: TradeIntent
     policy: RiskPolicy
     snapshot: AccountRiskSnapshot
+
+
+class RiskEmergencyStopParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    action: Literal["pause_trading", "cancel_all", "close_all", "disable_live"]
+    reason: str | None = None
 
 
 class MemorySearchParams(BaseModel):
@@ -286,6 +302,7 @@ async def handle_gateway_websocket(
     feed_service: FeedService,
     memory_index: MemoryIndex,
     resolved_plugins: ResolvedPlugins,
+    risk_control_state: RiskControlState,
     trade_execution_service: TradeExecutionService,
 ) -> None:
     await websocket.accept()
@@ -788,6 +805,54 @@ async def handle_gateway_websocket(
             )
             continue
 
+        if frame.method == "risk.status":
+            await websocket.send_json(
+                _ok_response(
+                    frame.id,
+                    payload=risk_control_state.status_payload(),
+                )
+            )
+            continue
+
+        if frame.method == "risk.emergencyStop":
+            try:
+                params = RiskEmergencyStopParams.model_validate(frame.params)
+            except ValidationError:
+                await websocket.send_json(
+                    _error_response(
+                        frame.id,
+                        code="INVALID_PARAMS",
+                        message="invalid risk.emergencyStop params",
+                    )
+                )
+                continue
+
+            emergency_payload = risk_control_state.activate_emergency_stop(
+                action=params.action,
+                reason=params.reason,
+            )
+            audit_store.append(
+                actor="user",
+                action="risk.emergencyStop",
+                trace_id=frame.id,
+                data={
+                    "action": params.action,
+                    "reason": params.reason,
+                    "emergencyStopActive": emergency_payload["emergencyStopActive"],
+                },
+            )
+            await websocket.send_json(
+                _event_frame(
+                    "event.risk.emergencyStop",
+                    {
+                        "requestId": frame.id,
+                        "status": emergency_payload,
+                    },
+                )
+            )
+            await websocket.send_json(_ok_response(frame.id, payload=emergency_payload))
+            continue
+
         if frame.method == "agent.run":
             try:
                 params = AgentRunParams.model_validate(frame.params)
@@ -1107,6 +1172,47 @@ async def handle_gateway_websocket(
                         frame.id,
                         code="INVALID_PARAMS",
                         message="invalid trades.place params",
+                    )
+                )
+                continue
+
+            if risk_control_state.status_payload()["emergencyStopActive"]:
+                emergency_status = risk_control_state.status_payload()
+                emergency_decision = RiskDecision(
+                    allowed=False,
+                    violations=[
+                        RiskViolation(
+                            code=ViolationCode.EMERGENCY_STOP_ACTIVE,
+                            message="Emergency stop is active.",
+                            details={
+                                "lastAction": emergency_status["lastAction"],
+                                "updatedAt": emergency_status["updatedAt"],
+                            },
+                        )
+                    ],
+                )
+                emergency_payload = emergency_decision.model_dump(mode="json")
+                audit_store.append(
+                    actor="user",
+                    action="trades.place.blocked",
+                    trace_id=frame.id,
+                    data={"decision": emergency_payload},
+                )
+                await websocket.send_json(
+                    _event_frame(
+                        "event.risk.alert",
+                        {
+                            "requestId": frame.id,
+                            "decision": emergency_payload,
+                        },
+                    )
+                )
+                await websocket.send_json(
+                    _error_response(
+                        frame.id,
+                        code="RISK_BLOCKED",
+                        message="trade blocked by emergency stop",
+                        details={"decision": emergency_payload},
                     )
                 )
                 continue

@@ -13,6 +13,7 @@ from app.memory.index import MemoryIndex
 from app.plugins.registry import PluginConfig, PluginRecord, PluginRegistry
 from app.queues.agent_queue import AgentQueue
 from app.queues.snapshot_store import QueueSnapshotStore
+from app.risk.control import RiskControlState
 from app.trades.service import TradeExecutionService
 
 
@@ -72,6 +73,7 @@ def create_app(
     app.state.feed_service = FeedService()
     app.state.memory_index = MemoryIndex(db_path=Path(data_dir) / "memory.db")
     app.state.resolved_plugins = resolved_plugins
+    app.state.risk_control_state = RiskControlState()
     app.state.trade_execution_service = TradeExecutionService()
 
     @app.get("/health")
@@ -92,6 +94,7 @@ def create_app(
             feed_service=app.state.feed_service,
             memory_index=app.state.memory_index,
             resolved_plugins=app.state.resolved_plugins,
+            risk_control_state=app.state.risk_control_state,
             trade_execution_service=app.state.trade_execution_service,
         )
 

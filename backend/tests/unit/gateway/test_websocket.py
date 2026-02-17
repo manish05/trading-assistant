@@ -140,6 +140,104 @@ def test_websocket_risk_preview_returns_decision(tmp_path) -> None:
     assert len(response["payload"]["violations"]) == 2
 
 
+def test_websocket_risk_status_and_emergency_stop_methods(tmp_path) -> None:
+    client = TestClient(create_app(data_dir=tmp_path))
+
+    with client.websocket_connect("/ws") as websocket:
+        websocket.send_json(_connect_payload())
+        _ = websocket.receive_json()
+
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_risk_status_1",
+                "method": "risk.status",
+                "params": {},
+            }
+        )
+        initial_status_response = websocket.receive_json()
+
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_risk_stop_1",
+                "method": "risk.emergencyStop",
+                "params": {
+                    "action": "pause_trading",
+                    "reason": "operator initiated kill-switch drill",
+                },
+            }
+        )
+        emergency_event, emergency_stop_response = _read_event_then_response(websocket)
+
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_risk_status_2",
+                "method": "risk.status",
+                "params": {},
+            }
+        )
+        active_status_response = websocket.receive_json()
+
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_trade_blocked_by_emergency_stop",
+                "method": "trades.place",
+                "params": {
+                    "intent": {
+                        "account_id": "acct_demo_1",
+                        "symbol": "ETHUSDm",
+                        "action": "PLACE_MARKET_ORDER",
+                        "side": "buy",
+                        "volume": 0.1,
+                        "stop_loss": 2400.0,
+                        "take_profit": 2700.0,
+                    },
+                    "policy": {
+                        "allowed_symbols": ["ETHUSDm"],
+                        "max_volume": 0.2,
+                        "max_concurrent_positions": 2,
+                        "max_daily_loss": 100.0,
+                        "require_stop_loss": True,
+                    },
+                    "snapshot": {
+                        "open_positions": 0,
+                        "daily_pnl": -20.0,
+                    },
+                },
+            }
+        )
+        blocked_trade_event, blocked_trade_response = _read_event_then_response(websocket)
+
+    assert initial_status_response["ok"] is True
+    assert initial_status_response["payload"]["emergencyStopActive"] is False
+    assert initial_status_response["payload"]["lastAction"] is None
+
+    assert emergency_event is not None
+    assert emergency_event["event"] == "event.risk.emergencyStop"
+    assert emergency_stop_response["ok"] is True
+    assert emergency_stop_response["payload"]["emergencyStopActive"] is True
+    assert emergency_stop_response["payload"]["lastAction"] == "pause_trading"
+    assert emergency_stop_response["payload"]["lastReason"] == (
+        "operator initiated kill-switch drill"
+    )
+    assert emergency_stop_response["payload"]["actionCounts"]["pause_trading"] == 1
+
+    assert active_status_response["ok"] is True
+    assert active_status_response["payload"]["emergencyStopActive"] is True
+    assert active_status_response["payload"]["lastAction"] == "pause_trading"
+
+    assert blocked_trade_event is not None
+    assert blocked_trade_event["event"] == "event.risk.alert"
+    assert blocked_trade_response["ok"] is False
+    assert blocked_trade_response["error"]["code"] == "RISK_BLOCKED"
+    assert blocked_trade_response["error"]["details"]["decision"]["violations"][0]["code"] == (
+        "EMERGENCY_STOP_ACTIVE"
+    )
+
+
 def test_websocket_agent_run_updates_queue_status(tmp_path) -> None:
     client = TestClient(create_app(data_dir=tmp_path))
 
