@@ -567,6 +567,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Lock Reset' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Reset Helper Prefs' })).toBeEnabled()
     expect(screen.getByText('Helper reset lock unlocked via Alt+L.')).toBeInTheDocument()
+    expect(screen.getByText('helper.reset.lock.toggle')).toBeInTheDocument()
 
     fireEvent.keyDown(input, { key: 'l', altKey: true })
     expect(screen.getByRole('button', { name: 'Unlock Reset' })).toBeInTheDocument()

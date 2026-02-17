@@ -476,6 +476,17 @@ function App() {
   )
 
   const toggleHelperResetLock = useCallback((source: 'Alt+L' | 'controls' | 'snapshot') => {
+    const now = Date.now()
+    const lockEntry: QuickActionHistory = {
+      id: `hist_${now}_helper_reset_lock_${source}`,
+      method: 'helper.reset.lock.toggle',
+      status: 'ok',
+      durationMs: 0,
+      timestamp: now,
+    }
+    setQuickActionHistory((current) =>
+      [lockEntry, ...current].slice(0, 20),
+    )
     setIsHelperResetLocked((current) => {
       const next = !current
       setHintModeLiveNote(`Helper reset lock ${next ? 'locked' : 'unlocked'} via ${source}.`)
