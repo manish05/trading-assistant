@@ -192,3 +192,65 @@ def test_websocket_agent_run_updates_queue_status() -> None:
     assert status_response["payload"]["activeRequestId"] == "ar_1"
     assert status_response["payload"]["pendingCount"] == 1
     assert status_response["payload"]["mode"] == "followup"
+
+
+def test_gateway_methods_write_audit_entries(tmp_path) -> None:
+    client = TestClient(create_app(data_dir=tmp_path))
+
+    with client.websocket_connect("/ws") as websocket:
+        websocket.send_json(_connect_payload())
+        _ = websocket.receive_json()
+
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_risk_2",
+                "method": "risk.preview",
+                "params": {
+                    "intent": {
+                        "account_id": "acct_demo_1",
+                        "symbol": "ETHUSDm",
+                        "action": "PLACE_MARKET_ORDER",
+                        "side": "buy",
+                        "volume": 0.1,
+                        "stop_loss": 2400.0,
+                        "take_profit": 2700.0,
+                    },
+                    "policy": {
+                        "allowed_symbols": ["ETHUSDm"],
+                        "max_volume": 0.2,
+                        "max_concurrent_positions": 2,
+                        "max_daily_loss": 100.0,
+                        "require_stop_loss": True,
+                    },
+                    "snapshot": {
+                        "open_positions": 0,
+                        "daily_pnl": -20.0,
+                    },
+                },
+            }
+        )
+        _ = websocket.receive_json()
+
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_run_3",
+                "method": "agent.run",
+                "params": {
+                    "agentId": "agent_eth_5m",
+                    "request": {
+                        "request_id": "ar_3",
+                        "kind": "hook_trigger",
+                        "priority": "normal",
+                        "payload": {"message": "run for audit"},
+                    },
+                },
+            }
+        )
+        _ = websocket.receive_json()
+
+    audit_log = (tmp_path / "audit.jsonl").read_text().splitlines()
+    assert len(audit_log) >= 2
+    assert '"action":"risk.preview"' in audit_log[0]
+    assert '"action":"agent.run"' in audit_log[1]

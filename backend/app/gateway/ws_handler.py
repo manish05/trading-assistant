@@ -6,6 +6,7 @@ from fastapi import WebSocket
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from starlette.websockets import WebSocketDisconnect
 
+from app.audit.store import AuditStore
 from app.gateway.models import GatewayConnectParams
 from app.protocol.frames import RequestFrame, parse_gateway_frame
 from app.queues.agent_queue import AgentQueue, AgentRequest, QueueSettings
@@ -89,6 +90,7 @@ async def handle_gateway_websocket(
     *,
     started_at: datetime,
     agent_queues: dict[str, AgentQueue],
+    audit_store: AuditStore,
 ) -> None:
     await websocket.accept()
 
@@ -219,10 +221,20 @@ async def handle_gateway_websocket(
                 policy=params.policy,
                 snapshot=params.snapshot,
             )
+            decision_payload = decision.model_dump(mode="json")
+            audit_store.append(
+                actor="user",
+                action="risk.preview",
+                trace_id=frame.id,
+                data={
+                    "intent": params.intent.model_dump(mode="json"),
+                    "decision": decision_payload,
+                },
+            )
             await websocket.send_json(
                 _ok_response(
                     frame.id,
-                    payload=decision.model_dump(mode="json"),
+                    payload=decision_payload,
                 )
             )
             continue
@@ -250,11 +262,22 @@ async def handle_gateway_websocket(
                 payload=params.request.payload,
             )
             decision = queue.enqueue(request, now_ms=int(datetime.now(UTC).timestamp() * 1000))
+            decision_payload = decision.model_dump(mode="json")
+            audit_store.append(
+                actor="user",
+                action="agent.run",
+                trace_id=frame.id,
+                data={
+                    "agentId": params.agentId,
+                    "request": request.model_dump(mode="json"),
+                    "decision": decision_payload,
+                },
+            )
             await websocket.send_json(
                 _ok_response(
                     frame.id,
                     payload={
-                        "decision": decision.model_dump(mode="json"),
+                        "decision": decision_payload,
                         "activeRequestId": (
                             queue.active_request.request_id if queue.active_request else None
                         ),
