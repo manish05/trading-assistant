@@ -77,6 +77,12 @@ type MarketOverlayMarkerFocus = 'all' | 'trade' | 'risk' | 'feed'
 type MarketOverlayMarkerWindow = 3 | 5 | 8
 type MarketOverlayMarkerAgeFilter = 'all' | 'last-60s' | 'last-300s'
 type MarketOverlayMarkerBucket = 'none' | '30s' | '60s'
+type MarketOverlayMarkerDeltaFilter =
+  | 'all'
+  | 'latest-up'
+  | 'latest-down'
+  | 'latest-flat'
+  | 'latest-unavailable'
 type MarketOverlayBucketScope = 'all-buckets' | 'latest-bucket'
 type MarketOverlayTimelineOrder = 'newest-first' | 'oldest-first'
 type MarketOverlayMarkerWrap = 'bounded' | 'wrap'
@@ -177,6 +183,8 @@ const MARKET_OVERLAY_CHART_LENS_STORAGE_KEY = 'quick-action-market-overlay-chart
 const MARKET_OVERLAY_MARKER_FOCUS_STORAGE_KEY = 'quick-action-market-overlay-marker-focus-v1'
 const MARKET_OVERLAY_MARKER_WINDOW_STORAGE_KEY = 'quick-action-market-overlay-marker-window-v1'
 const MARKET_OVERLAY_MARKER_AGE_FILTER_STORAGE_KEY = 'quick-action-market-overlay-marker-age-filter-v1'
+const MARKET_OVERLAY_MARKER_DELTA_FILTER_STORAGE_KEY =
+  'quick-action-market-overlay-marker-delta-filter-v1'
 const MARKET_OVERLAY_MARKER_BUCKET_STORAGE_KEY = 'quick-action-market-overlay-marker-bucket-v1'
 const MARKET_OVERLAY_BUCKET_SCOPE_STORAGE_KEY = 'quick-action-market-overlay-bucket-scope-v1'
 const MARKET_OVERLAY_TIMELINE_ORDER_STORAGE_KEY = 'quick-action-market-overlay-timeline-order-v1'
@@ -449,6 +457,22 @@ const readMarketOverlayMarkerAgeFilterFromStorage = (): MarketOverlayMarkerAgeFi
   return 'all'
 }
 
+const readMarketOverlayMarkerDeltaFilterFromStorage = (): MarketOverlayMarkerDeltaFilter => {
+  if (typeof window === 'undefined') {
+    return 'all'
+  }
+  const raw = window.localStorage.getItem(MARKET_OVERLAY_MARKER_DELTA_FILTER_STORAGE_KEY)
+  if (
+    raw === 'latest-up' ||
+    raw === 'latest-down' ||
+    raw === 'latest-flat' ||
+    raw === 'latest-unavailable'
+  ) {
+    return raw
+  }
+  return 'all'
+}
+
 const readMarketOverlayMarkerBucketFromStorage = (): MarketOverlayMarkerBucket => {
   if (typeof window === 'undefined') {
     return 'none'
@@ -494,6 +518,23 @@ const readMarketOverlaySelectionModeFromStorage = (): MarketOverlaySelectionMode
   return window.localStorage.getItem(MARKET_OVERLAY_SELECTION_MODE_STORAGE_KEY) === 'follow-latest'
     ? 'follow-latest'
     : 'sticky'
+}
+
+const resolveMarketOverlayLatestDeltaTone = (
+  point: MarketOverlayChartPoint | null,
+  latestPoint: MarketOverlayChartPoint | null,
+): 'up' | 'down' | 'flat' | 'unavailable' => {
+  if (!point || !latestPoint) {
+    return 'unavailable'
+  }
+  const delta = point.value - latestPoint.value
+  if (delta > 0) {
+    return 'up'
+  }
+  if (delta < 0) {
+    return 'down'
+  }
+  return 'flat'
 }
 
 const sanitizePreset = (value: unknown): QuickActionPreset | null => {
@@ -874,6 +915,8 @@ function App() {
     useState<MarketOverlayMarkerWindow>(readMarketOverlayMarkerWindowFromStorage)
   const [marketOverlayMarkerAgeFilter, setMarketOverlayMarkerAgeFilter] =
     useState<MarketOverlayMarkerAgeFilter>(readMarketOverlayMarkerAgeFilterFromStorage)
+  const [marketOverlayMarkerDeltaFilter, setMarketOverlayMarkerDeltaFilter] =
+    useState<MarketOverlayMarkerDeltaFilter>(readMarketOverlayMarkerDeltaFilterFromStorage)
   const [marketOverlayMarkerBucket, setMarketOverlayMarkerBucket] = useState<MarketOverlayMarkerBucket>(
     readMarketOverlayMarkerBucketFromStorage,
   )
@@ -1165,7 +1208,7 @@ function App() {
       return latest === null || bucketStart > latest ? bucketStart : latest
     }, null as number | null)
   }, [marketOverlayMarkerBucket, marketOverlayTimelineAnnotations])
-  const marketOverlayScopedTimelineAnnotations = useMemo(() => {
+  const marketOverlayBucketScopedTimelineAnnotations = useMemo(() => {
     if (
       marketOverlayMarkerBucket === 'none' ||
       marketOverlayBucketScope === 'all-buckets' ||
@@ -1183,6 +1226,65 @@ function App() {
     marketOverlayLatestBucketStart,
     marketOverlayMarkerBucket,
     marketOverlayTimelineAnnotations,
+  ])
+  const marketOverlayMarkerDeltaFilterSummary = useMemo(() => {
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    let upCount = 0
+    let downCount = 0
+    let flatCount = 0
+    let unavailableCount = 0
+    let matchedCount = 0
+    marketOverlayBucketScopedTimelineAnnotations.forEach((annotation) => {
+      const tone = resolveMarketOverlayLatestDeltaTone(pointByTime.get(annotation.time) ?? null, latestPoint)
+      if (tone === 'up') {
+        upCount += 1
+      } else if (tone === 'down') {
+        downCount += 1
+      } else if (tone === 'flat') {
+        flatCount += 1
+      } else {
+        unavailableCount += 1
+      }
+      const isMatch =
+        marketOverlayMarkerDeltaFilter === 'all' ||
+        (marketOverlayMarkerDeltaFilter === 'latest-up' && tone === 'up') ||
+        (marketOverlayMarkerDeltaFilter === 'latest-down' && tone === 'down') ||
+        (marketOverlayMarkerDeltaFilter === 'latest-flat' && tone === 'flat') ||
+        (marketOverlayMarkerDeltaFilter === 'latest-unavailable' && tone === 'unavailable')
+      if (isMatch) {
+        matchedCount += 1
+      }
+    })
+    return `mode:${marketOverlayMarkerDeltaFilter} · matched:${matchedCount}/${marketOverlayBucketScopedTimelineAnnotations.length} · up:${upCount} · down:${downCount} · flat:${flatCount} · n/a:${unavailableCount}`
+  }, [
+    marketOverlayBucketScopedTimelineAnnotations,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaFilter,
+  ])
+  const marketOverlayScopedTimelineAnnotations = useMemo(() => {
+    if (marketOverlayMarkerDeltaFilter === 'all') {
+      return marketOverlayBucketScopedTimelineAnnotations
+    }
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    return marketOverlayBucketScopedTimelineAnnotations.filter((annotation) => {
+      const tone = resolveMarketOverlayLatestDeltaTone(pointByTime.get(annotation.time) ?? null, latestPoint)
+      if (marketOverlayMarkerDeltaFilter === 'latest-up') {
+        return tone === 'up'
+      }
+      if (marketOverlayMarkerDeltaFilter === 'latest-down') {
+        return tone === 'down'
+      }
+      if (marketOverlayMarkerDeltaFilter === 'latest-flat') {
+        return tone === 'flat'
+      }
+      return tone === 'unavailable'
+    })
+  }, [
+    marketOverlayBucketScopedTimelineAnnotations,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaFilter,
   ])
   const marketOverlayScopedVisibleAnnotations = useMemo(() => {
     if (marketOverlayScopedTimelineAnnotations.length === 0) {
@@ -4600,6 +4702,13 @@ function App() {
   }, [marketOverlayMarkerAgeFilter])
 
   useEffect(() => {
+    window.localStorage.setItem(
+      MARKET_OVERLAY_MARKER_DELTA_FILTER_STORAGE_KEY,
+      marketOverlayMarkerDeltaFilter,
+    )
+  }, [marketOverlayMarkerDeltaFilter])
+
+  useEffect(() => {
     window.localStorage.setItem(MARKET_OVERLAY_MARKER_BUCKET_STORAGE_KEY, marketOverlayMarkerBucket)
   }, [marketOverlayMarkerBucket])
 
@@ -4835,6 +4944,7 @@ function App() {
     const markerFocus = marketOverlayMarkerFocus
     const markerWindow = marketOverlayMarkerWindow
     const markerAge = marketOverlayMarkerAgeFilter
+    const markerDeltaFilter = marketOverlayMarkerDeltaFilter
     const markerBucket = marketOverlayMarkerBucket
     const bucketScope = marketOverlayBucketScope
     const timelineOrder = marketOverlayTimelineOrder
@@ -4848,9 +4958,9 @@ function App() {
     const pulseSummary = marketOverlayPulse.summary
     const regimeSummary = marketOverlayRegime.summary
     const summaryByMode: Record<MarketOverlayMode, string> = {
-      'price-only': `candles:${candles} · chartPoints:${chartPoints} · chartLens:${chartLens} · markerFocus:${markerFocus} · markerWindow:${markerWindow} · markerAge:${markerAge} · markerBucket:${markerBucket} · bucketScope:${bucketScope} · timelineOrder:${timelineOrder} · markerWrap:${markerWrap} · markerSelection:${markerSelection} · markerNav:${markerNavigation} · markers:${markerSummary} · corr:${correlationHint} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
-      'with-trades': `candles:${candles} · tradeEvents:${tradeEvents} · chartPoints:${chartPoints} · chartLens:${chartLens} · markerFocus:${markerFocus} · markerWindow:${markerWindow} · markerAge:${markerAge} · markerBucket:${markerBucket} · bucketScope:${bucketScope} · timelineOrder:${timelineOrder} · markerWrap:${markerWrap} · markerSelection:${markerSelection} · markerNav:${markerNavigation} · markers:${markerSummary} · corr:${correlationHint} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
-      'with-risk': `candles:${candles} · tradeEvents:${tradeEvents} · riskAlerts:${alerts} · chartPoints:${chartPoints} · chartLens:${chartLens} · markerFocus:${markerFocus} · markerWindow:${markerWindow} · markerAge:${markerAge} · markerBucket:${markerBucket} · bucketScope:${bucketScope} · timelineOrder:${timelineOrder} · markerWrap:${markerWrap} · markerSelection:${markerSelection} · markerNav:${markerNavigation} · markers:${markerSummary} · corr:${correlationHint} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
+      'price-only': `candles:${candles} · chartPoints:${chartPoints} · chartLens:${chartLens} · markerFocus:${markerFocus} · markerWindow:${markerWindow} · markerAge:${markerAge} · markerDelta:${markerDeltaFilter} · markerBucket:${markerBucket} · bucketScope:${bucketScope} · timelineOrder:${timelineOrder} · markerWrap:${markerWrap} · markerSelection:${markerSelection} · markerNav:${markerNavigation} · markers:${markerSummary} · corr:${correlationHint} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
+      'with-trades': `candles:${candles} · tradeEvents:${tradeEvents} · chartPoints:${chartPoints} · chartLens:${chartLens} · markerFocus:${markerFocus} · markerWindow:${markerWindow} · markerAge:${markerAge} · markerDelta:${markerDeltaFilter} · markerBucket:${markerBucket} · bucketScope:${bucketScope} · timelineOrder:${timelineOrder} · markerWrap:${markerWrap} · markerSelection:${markerSelection} · markerNav:${markerNavigation} · markers:${markerSummary} · corr:${correlationHint} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
+      'with-risk': `candles:${candles} · tradeEvents:${tradeEvents} · riskAlerts:${alerts} · chartPoints:${chartPoints} · chartLens:${chartLens} · markerFocus:${markerFocus} · markerWindow:${markerWindow} · markerAge:${markerAge} · markerDelta:${markerDeltaFilter} · markerBucket:${markerBucket} · bucketScope:${bucketScope} · timelineOrder:${timelineOrder} · markerWrap:${markerWrap} · markerSelection:${markerSelection} · markerNav:${markerNavigation} · markers:${markerSummary} · corr:${correlationHint} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
     }
     setMarketOverlaySnapshotSummary(summaryByMode[marketOverlayMode])
     setMarketOverlaySnapshotAt(new Date().toISOString())
@@ -4865,6 +4975,7 @@ function App() {
     marketOverlayMarkerBucket,
     marketOverlayBucketScope,
     marketOverlayMarkerAgeFilter,
+    marketOverlayMarkerDeltaFilter,
     marketOverlayMarkerWrap,
     marketOverlaySelectionMode,
     marketOverlayTimelineOrder,
@@ -4970,6 +5081,21 @@ function App() {
                 <option value="all">all</option>
                 <option value="last-60s">last-60s</option>
                 <option value="last-300s">last-300s</option>
+              </select>
+            </label>
+            <label>
+              Delta Filter
+              <select
+                value={marketOverlayMarkerDeltaFilter}
+                onChange={(event) =>
+                  setMarketOverlayMarkerDeltaFilter(event.target.value as MarketOverlayMarkerDeltaFilter)
+                }
+              >
+                <option value="all">all</option>
+                <option value="latest-up">latest-up</option>
+                <option value="latest-down">latest-down</option>
+                <option value="latest-flat">latest-flat</option>
+                <option value="latest-unavailable">latest-unavailable</option>
               </select>
             </label>
             <label>
@@ -5105,6 +5231,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Scope Summary">
               Scope: {marketOverlayMarkerScopeSummary}
+            </p>
+            <p aria-label="Overlay Marker Delta Filter Summary">
+              Delta filter: {marketOverlayMarkerDeltaFilterSummary}
             </p>
             <p aria-label="Overlay Marker Delta Summary">Delta summary: {marketOverlayMarkerDeltaSummary}</p>
             <p aria-label="Overlay Marker Delta Tone Summary">

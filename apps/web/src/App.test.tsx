@@ -42,6 +42,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Marker Window')).toHaveValue('5')
     expect(screen.getByLabelText('Marker Focus')).toHaveValue('all')
     expect(screen.getByLabelText('Marker Age')).toHaveValue('all')
+    expect(screen.getByLabelText('Delta Filter')).toHaveValue('all')
     expect(screen.getByLabelText('Marker Bucket')).toHaveValue('none')
     expect(screen.getByLabelText('Bucket Scope')).toHaveValue('all-buckets')
     expect(screen.getByLabelText('Timeline Order')).toHaveValue('newest-first')
@@ -72,6 +73,9 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Overlay Marker Scope Summary')).toHaveTextContent(
       'Scope: visible:t0/r0/f0 · selectedKind:none',
+    )
+    expect(screen.getByLabelText('Overlay Marker Delta Filter Summary')).toHaveTextContent(
+      'Delta filter: mode:all · matched:0/0 · up:0 · down:0 · flat:0 · n/a:0',
     )
     expect(screen.getByLabelText('Overlay Marker Chronology Summary')).toHaveTextContent(
       'Chronology: none',
@@ -358,6 +362,9 @@ describe('Dashboard shell', () => {
     fireEvent.change(screen.getByLabelText('Marker Age'), {
       target: { value: 'last-60s' },
     })
+    fireEvent.change(screen.getByLabelText('Delta Filter'), {
+      target: { value: 'latest-down' },
+    })
     fireEvent.change(screen.getByLabelText('Marker Bucket'), {
       target: { value: '60s' },
     })
@@ -382,6 +389,9 @@ describe('Dashboard shell', () => {
     expect(window.localStorage.getItem('quick-action-market-overlay-marker-window-v1')).toBe('8')
     expect(window.localStorage.getItem('quick-action-market-overlay-marker-age-filter-v1')).toBe(
       'last-60s',
+    )
+    expect(window.localStorage.getItem('quick-action-market-overlay-marker-delta-filter-v1')).toBe(
+      'latest-down',
     )
     expect(window.localStorage.getItem('quick-action-market-overlay-marker-bucket-v1')).toBe('60s')
     expect(window.localStorage.getItem('quick-action-market-overlay-bucket-scope-v1')).toBe(
@@ -425,7 +435,7 @@ describe('Dashboard shell', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Refresh Overlay Snapshot' }))
     expect(screen.getByLabelText('Overlay Snapshot Summary')).toHaveTextContent(
-      'Summary: candles:0 · chartPoints:0 · chartLens:price-only · markerFocus:all · markerWindow:5 · markerAge:all · markerBucket:none · bucketScope:all-buckets · timelineOrder:newest-first · markerWrap:bounded · markerSelection:sticky · markerNav:0/0|selected:none · markers:t0/r0/f0 · corr:none · trend:neutral · vol:n/a · pulse:quiet(0) · regime:observe',
+      'Summary: candles:0 · chartPoints:0 · chartLens:price-only · markerFocus:all · markerWindow:5 · markerAge:all · markerDelta:all · markerBucket:none · bucketScope:all-buckets · timelineOrder:newest-first · markerWrap:bounded · markerSelection:sticky · markerNav:0/0|selected:none · markers:t0/r0/f0 · corr:none · trend:neutral · vol:n/a · pulse:quiet(0) · regime:observe',
     )
     expect(screen.getByLabelText('Overlay Snapshot Time')).not.toHaveTextContent('Snapshot: never')
 
@@ -434,7 +444,7 @@ describe('Dashboard shell', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: 'Refresh Overlay Snapshot' }))
     expect(screen.getByLabelText('Overlay Snapshot Summary')).toHaveTextContent(
-      'Summary: candles:0 · tradeEvents:0 · chartPoints:0 · chartLens:price-only · markerFocus:all · markerWindow:5 · markerAge:all · markerBucket:none · bucketScope:all-buckets · timelineOrder:newest-first · markerWrap:bounded · markerSelection:sticky · markerNav:0/0|selected:none · markers:t0/r0/f0 · corr:none · trend:neutral · vol:n/a · pulse:quiet(0) · regime:observe',
+      'Summary: candles:0 · tradeEvents:0 · chartPoints:0 · chartLens:price-only · markerFocus:all · markerWindow:5 · markerAge:all · markerDelta:all · markerBucket:none · bucketScope:all-buckets · timelineOrder:newest-first · markerWrap:bounded · markerSelection:sticky · markerNav:0/0|selected:none · markers:t0/r0/f0 · corr:none · trend:neutral · vol:n/a · pulse:quiet(0) · regime:observe',
     )
 
     fireEvent.change(screen.getByLabelText('Overlay Mode'), {
@@ -442,7 +452,7 @@ describe('Dashboard shell', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: 'Refresh Overlay Snapshot' }))
     expect(screen.getByLabelText('Overlay Snapshot Summary')).toHaveTextContent(
-      'Summary: candles:0 · tradeEvents:0 · riskAlerts:0 · chartPoints:0 · chartLens:price-only · markerFocus:all · markerWindow:5 · markerAge:all · markerBucket:none · bucketScope:all-buckets · timelineOrder:newest-first · markerWrap:bounded · markerSelection:sticky · markerNav:0/0|selected:none · markers:t0/r0/f0 · corr:none · trend:neutral · vol:n/a · pulse:quiet(0) · regime:observe',
+      'Summary: candles:0 · tradeEvents:0 · riskAlerts:0 · chartPoints:0 · chartLens:price-only · markerFocus:all · markerWindow:5 · markerAge:all · markerDelta:all · markerBucket:none · bucketScope:all-buckets · timelineOrder:newest-first · markerWrap:bounded · markerSelection:sticky · markerNav:0/0|selected:none · markers:t0/r0/f0 · corr:none · trend:neutral · vol:n/a · pulse:quiet(0) · regime:observe',
     )
   })
 
@@ -1058,7 +1068,7 @@ describe('Dashboard shell', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Refresh Overlay Snapshot' }))
     expect(screen.getByLabelText('Overlay Snapshot Summary')).toHaveTextContent(
-      'Summary: candles:2 · tradeEvents:1 · riskAlerts:1 · chartPoints:2 · chartLens:diagnostics · markerFocus:all · markerWindow:5 · markerAge:all · markerBucket:none · bucketScope:all-buckets · timelineOrder:oldest-first · markerWrap:bounded · markerSelection:sticky · markerNav:2/2|selected:risk:live_trading_disabled:raised · markers:t1/r1/f0 · corr:risk:live_trading_disabled:raised@2.00(t2) · trend:up (+1.00) · vol:1.00 · pulse:intense(5) · regime:risk_on',
+      'Summary: candles:2 · tradeEvents:1 · riskAlerts:1 · chartPoints:2 · chartLens:diagnostics · markerFocus:all · markerWindow:5 · markerAge:all · markerDelta:all · markerBucket:none · bucketScope:all-buckets · timelineOrder:oldest-first · markerWrap:bounded · markerSelection:sticky · markerNav:2/2|selected:risk:live_trading_disabled:raised · markers:t1/r1/f0 · corr:risk:live_trading_disabled:raised@2.00(t2) · trend:up (+1.00) · vol:1.00 · pulse:intense(5) · regime:risk_on',
     )
 
     sendSpy.mockRestore()
@@ -1185,6 +1195,28 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
       'Timeline buckets: mode:none · scope:all-buckets · buckets:2 · latest:t2 · count:2',
     )
+    expect(screen.getByLabelText('Overlay Marker Delta Filter Summary')).toHaveTextContent(
+      'Delta filter: mode:all · matched:2/2 · up:0 · down:1 · flat:1 · n/a:0',
+    )
+    fireEvent.change(screen.getByLabelText('Delta Filter'), { target: { value: 'latest-down' } })
+    await waitFor(() => {
+      expect(screen.getByLabelText('Overlay Marker Drilldown')).toHaveTextContent(
+        'Marker focus: all · window:5 · age:all · scope:all-buckets · order:newest-first · visible:1 · latest:trade:closed:queued',
+      )
+    })
+    expect(screen.getByLabelText('Overlay Marker Delta Filter Summary')).toHaveTextContent(
+      'Delta filter: mode:latest-down · matched:1/2 · up:0 · down:1 · flat:1 · n/a:0',
+    )
+    expect(screen.getByLabelText('Overlay Markers')).toHaveTextContent('trade:closed:queued')
+    expect(screen.getByLabelText('Overlay Markers')).not.toHaveTextContent(
+      'risk:live_trading_disabled:raised',
+    )
+    fireEvent.change(screen.getByLabelText('Delta Filter'), { target: { value: 'all' } })
+    await waitFor(() => {
+      expect(screen.getByLabelText('Overlay Marker Drilldown')).toHaveTextContent(
+        'Marker focus: all · window:5 · age:all · scope:all-buckets · order:newest-first · visible:2 · latest:risk:live_trading_disabled:raised',
+      )
+    })
     fireEvent.change(screen.getByLabelText('Marker Bucket'), { target: { value: '60s' } })
     const expectedBucket = new Date(Math.floor(fakeNow / 60_000) * 60_000).toISOString()
     expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
