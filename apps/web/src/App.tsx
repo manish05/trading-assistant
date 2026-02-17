@@ -116,6 +116,8 @@ function App() {
   const [activeSubscriptionId, setActiveSubscriptionId] = useState<string | null>(null)
   const [feedLifecycle, setFeedLifecycle] = useState<FeedLifecycleBadge[]>([])
   const [quickActionHistory, setQuickActionHistory] = useState<QuickActionHistory[]>([])
+  const [lastSuccessByMethod, setLastSuccessByMethod] = useState<Record<string, string>>({})
+  const [lastErrorByMethod, setLastErrorByMethod] = useState<Record<string, string>>({})
   const [blocks, setBlocks] = useState<BlockItem[]>([])
 
   const websocketUrl = useMemo(() => {
@@ -142,6 +144,10 @@ function App() {
     async (method: string, params: Record<string, unknown>): Promise<Record<string, unknown> | null> => {
       const socket = wsRef.current
       if (!socket || socket.readyState !== WebSocket.OPEN) {
+        setLastErrorByMethod((current) => ({
+          ...current,
+          [method]: new Date().toISOString(),
+        }))
         pushHistory({
           id: `hist_${Date.now()}`,
           method,
@@ -204,6 +210,10 @@ function App() {
       const durationMs = Date.now() - nowMs
 
       if (!response.ok) {
+        setLastErrorByMethod((current) => ({
+          ...current,
+          [method]: new Date().toISOString(),
+        }))
         patchHistory(historyId, {
           status: 'error',
           durationMs,
@@ -221,6 +231,10 @@ function App() {
         status: 'ok',
         durationMs,
       })
+      setLastSuccessByMethod((current) => ({
+        ...current,
+        [method]: new Date().toISOString(),
+      }))
       appendBlock({
         id: `blk_${Date.now()}`,
         title: `${method} response`,
@@ -985,6 +999,45 @@ function App() {
                     ))}
                   </ul>
                 )}
+              </dd>
+            </div>
+            <div>
+              <dt>Quick Action Timestamps</dt>
+              <dd className="timestamp-grid">
+                <div>
+                  <strong>Success</strong>
+                  {Object.keys(lastSuccessByMethod).length === 0 ? (
+                    <div className="history-empty">none</div>
+                  ) : (
+                    <ul className="timestamp-list">
+                      {Object.entries(lastSuccessByMethod)
+                        .slice(0, 6)
+                        .map(([method, ts]) => (
+                          <li key={`ok_${method}`}>
+                            <span>{method}</span>
+                            <span>{ts}</span>
+                          </li>
+                        ))}
+                    </ul>
+                  )}
+                </div>
+                <div>
+                  <strong>Error</strong>
+                  {Object.keys(lastErrorByMethod).length === 0 ? (
+                    <div className="history-empty">none</div>
+                  ) : (
+                    <ul className="timestamp-list">
+                      {Object.entries(lastErrorByMethod)
+                        .slice(0, 6)
+                        .map(([method, ts]) => (
+                          <li key={`err_${method}`}>
+                            <span>{method}</span>
+                            <span>{ts}</span>
+                          </li>
+                        ))}
+                    </ul>
+                  )}
+                </div>
               </dd>
             </div>
           </dl>

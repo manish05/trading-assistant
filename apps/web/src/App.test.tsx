@@ -17,6 +17,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByText('Account Status')).toBeInTheDocument()
     expect(screen.getByText('Feed Lifecycle')).toBeInTheDocument()
     expect(screen.getByText('Quick Action History')).toBeInTheDocument()
+    expect(screen.getByText('Quick Action Timestamps')).toBeInTheDocument()
   })
 
   it('renders gateway action buttons for account/feed listing', () => {

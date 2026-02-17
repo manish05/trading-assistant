@@ -291,6 +291,33 @@
   color: #9fb0cc;
 }
 
+.timestamp-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.45rem;
+}
+
+.timestamp-grid strong {
+  font-size: 0.72rem;
+  color: #d9e4f7;
+}
+
+.timestamp-list {
+  margin: 0.15rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.2rem;
+}
+
+.timestamp-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.4rem;
+  font-size: 0.7rem;
+  color: #9fb0cc;
+}
+
 .empty-state {
   color: #9aa6be;
   font-size: 0.85rem;
