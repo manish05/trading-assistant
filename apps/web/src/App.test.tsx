@@ -47,6 +47,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Import Presets JSON' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Copy Import Report' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Clear Import Report' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Expand Report' })).toBeDisabled()
     expect(screen.getByLabelText('Import Mode')).toBeInTheDocument()
     expect(screen.getByLabelText('Import Mode Badge')).toBeInTheDocument()
   })
@@ -485,5 +486,27 @@ describe('Dashboard shell', () => {
     expect(screen.queryByText('Accepted')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Copy Import Report' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Clear Import Report' })).toBeDisabled()
+  })
+
+  it('supports collapsing and expanding preset import report details', async () => {
+    render(<App />)
+    fireEvent.change(screen.getByLabelText('Import Presets JSON'), {
+      target: {
+        value: '{"toggle-template":{"feedSymbol":"ETHUSDm"}}',
+      },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Import Presets JSON' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Collapse Report' })).toBeEnabled()
+      expect(screen.getByText('Accepted')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Collapse Report' }))
+    expect(screen.queryByText('Accepted')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Expand Report' })).toBeEnabled()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Expand Report' }))
+    expect(screen.getByText('Accepted')).toBeInTheDocument()
   })
 })

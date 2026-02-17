@@ -251,6 +251,7 @@ function App() {
     readPresetImportModeFromStorage,
   )
   const [presetImportReport, setPresetImportReport] = useState<PresetImportReport | null>(null)
+  const [isPresetImportReportExpanded, setIsPresetImportReportExpanded] = useState<boolean>(true)
   const [availablePresetNames, setAvailablePresetNames] = useState<string[]>(() =>
     Object.keys(readPresetStoreFromStorage()).sort(),
   )
@@ -843,6 +844,7 @@ function App() {
       overwrittenCount,
       importedAt: new Date().toISOString(),
     })
+    setIsPresetImportReportExpanded(true)
     appendBlock({
       id: `blk_${Date.now()}`,
       title: 'presets imported',
@@ -1308,8 +1310,16 @@ function App() {
               <button type="button" onClick={clearPresetImportReport} disabled={!presetImportReport}>
                 Clear Import Report
               </button>
+              <button
+                type="button"
+                onClick={() => setIsPresetImportReportExpanded((current) => !current)}
+                disabled={!presetImportReport}
+                aria-expanded={isPresetImportReportExpanded}
+              >
+                {presetImportReport && isPresetImportReportExpanded ? 'Collapse Report' : 'Expand Report'}
+              </button>
             </div>
-            {presetImportReport ? (
+            {presetImportReport && isPresetImportReportExpanded ? (
               <div className="preset-import-report">
                 <div>
                   <strong>Last Import</strong>
