@@ -689,6 +689,7 @@ describe('Dashboard shell', () => {
       expect(payload).toContain('enabled=1/2')
       expect(payload).toContain('density=chips')
       expect(payload).toContain('resetAt=never')
+      expect(payload).toContain('resetFormat=absolute')
     })
   })
 
