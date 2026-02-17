@@ -1391,9 +1391,22 @@ function App() {
       `resetBadgeVisible=${isHelperResetBadgeVisible ? 'yes' : 'no'}`,
       `resetBadgeSection=${isHelperResetBadgeSectionExpanded ? 'expanded' : 'collapsed'}`,
       `lockToggleTotal=${helperResetLockToggleCount}`,
+      `lockToggleTone=${helperResetLockToggleToneClass.replace('counter-tone-', '')}`,
       `lockToggleAlt+L=${helperResetLockSourceCounts['Alt+L']}`,
+      `lockToggleAlt+LTone=${resolveLockCounterTone(helperResetLockSourceCounts['Alt+L']).replace(
+        'counter-tone-',
+        '',
+      )}`,
       `lockToggleControls=${helperResetLockSourceCounts.controls}`,
+      `lockToggleControlsTone=${resolveLockCounterTone(helperResetLockSourceCounts.controls).replace(
+        'counter-tone-',
+        '',
+      )}`,
       `lockToggleSnapshot=${helperResetLockSourceCounts.snapshot}`,
+      `lockToggleSnapshotTone=${resolveLockCounterTone(helperResetLockSourceCounts.snapshot).replace(
+        'counter-tone-',
+        '',
+      )}`,
       `lockCounterResetAt=${helperLockCountersLastResetAt ?? 'never'}`,
     ].join('\n')
     try {
@@ -1423,6 +1436,7 @@ function App() {
     helperLockCountersLastResetAt,
     helperResetLockSourceCounts,
     helperResetLockToggleCount,
+    helperResetLockToggleToneClass,
     isHelperResetBadgeSectionExpanded,
     isHelperResetBadgeVisible,
     isHelperResetLocked,

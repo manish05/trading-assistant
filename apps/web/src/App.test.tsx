@@ -1029,9 +1029,13 @@ describe('Dashboard shell', () => {
       expect(payload).toContain('resetBadgeVisible=yes')
       expect(payload).toContain('resetBadgeSection=expanded')
       expect(payload).toContain('lockToggleTotal=0')
+      expect(payload).toContain('lockToggleTone=none')
       expect(payload).toContain('lockToggleAlt+L=0')
+      expect(payload).toContain('lockToggleAlt+LTone=none')
       expect(payload).toContain('lockToggleControls=0')
+      expect(payload).toContain('lockToggleControlsTone=none')
       expect(payload).toContain('lockToggleSnapshot=0')
+      expect(payload).toContain('lockToggleSnapshotTone=none')
       expect(payload).toContain('lockCounterResetAt=never')
       expect(
         screen.getByText('Copied helper reset badge text to clipboard (lock: locked).'),
