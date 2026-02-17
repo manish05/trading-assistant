@@ -606,6 +606,30 @@ function App() {
     [isBlockTelemetryVisible, lockTelemetryToastDetailsWithLabelAndSources],
   )
 
+  const lockTelemetrySuccessSentence = useMemo(
+    () =>
+      isBlockTelemetryVisible
+        ? ` Lock telemetry: ${lockTelemetryToastDetailsWithLabelAndSources}.`
+        : '',
+    [isBlockTelemetryVisible, lockTelemetryToastDetailsWithLabelAndSources],
+  )
+
+  const lockTelemetrySuccessParenthetical = useMemo(
+    () =>
+      isBlockTelemetryVisible
+        ? ` (${lockTelemetryToastDetailsWithLabelAndSources})`
+        : '',
+    [isBlockTelemetryVisible, lockTelemetryToastDetailsWithLabelAndSources],
+  )
+
+  const lockStateTelemetryParenthetical = useCallback(
+    (lockState: 'locked' | 'unlocked'): string =>
+      isBlockTelemetryVisible
+        ? ` (lock: ${lockState}, ${lockTelemetryToastDetailsWithSources})`
+        : ` (lock: ${lockState})`,
+    [isBlockTelemetryVisible, lockTelemetryToastDetailsWithSources],
+  )
+
   const eventBlockLockTelemetryRef = useRef(lockTelemetryToastDetailsWithLabelAndSources)
   const eventBlockTelemetryVisibleRef = useRef(isBlockTelemetryVisible)
 
@@ -677,14 +701,14 @@ function App() {
     appendBlock({
       id: `blk_${Date.now()}`,
       title: 'helper lock counters reset',
-      content: `Reset helper lock counters (${lockTelemetryToastDetailsWithLabelAndSources}).`,
+      content: `Reset helper lock counters${lockTelemetrySuccessParenthetical}.`,
       severity: 'info',
     })
   }, [
     appendBlock,
     helperResetLockToggleCount,
     lockTelemetryFailureSuffix,
-    lockTelemetryToastDetailsWithLabelAndSources,
+    lockTelemetrySuccessParenthetical,
   ])
 
   const pushHistory = useCallback((item: QuickActionHistory) => {
@@ -1177,7 +1201,7 @@ function App() {
       appendBlock({
         id: `blk_${Date.now()}`,
         title: 'presets exported',
-        content: `Copied ${Object.keys(store).length} presets JSON to clipboard (${lockTelemetryToastDetailsWithLabelAndSources}).`,
+        content: `Copied ${Object.keys(store).length} presets JSON to clipboard${lockTelemetrySuccessParenthetical}.`,
         severity: 'info',
       })
     } catch {
@@ -1191,7 +1215,7 @@ function App() {
   }, [
     appendBlock,
     lockTelemetryFailureSuffix,
-    lockTelemetryToastDetailsWithLabelAndSources,
+    lockTelemetrySuccessParenthetical,
     readPresetStore,
   ])
 
@@ -1271,13 +1295,13 @@ function App() {
       content:
         `Imported ${acceptedNames.length} preset entries (${presetImportMode}). ` +
         `Created ${createdCount}, preserved ${preservedCount}, overwritten ${overwrittenCount}, ` +
-        `rejected ${rejectedNames.length}. Lock telemetry: ${lockTelemetryToastDetailsWithLabelAndSources}.`,
+        `rejected ${rejectedNames.length}.${lockTelemetrySuccessSentence}`,
       severity: 'info',
     })
   }, [
     appendBlock,
     lockTelemetryFailureSuffix,
-    lockTelemetryToastDetailsWithLabelAndSources,
+    lockTelemetrySuccessSentence,
     presetImportInput,
     presetImportMode,
     readPresetStore,
@@ -1311,7 +1335,7 @@ function App() {
       appendBlock({
         id: `blk_${Date.now()}`,
         title: 'import report copied',
-        content: `Preset import report copied to clipboard (${lockTelemetryToastDetailsWithLabelAndSources}).`,
+        content: `Preset import report copied to clipboard${lockTelemetrySuccessParenthetical}.`,
         severity: 'info',
       })
     } catch {
@@ -1325,7 +1349,7 @@ function App() {
   }, [
     appendBlock,
     lockTelemetryFailureSuffix,
-    lockTelemetryToastDetailsWithLabelAndSources,
+    lockTelemetrySuccessParenthetical,
     presetImportReport,
     withLockTelemetrySection,
   ])
@@ -1360,7 +1384,7 @@ function App() {
       appendBlock({
         id: `blk_${Date.now()}`,
         title: 'import names copied',
-        content: `Copied full accepted/rejected import names to clipboard (${lockTelemetryToastDetailsWithLabelAndSources}).`,
+        content: `Copied full accepted/rejected import names to clipboard${lockTelemetrySuccessParenthetical}.`,
         severity: 'info',
       })
     } catch {
@@ -1374,7 +1398,7 @@ function App() {
   }, [
     appendBlock,
     lockTelemetryFailureSuffix,
-    lockTelemetryToastDetailsWithLabelAndSources,
+    lockTelemetrySuccessParenthetical,
     presetImportReport,
     withLockTelemetrySection,
   ])
@@ -1399,7 +1423,7 @@ function App() {
       appendBlock({
         id: `blk_${Date.now()}`,
         title: 'last summary copied',
-        content: `Copied last import summary to clipboard (${lockTelemetryToastDetailsWithLabelAndSources}).`,
+        content: `Copied last import summary to clipboard${lockTelemetrySuccessParenthetical}.`,
         severity: 'info',
       })
     } catch {
@@ -1414,7 +1438,7 @@ function App() {
     appendBlock,
     lastImportSummaryText,
     lockTelemetryFailureSuffix,
-    lockTelemetryToastDetailsWithLabelAndSources,
+    lockTelemetrySuccessParenthetical,
     presetImportReport,
     withLockTelemetrySection,
   ])
@@ -1447,9 +1471,9 @@ function App() {
       appendBlock({
         id: `blk_${Date.now()}`,
         title: 'shortcut cheat-sheet copied',
-        content: `Copied import shortcut cheat-sheet to clipboard (lock: ${
-          isHelperResetLocked ? 'locked' : 'unlocked'
-        }, ${lockTelemetryToastDetailsWithSources}).`,
+        content: `Copied import shortcut cheat-sheet to clipboard${lockStateTelemetryParenthetical(
+          isHelperResetLocked ? 'locked' : 'unlocked',
+        )}.`,
         severity: 'info',
       })
     } catch {
@@ -1470,7 +1494,7 @@ function App() {
     helperResetTimestampFormat,
     isHelperResetLocked,
     lockTelemetryFailureSuffix,
-    lockTelemetryToastDetailsWithSources,
+    lockStateTelemetryParenthetical,
     presetImportMode,
   ])
 
@@ -1499,9 +1523,9 @@ function App() {
       appendBlock({
         id: `blk_${Date.now()}`,
         title: 'helper summary copied',
-        content: `Copied helper diagnostics summary to clipboard (lock: ${
-          isHelperResetLocked ? 'locked' : 'unlocked'
-        }, ${lockTelemetryToastDetails}; ${lockTelemetrySourceToastDetails}).`,
+        content: `Copied helper diagnostics summary to clipboard${lockStateTelemetryParenthetical(
+          isHelperResetLocked ? 'locked' : 'unlocked',
+        )}.`,
         severity: 'info',
       })
     } catch {
@@ -1524,8 +1548,7 @@ function App() {
     helperResetTimestampFormat,
     isBlockTelemetryVisible,
     lockTelemetryFailureSuffix,
-    lockTelemetrySourceToastDetails,
-    lockTelemetryToastDetails,
+    lockStateTelemetryParenthetical,
     shortcutLegendDensity,
     shortcutLegendOrder,
     showShortcutLegendInStatus,
@@ -1553,9 +1576,9 @@ function App() {
       appendBlock({
         id: `blk_${Date.now()}`,
         title: 'helper reset badge copied',
-        content: `Copied helper reset badge text to clipboard (lock: ${
-          isHelperResetLocked ? 'locked' : 'unlocked'
-        }, ${lockTelemetryToastDetailsWithSources}).`,
+        content: `Copied helper reset badge text to clipboard${lockStateTelemetryParenthetical(
+          isHelperResetLocked ? 'locked' : 'unlocked',
+        )}.`,
         severity: 'info',
       })
     } catch {
@@ -1572,7 +1595,7 @@ function App() {
     isHelperResetBadgeSectionExpanded,
     isHelperResetBadgeVisible,
     isHelperResetLocked,
-    lockTelemetryToastDetailsWithSources,
+    lockStateTelemetryParenthetical,
     lockTelemetryFailureSuffix,
     helperResetStaleThresholdHours,
     helperResetTimestampFormat,
@@ -1623,10 +1646,10 @@ function App() {
     appendBlock({
       id: `blk_${Date.now()}`,
       title: 'import report cleared',
-      content: `Cleared the latest preset import diagnostics (${lockTelemetryToastDetailsWithLabelAndSources}).`,
+      content: `Cleared the latest preset import diagnostics${lockTelemetrySuccessParenthetical}.`,
       severity: 'info',
     })
-  }, [appendBlock, lockTelemetryToastDetailsWithLabelAndSources, presetImportReport])
+  }, [appendBlock, lockTelemetrySuccessParenthetical, presetImportReport])
 
   useEffect(() => {
     if (!autoRefreshEnabled) {
@@ -1939,9 +1962,9 @@ function App() {
       appendBlock({
         id: `blk_${Date.now()}`,
         title: 'status legend copied',
-        content: `Copied status shortcut legend to clipboard (lock: ${
-          isHelperResetLocked ? 'locked' : 'unlocked'
-        }, ${lockTelemetryToastDetails}; ${lockTelemetrySourceToastDetails}).`,
+        content: `Copied status shortcut legend to clipboard${lockStateTelemetryParenthetical(
+          isHelperResetLocked ? 'locked' : 'unlocked',
+        )}.`,
         severity: 'info',
       })
     } catch {
@@ -1957,8 +1980,7 @@ function App() {
     importHintMode,
     isHelperResetLocked,
     lockTelemetryFailureSuffix,
-    lockTelemetrySourceToastDetails,
-    lockTelemetryToastDetails,
+    lockStateTelemetryParenthetical,
     shortcutLegendDensity,
     shortcutLegendOrder,
     showShortcutLegendInStatus,
@@ -1993,7 +2015,7 @@ function App() {
       appendBlock({
         id: `blk_${Date.now()}`,
         title: 'history copied',
-        content: `Copied ${Math.min(filteredHistory.length, 10)} history entries (${lockTelemetryToastDetailsWithLabelAndSources}).`,
+        content: `Copied ${Math.min(filteredHistory.length, 10)} history entries${lockTelemetrySuccessParenthetical}.`,
         severity: 'info',
       })
     } catch {
@@ -2009,7 +2031,7 @@ function App() {
     filteredHistory,
     lockTelemetryFailureSuffix,
     historyFilter,
-    lockTelemetryToastDetailsWithLabelAndSources,
+    lockTelemetrySuccessParenthetical,
     withLockTelemetrySection,
   ])
 

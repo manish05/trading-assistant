@@ -396,6 +396,31 @@ describe('Dashboard shell', () => {
     ).not.toBeInTheDocument()
   })
 
+  it('omits success telemetry details when block telemetry is hidden', async () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Hide Block Telemetry' }))
+
+    fireEvent.change(screen.getByLabelText('Import Presets JSON'), {
+      target: {
+        value: '{"hidden-telemetry-template":{"feedSymbol":"ETHUSDm"}}',
+      },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Import Presets JSON' }))
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          'Imported 1 preset entries (overwrite). Created 1, preserved 0, overwritten 0, rejected 0.',
+        ),
+      ).toBeInTheDocument()
+      expect(
+        screen.queryByText(
+          /Imported 1 preset entries \(overwrite\)\. Created 1, preserved 0, overwritten 0, rejected 0\. Lock telemetry:/,
+        ),
+      ).not.toBeInTheDocument()
+    })
+  })
+
   it('shows lock telemetry when selected preset no longer exists', async () => {
     render(<App />)
 
