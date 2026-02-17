@@ -575,6 +575,12 @@ function App() {
     [lockTelemetryToastDetails],
   )
 
+  const lockTelemetrySourceToastDetails = useMemo(
+    () =>
+      `sources: Alt+L=${helperResetLockSourceCounts['Alt+L']}, controls=${helperResetLockSourceCounts.controls}, snapshot=${helperResetLockSourceCounts.snapshot}`,
+    [helperResetLockSourceCounts],
+  )
+
   const lockTelemetryFailureSuffix = useMemo(
     () => ` Lock telemetry: ${lockTelemetryToastDetailsWithLabel}.`,
     [lockTelemetryToastDetailsWithLabel],
@@ -1432,7 +1438,7 @@ function App() {
         title: 'helper summary copied',
         content: `Copied helper diagnostics summary to clipboard (lock: ${
           isHelperResetLocked ? 'locked' : 'unlocked'
-        }, ${lockTelemetryToastDetails}).`,
+        }, ${lockTelemetryToastDetails}; ${lockTelemetrySourceToastDetails}).`,
         severity: 'info',
       })
     } catch {
@@ -1454,6 +1460,7 @@ function App() {
     helperResetStaleThresholdHours,
     helperResetTimestampFormat,
     lockTelemetryFailureSuffix,
+    lockTelemetrySourceToastDetails,
     lockTelemetryToastDetails,
     shortcutLegendDensity,
     shortcutLegendOrder,
@@ -1853,7 +1860,7 @@ function App() {
         title: 'status legend copied',
         content: `Copied status shortcut legend to clipboard (lock: ${
           isHelperResetLocked ? 'locked' : 'unlocked'
-        }, ${lockTelemetryToastDetails}).`,
+        }, ${lockTelemetryToastDetails}; ${lockTelemetrySourceToastDetails}).`,
         severity: 'info',
       })
     } catch {
@@ -1869,6 +1876,7 @@ function App() {
     importHintMode,
     isHelperResetLocked,
     lockTelemetryFailureSuffix,
+    lockTelemetrySourceToastDetails,
     lockTelemetryToastDetails,
     shortcutLegendDensity,
     shortcutLegendOrder,

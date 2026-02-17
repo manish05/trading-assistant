@@ -676,7 +676,7 @@ describe('Dashboard shell', () => {
       expect(payload).toContain('Alt+L\tToggle helper reset lock')
       expect(
         screen.getByText(
-          'Copied status shortcut legend to clipboard (lock: locked, toggles: 0, tone: none, reset: never).',
+          'Copied status shortcut legend to clipboard (lock: locked, toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0).',
         ),
       ).toBeInTheDocument()
     })
@@ -1146,7 +1146,7 @@ describe('Dashboard shell', () => {
       expect(payload).toContain('[LockTelemetry]')
       expect(
         screen.getByText(
-          'Copied helper diagnostics summary to clipboard (lock: locked, toggles: 0, tone: none, reset: never).',
+          'Copied helper diagnostics summary to clipboard (lock: locked, toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0).',
         ),
       ).toBeInTheDocument()
     })
