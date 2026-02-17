@@ -2601,6 +2601,18 @@ function App() {
         )
         return
       }
+      if (normalizedKey === 'w') {
+        event.preventDefault()
+        setMarketOverlayMarkerWrap((current) => (current === 'bounded' ? 'wrap' : 'bounded'))
+        return
+      }
+      if (normalizedKey === 's') {
+        event.preventDefault()
+        setMarketOverlaySelectionMode((current) =>
+          current === 'sticky' ? 'follow-latest' : 'sticky',
+        )
+        return
+      }
       if (normalizedKey === 'u') {
         event.preventDefault()
         setMarketOverlayMarkerDeltaFilter('latest-up')

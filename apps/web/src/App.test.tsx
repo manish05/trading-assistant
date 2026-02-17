@@ -1563,6 +1563,20 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Behavior')).toHaveTextContent(
       'Marker behavior: wrap:bounded · selection:sticky · nav:manual',
     )
+    fireEvent.keyDown(screen.getByRole('button', { name: 'risk:live_trading_disabled:raised' }), {
+      key: 'w',
+    })
+    expect(screen.getByLabelText('Marker Wrap')).toHaveValue('wrap')
+    expect(screen.getByLabelText('Overlay Marker Behavior')).toHaveTextContent(
+      'Marker behavior: wrap:wrap · selection:sticky · nav:manual',
+    )
+    fireEvent.keyDown(screen.getByRole('button', { name: 'risk:live_trading_disabled:raised' }), {
+      key: 'w',
+    })
+    expect(screen.getByLabelText('Marker Wrap')).toHaveValue('bounded')
+    expect(screen.getByLabelText('Overlay Marker Behavior')).toHaveTextContent(
+      'Marker behavior: wrap:bounded · selection:sticky · nav:manual',
+    )
 
     fireEvent.keyDown(screen.getByRole('button', { name: 'risk:live_trading_disabled:raised' }), {
       key: 'ArrowLeft',
@@ -1571,7 +1585,8 @@ describe('Dashboard shell', () => {
       'Marker nav: 1/2 · selected:trade:closed:queued',
     )
 
-    fireEvent.change(screen.getByLabelText('Selection Mode'), { target: { value: 'follow-latest' } })
+    fireEvent.keyDown(screen.getByRole('button', { name: 'trade:closed:queued' }), { key: 's' })
+    expect(screen.getByLabelText('Selection Mode')).toHaveValue('follow-latest')
     expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
       'Marker nav: 2/2 · selected:risk:live_trading_disabled:raised',
     )
