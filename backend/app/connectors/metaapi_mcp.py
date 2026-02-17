@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 from dataclasses import dataclass
 from typing import Any, Protocol
 
@@ -78,7 +79,16 @@ class MetaApiConnector:
 
     def _call_tool(self, tool_name: str, payload: dict[str, Any]) -> dict[str, Any]:
         try:
-            return asyncio.run(self._transport.call_tool(tool_name, payload))
+            result = self._transport.call_tool(tool_name, payload)
+            if inspect.isawaitable(result):
+                return asyncio.run(result)
+            if isinstance(result, dict):
+                return result
+            raise MetaApiConnectorError(
+                code="CONNECTOR_ERROR",
+                message="connector transport returned non-dict payload",
+                retryable=False,
+            )
         except Exception as exc:  # noqa: BLE001
             mapped = self._map_error(exc)
             raise mapped from exc

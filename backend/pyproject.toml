@@ -26,6 +26,9 @@ dev = [
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
+markers = [
+  "live: marks tests that require live external credentials",
+]
 
 [tool.ruff]
 line-length = 100
