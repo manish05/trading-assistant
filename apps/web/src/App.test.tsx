@@ -21,6 +21,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByText('Quick Action Timestamps')).toBeInTheDocument()
     expect(screen.getByLabelText('History Filter')).toBeInTheDocument()
     expect(screen.getByLabelText('History Legend')).toBeInTheDocument()
+    expect(screen.getByLabelText('Lock Toggle Source Legend')).toBeInTheDocument()
     expect(screen.getByLabelText('Timestamp Format')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Copy History' })).toBeDisabled()
   })
@@ -130,6 +131,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Reset Helper Prefs' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Unlock Reset' })).toBeInTheDocument()
     expect(screen.getByText('Last import: none')).toBeInTheDocument()
+    expect(screen.getByText('Alt+L:0')).toBeInTheDocument()
+    expect(screen.getByText('controls:0')).toBeInTheDocument()
+    expect(screen.getByText('snapshot:0')).toBeInTheDocument()
   })
 
   it('sends account and feed management requests', async () => {
@@ -579,6 +583,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Unlock Reset' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Reset Helper Prefs' })).toBeDisabled()
     expect(screen.getByText('Helper reset lock locked via Alt+L.')).toBeInTheDocument()
+    expect(screen.getByText('Alt+L:2')).toBeInTheDocument()
   })
 
   it('toggles import shortcut legend visibility in status panel', () => {
@@ -662,6 +667,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Quick Lock Reset' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Reset Helper Prefs' })).toBeEnabled()
     expect(screen.getByText('Helper reset lock unlocked via snapshot.')).toBeInTheDocument()
+    expect(screen.getByText('snapshot:1')).toBeInTheDocument()
     expect(screen.getByLabelText('Quick Toggle Lock Summary')).toHaveTextContent('quickLock:unlocked')
     expect(screen.getByLabelText('Quick Toggle Lock Summary')).toHaveClass('quick-lock-unlocked')
     expect(screen.getByLabelText('Quick Toggle Lock Summary')).toHaveAttribute(
@@ -720,6 +726,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Lock Reset' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Reset Helper Prefs' })).toBeEnabled()
     expect(screen.getByText('Helper reset lock unlocked via controls.')).toBeInTheDocument()
+    expect(screen.getByText('controls:1')).toBeInTheDocument()
     expect(window.localStorage.getItem('quick-action-helper-reset-lock-v1')).toBe('unlocked')
     expect(screen.getByText('Helper Diagnostics', { selector: 'dt' })).toHaveTextContent(
       'Helper Diagnostics (lock:unlocked)',

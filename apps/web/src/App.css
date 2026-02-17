@@ -524,6 +524,19 @@
   color: #9fb0cc;
 }
 
+.lock-source-legend {
+  margin-top: -0.12rem;
+}
+
+.history-lock-source {
+  padding: 0.05rem 0.3rem;
+  border-radius: 999px;
+  border: 1px dashed #2d4a7e;
+  background: #162744;
+  color: #cdd8eb;
+  font-size: 0.68rem;
+}
+
 .history-tools {
   margin-bottom: 0.35rem;
 }

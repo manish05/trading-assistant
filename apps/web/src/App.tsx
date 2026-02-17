@@ -481,6 +481,27 @@ function App() {
     [quickActionHistory],
   )
 
+  const helperResetLockSourceCounts = useMemo(() => {
+    const counts: Record<'Alt+L' | 'controls' | 'snapshot', number> = {
+      'Alt+L': 0,
+      controls: 0,
+      snapshot: 0,
+    }
+    for (const entry of quickActionHistory) {
+      if (!entry.method.startsWith('helper.reset.lock.toggle.')) {
+        continue
+      }
+      const source = entry.method.replace('helper.reset.lock.toggle.', '') as
+        | 'Alt+L'
+        | 'controls'
+        | 'snapshot'
+      if (source in counts) {
+        counts[source] += 1
+      }
+    }
+    return counts
+  }, [quickActionHistory])
+
   const toggleHelperResetLock = useCallback((source: 'Alt+L' | 'controls' | 'snapshot') => {
     const now = Date.now()
     const lockEntry: QuickActionHistory = {
@@ -2271,6 +2292,16 @@ function App() {
                   <span className="history-status status-debounced">debounced</span>
                   <span className="history-status status-skipped">skipped</span>
                   <span className="history-status status-sent">sent</span>
+                </div>
+                <div className="history-legend lock-source-legend" aria-label="Lock Toggle Source Legend">
+                  <span className="history-legend-title">Lock Sources</span>
+                  <span className="history-lock-source">Alt+L:{helperResetLockSourceCounts['Alt+L']}</span>
+                  <span className="history-lock-source">
+                    controls:{helperResetLockSourceCounts.controls}
+                  </span>
+                  <span className="history-lock-source">
+                    snapshot:{helperResetLockSourceCounts.snapshot}
+                  </span>
                 </div>
                 {filteredHistory.length === 0 ? (
                   <span className="history-empty">none</span>
