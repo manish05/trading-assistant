@@ -650,8 +650,9 @@ function App() {
   )
 
   const withLockTelemetrySection = useCallback(
-    (lines: string[]): string[] => [...lines, '[LockTelemetry]', ...lockTelemetrySummaryLines],
-    [lockTelemetrySummaryLines],
+    (lines: string[]): string[] =>
+      isBlockTelemetryVisible ? [...lines, '[LockTelemetry]', ...lockTelemetrySummaryLines] : lines,
+    [isBlockTelemetryVisible, lockTelemetrySummaryLines],
   )
 
   const toggleHelperResetLock = useCallback((source: 'Alt+L' | 'controls' | 'snapshot') => {
@@ -1444,7 +1445,7 @@ function App() {
   ])
 
   const copyImportShortcutCheatSheet = useCallback(async () => {
-    const cheatSheet = [
+    const cheatSheetLines = [
       'Import Shortcuts',
       '- Ctrl/Cmd+Enter: run preset JSON import',
       '- Esc: clear preset JSON input',
@@ -1455,14 +1456,19 @@ function App() {
       `- Helper reset format: ${helperResetTimestampFormat}`,
       `- Helper reset stale-after hours: ${helperResetStaleThresholdHours}`,
       `- Helper reset lock: ${isHelperResetLocked ? 'locked' : 'unlocked'}`,
-      '- [LockTelemetry]',
-      `- Helper lock counter reset at: ${helperLockCountersLastResetAt ?? 'never'}`,
-      `- Helper lock toggle total: ${helperResetLockToggleCount}`,
-      `- Helper lock toggle tone: ${helperResetLockToggleToneClass.replace('counter-tone-', '')}`,
-      `- Helper lock toggle Alt+L: ${helperResetLockSourceCounts['Alt+L']}`,
-      `- Helper lock toggle controls: ${helperResetLockSourceCounts.controls}`,
-      `- Helper lock toggle snapshot: ${helperResetLockSourceCounts.snapshot}`,
-    ].join('\n')
+    ]
+    if (isBlockTelemetryVisible) {
+      cheatSheetLines.push(
+        '- [LockTelemetry]',
+        `- Helper lock counter reset at: ${helperLockCountersLastResetAt ?? 'never'}`,
+        `- Helper lock toggle total: ${helperResetLockToggleCount}`,
+        `- Helper lock toggle tone: ${helperResetLockToggleToneClass.replace('counter-tone-', '')}`,
+        `- Helper lock toggle Alt+L: ${helperResetLockSourceCounts['Alt+L']}`,
+        `- Helper lock toggle controls: ${helperResetLockSourceCounts.controls}`,
+        `- Helper lock toggle snapshot: ${helperResetLockSourceCounts.snapshot}`,
+      )
+    }
+    const cheatSheet = cheatSheetLines.join('\n')
     try {
       if (!navigator.clipboard?.writeText) {
         throw new Error('Clipboard API unavailable')
@@ -1493,6 +1499,7 @@ function App() {
     helperResetLockToggleToneClass,
     helperResetTimestampFormat,
     isHelperResetLocked,
+    isBlockTelemetryVisible,
     lockTelemetryFailureSuffix,
     lockStateTelemetryParenthetical,
     presetImportMode,

@@ -1073,6 +1073,29 @@ describe('Dashboard shell', () => {
     })
   })
 
+  it('omits shortcut lock telemetry metadata when block telemetry is hidden', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(window.navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    })
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Hide Block Telemetry' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Copy Shortcut Cheat Sheet' }))
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalled()
+      const payload = String(writeText.mock.calls[writeText.mock.calls.length - 1][0])
+      expect(payload).toContain('Import Shortcuts')
+      expect(payload).toContain('Helper reset lock: locked')
+      expect(payload).not.toContain('[LockTelemetry]')
+      expect(payload).not.toContain('Helper lock toggle total:')
+      expect(
+        screen.getByText('Copied import shortcut cheat-sheet to clipboard (lock: locked).'),
+      ).toBeInTheDocument()
+    })
+  })
+
   it('copies status shortcut legend with lock telemetry metadata', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined)
     Object.defineProperty(window.navigator, 'clipboard', {
@@ -1105,6 +1128,31 @@ describe('Dashboard shell', () => {
         screen.getByText(
           'Copied status shortcut legend to clipboard (lock: locked, toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0).',
         ),
+      ).toBeInTheDocument()
+    })
+  })
+
+  it('omits status legend lock telemetry metadata when block telemetry is hidden', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(window.navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    })
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Hide Block Telemetry' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Show Legend in Status' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Copy Status Legend' }))
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalled()
+      const payload = String(writeText.mock.calls[writeText.mock.calls.length - 1][0])
+      expect(payload).toContain('Status Shortcut Legend')
+      expect(payload).toContain('legendVisible=yes')
+      expect(payload).toContain('[Legend]')
+      expect(payload).not.toContain('[LockTelemetry]')
+      expect(payload).not.toContain('lockToggleTotal=')
+      expect(
+        screen.getByText('Copied status shortcut legend to clipboard (lock: locked).'),
       ).toBeInTheDocument()
     })
   })
