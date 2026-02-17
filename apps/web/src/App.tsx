@@ -1349,6 +1349,11 @@ function App() {
                 value={presetImportInput}
                 onChange={(event) => setPresetImportInput(event.target.value)}
                 onKeyDown={(event) => {
+                  if (event.key === 'Escape') {
+                    event.preventDefault()
+                    setPresetImportInput('')
+                    return
+                  }
                   if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
                     event.preventDefault()
                     importPresetsJson()

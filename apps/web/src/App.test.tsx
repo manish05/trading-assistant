@@ -467,6 +467,19 @@ describe('Dashboard shell', () => {
     })
   })
 
+  it('clears import JSON textarea via Escape keyboard shortcut', () => {
+    render(<App />)
+    const importTextarea = screen.getByLabelText('Import Presets JSON')
+    fireEvent.change(importTextarea, {
+      target: {
+        value: '{"escape-template":{"feedSymbol":"ETHUSDm"}}',
+      },
+    })
+
+    fireEvent.keyDown(importTextarea, { key: 'Escape' })
+    expect(importTextarea).toHaveValue('')
+  })
+
   it('truncates long import report name lists with overflow counter', async () => {
     render(<App />)
     const manyPresets = Object.fromEntries(
