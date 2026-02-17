@@ -317,18 +317,22 @@ describe('Dashboard shell', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: 'Save Preset' }))
     expect(
-      screen.getByText('Preset name is required. Lock telemetry: lock toggles: 0, tone: none, reset: never.'),
+      screen.getByText(
+        'Preset name is required. Lock telemetry: lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0.',
+      ),
     ).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Load Preset' }))
     expect(
-      screen.getByText('Select a preset first. Lock telemetry: lock toggles: 0, tone: none, reset: never.'),
+      screen.getByText(
+        'Select a preset first. Lock telemetry: lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0.',
+      ),
     ).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Import Presets JSON' }))
     expect(
       screen.getByText(
-        'Import JSON field is empty. Lock telemetry: lock toggles: 0, tone: none, reset: never.',
+        'Import JSON field is empty. Lock telemetry: lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0.',
       ),
     ).toBeInTheDocument()
 
@@ -337,7 +341,9 @@ describe('Dashboard shell', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: 'Import Presets JSON' }))
     expect(
-      screen.getByText('Invalid JSON payload. Lock telemetry: lock toggles: 0, tone: none, reset: never.'),
+      screen.getByText(
+        'Invalid JSON payload. Lock telemetry: lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0.',
+      ),
     ).toBeInTheDocument()
 
     fireEvent.change(screen.getByLabelText('Import Presets JSON'), {
@@ -346,7 +352,7 @@ describe('Dashboard shell', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Import Presets JSON' }))
     expect(
       screen.getByText(
-        'Expected a JSON object keyed by preset name. Lock telemetry: lock toggles: 0, tone: none, reset: never.',
+        'Expected a JSON object keyed by preset name. Lock telemetry: lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0.',
       ),
     ).toBeInTheDocument()
   })
@@ -459,7 +465,7 @@ describe('Dashboard shell', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Copy History' }))
     expect(
       screen.getByText(
-        'No quick-action history entries available for current filter. Lock telemetry: lock toggles: 0, tone: none, reset: never.',
+        'No quick-action history entries available for current filter. Lock telemetry: lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0.',
       ),
     ).toBeInTheDocument()
   })
@@ -483,7 +489,7 @@ describe('Dashboard shell', () => {
       expect(writeText).toHaveBeenCalled()
       expect(
         screen.getByText(
-          'Clipboard access failed or is unavailable. Lock telemetry: lock toggles: 0, tone: none, reset: never.',
+          'Clipboard access failed or is unavailable. Lock telemetry: lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0.',
         ),
       ).toBeInTheDocument()
     })
@@ -729,7 +735,7 @@ describe('Dashboard shell', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Copy Import Report' }))
     expect(
       screen.getByText(
-        'No preset import report available yet. Lock telemetry: lock toggles: 0, tone: none, reset: never.',
+        'No preset import report available yet. Lock telemetry: lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0.',
       ),
     ).toBeInTheDocument()
   })
@@ -739,7 +745,7 @@ describe('Dashboard shell', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Copy Last Summary' }))
     expect(
       screen.getByText(
-        'No preset import report available yet. Lock telemetry: lock toggles: 0, tone: none, reset: never.',
+        'No preset import report available yet. Lock telemetry: lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0.',
       ),
     ).toBeInTheDocument()
   })
@@ -749,7 +755,7 @@ describe('Dashboard shell', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Copy Full Names' }))
     expect(
       screen.getByText(
-        'No preset import report available yet. Lock telemetry: lock toggles: 0, tone: none, reset: never.',
+        'No preset import report available yet. Lock telemetry: lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0.',
       ),
     ).toBeInTheDocument()
   })
@@ -768,7 +774,7 @@ describe('Dashboard shell', () => {
       expect(writeText).toHaveBeenCalled()
       expect(
         screen.getByText(
-          'Clipboard access failed or is unavailable. Lock telemetry: lock toggles: 0, tone: none, reset: never.',
+          'Clipboard access failed or is unavailable. Lock telemetry: lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0.',
         ),
       ).toBeInTheDocument()
     })
@@ -1207,7 +1213,7 @@ describe('Dashboard shell', () => {
       expect(writeText).toHaveBeenCalled()
       expect(
         screen.getByText(
-          'Clipboard access failed or is unavailable. Lock telemetry: lock toggles: 0, tone: none, reset: never.',
+          'Clipboard access failed or is unavailable. Lock telemetry: lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0.',
         ),
       ).toBeInTheDocument()
     })
