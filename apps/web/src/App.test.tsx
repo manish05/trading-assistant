@@ -549,6 +549,16 @@ describe('Dashboard shell', () => {
       expect(screen.getByLabelText('Overlay Marker Timeline')).toHaveTextContent(
         'trade:closed:queued · t1 · close:1.00 · Δlatest:-1.00 (-50.00%)',
       )
+      expect(
+        screen.getByRole('button', {
+          name: /risk:live_trading_disabled:raised · t2 · close:2\.00/,
+        }),
+      ).toHaveAttribute('aria-pressed', 'true')
+      expect(
+        screen.getByRole('button', {
+          name: /trade:closed:queued · t1 · close:1\.00/,
+        }),
+      ).toHaveAttribute('aria-pressed', 'false')
       expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
         'Marker nav: 2/2 · selected:risk:live_trading_disabled:raised',
       )
@@ -660,6 +670,32 @@ describe('Dashboard shell', () => {
     expect(timelineOrderText.indexOf('trade:closed:queued')).toBeLessThan(
       timelineOrderText.indexOf('risk:live_trading_disabled:raised'),
     )
+    expect(
+      screen.getByRole('button', {
+        name: /trade:closed:queued · t1 · close:1\.00/,
+      }),
+    ).toHaveAttribute('aria-pressed', 'true')
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: /risk:live_trading_disabled:raised · t2 · close:2\.00/,
+      }),
+    )
+    expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
+      'Marker nav: 2/2 · selected:risk:live_trading_disabled:raised',
+    )
+    expect(screen.getByLabelText('Overlay Correlation Hint')).toHaveTextContent(
+      'Correlation: risk:live_trading_disabled:raised@2.00(t2)',
+    )
+    expect(
+      screen.getByRole('button', {
+        name: /risk:live_trading_disabled:raised · t2 · close:2\.00/,
+      }),
+    ).toHaveAttribute('aria-pressed', 'true')
+    expect(
+      screen.getByRole('button', {
+        name: /trade:closed:queued · t1 · close:1\.00/,
+      }),
+    ).toHaveAttribute('aria-pressed', 'false')
 
     fireEvent.change(screen.getByLabelText('Chart Lens'), { target: { value: 'diagnostics' } })
     expect(screen.getByLabelText('Overlay Chart Summary')).toHaveTextContent(
@@ -668,7 +704,7 @@ describe('Dashboard shell', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Refresh Overlay Snapshot' }))
     expect(screen.getByLabelText('Overlay Snapshot Summary')).toHaveTextContent(
-      'Summary: candles:2 · tradeEvents:1 · riskAlerts:1 · chartPoints:2 · chartLens:diagnostics · markerFocus:all · markerWindow:5 · markerAge:all · markerBucket:none · timelineOrder:oldest-first · markerNav:1/2|selected:trade:closed:queued · markers:t1/r1/f0 · corr:trade:closed:queued@1.00(t1) · trend:up (+1.00) · vol:1.00 · pulse:intense(5) · regime:risk_on',
+      'Summary: candles:2 · tradeEvents:1 · riskAlerts:1 · chartPoints:2 · chartLens:diagnostics · markerFocus:all · markerWindow:5 · markerAge:all · markerBucket:none · timelineOrder:oldest-first · markerNav:2/2|selected:risk:live_trading_disabled:raised · markers:t1/r1/f0 · corr:risk:live_trading_disabled:raised@2.00(t2) · trend:up (+1.00) · vol:1.00 · pulse:intense(5) · regime:risk_on',
     )
 
     sendSpy.mockRestore()

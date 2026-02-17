@@ -145,6 +145,16 @@
 .overlay-marker-timeline-row {
   font-size: 0.66rem;
   color: #9fb0cc;
+  background: #11213a;
+  border: 1px solid #2d4a7e;
+  border-radius: 6px;
+  text-align: left;
+  padding: 0.2rem 0.4rem;
+}
+
+.overlay-marker-timeline-row.is-selected {
+  border-color: #d8ecff;
+  color: #e8edf5;
 }
 
 .market-overlay-chart-runtime.runtime-ready {

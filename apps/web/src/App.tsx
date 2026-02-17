@@ -1187,7 +1187,7 @@ function App() {
   }, [marketOverlayActiveTimelineAnnotation, marketOverlayAverageClose, marketOverlayChartPoints])
   const marketOverlayMarkerTimelineRows = useMemo(() => {
     if (marketOverlayOrderedVisibleAnnotations.length === 0) {
-      return [] as string[]
+      return [] as Array<{ id: string; text: string; isSelected: boolean }>
     }
     const timelineById = new Map(
       marketOverlayTimelineAnnotations.map((annotation) => [annotation.id, annotation] as const),
@@ -1204,9 +1204,18 @@ function App() {
           ? (deltaToLatest / latestPoint.value) * 100
           : null
       const ageLabel = formatElapsedMs(Date.now() - annotation.timestamp)
-      return `${annotation.kind}:${annotation.label} · t${timelineAnnotation?.time ?? 'n/a'} · close:${point ? point.value.toFixed(2) : 'n/a'} · Δlatest:${deltaToLatest === null ? 'n/a' : `${deltaToLatest >= 0 ? '+' : ''}${deltaToLatest.toFixed(2)} (${deltaToLatestPct !== null ? `${deltaToLatestPct >= 0 ? '+' : ''}${deltaToLatestPct.toFixed(2)}%` : 'n/a'})`} · age:${ageLabel}`
+      return {
+        id: annotation.id,
+        text: `${annotation.kind}:${annotation.label} · t${timelineAnnotation?.time ?? 'n/a'} · close:${point ? point.value.toFixed(2) : 'n/a'} · Δlatest:${deltaToLatest === null ? 'n/a' : `${deltaToLatest >= 0 ? '+' : ''}${deltaToLatest.toFixed(2)} (${deltaToLatestPct !== null ? `${deltaToLatestPct >= 0 ? '+' : ''}${deltaToLatestPct.toFixed(2)}%` : 'n/a'})`} · age:${ageLabel}`,
+        isSelected: annotation.id === marketOverlaySelectedMarkerId,
+      }
     })
-  }, [marketOverlayChartPoints, marketOverlayOrderedVisibleAnnotations, marketOverlayTimelineAnnotations])
+  }, [
+    marketOverlayChartPoints,
+    marketOverlayOrderedVisibleAnnotations,
+    marketOverlaySelectedMarkerId,
+    marketOverlayTimelineAnnotations,
+  ])
   const marketOverlayMarkerBucketSummary = useMemo(() => {
     const totalVisible = marketOverlayTimelineAnnotations.length
     if (totalVisible === 0) {
@@ -3794,10 +3803,17 @@ function App() {
               {marketOverlayMarkerTimelineRows.length === 0 ? (
                 <span className="overlay-marker-chip overlay-marker-none">none</span>
               ) : (
-                marketOverlayMarkerTimelineRows.map((row, index) => (
-                  <span key={`${row}_${index}`} className="overlay-marker-timeline-row">
-                    {row}
-                  </span>
+                marketOverlayMarkerTimelineRows.map((row) => (
+                  <button
+                    key={row.id}
+                    type="button"
+                    className={`overlay-marker-timeline-row ${row.isSelected ? 'is-selected' : ''}`}
+                    onClick={() => setMarketOverlaySelectedMarkerId(row.id)}
+                    onKeyDown={onMarketOverlayMarkerKeyDown}
+                    aria-pressed={row.isSelected}
+                  >
+                    {row.text}
+                  </button>
                 ))
               )}
             </div>
