@@ -215,6 +215,7 @@ const MARKET_OVERLAY_MARKER_DELTA_BASIS_ORDER: MarketOverlayMarkerDeltaBasis[] =
 const MAX_IMPORT_REPORT_NAMES = 6
 const FEED_CANDLE_FETCH_LIMIT = 50
 const MARKET_OVERLAY_MARKER_SKIP_STEP = 2
+const MARKET_OVERLAY_MARKER_DIVERGENCE_PREVIEW_LIMIT = 3
 const DEVICE_NOTIFY_TEST_MESSAGE = 'Dashboard test notification'
 const DEFAULT_RISK_EMERGENCY_REASON = 'dashboard emergency stop trigger'
 const DEFAULT_AGENT_ID = 'agent_eth_5m'
@@ -1442,6 +1443,53 @@ function App() {
     marketOverlayBucketScopedTimelineAnnotations,
     marketOverlayChartPoints,
     marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+  ])
+  const marketOverlayMarkerDeltaBasisDivergenceSummary = useMemo(() => {
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const baseline =
+      marketOverlayChartPoints.length === 0
+        ? null
+        : marketOverlayChartPoints.reduce((sum, point) => sum + point.value, 0) /
+          marketOverlayChartPoints.length
+    const resolveToneForBasis = (
+      annotation: MarketOverlayTimelineAnnotation,
+      basis: MarketOverlayMarkerDeltaBasis,
+    ): 'up' | 'down' | 'flat' | 'unavailable' => {
+      const point = pointByTime.get(annotation.time) ?? null
+      const deltaValue =
+        basis === 'latest'
+          ? point && latestPoint
+            ? point.value - latestPoint.value
+            : null
+          : point && baseline !== null
+            ? point.value - baseline
+            : null
+      return resolveMarketOverlayDeltaTone(deltaValue)
+    }
+    const divergentItems = marketOverlayBucketScopedTimelineAnnotations
+      .map((annotation) => {
+        const latestTone = resolveToneForBasis(annotation, 'latest')
+        const averageTone = resolveToneForBasis(annotation, 'average')
+        if (latestTone === averageTone) {
+          return null
+        }
+        return `${annotation.kind}:${annotation.label}:${latestTone}->${averageTone}`
+      })
+      .filter((item): item is string => item !== null)
+    const previewItems = divergentItems.slice(0, MARKET_OVERLAY_MARKER_DIVERGENCE_PREVIEW_LIMIT)
+    const overflowCount = divergentItems.length - previewItems.length
+    const itemsLabel =
+      previewItems.length === 0
+        ? 'none'
+        : overflowCount > 0
+          ? `${previewItems.join(', ')} (+${overflowCount} more)`
+          : previewItems.join(', ')
+    return `mode:${marketOverlayMarkerDeltaFilter} · diverge:${divergentItems.length}/${marketOverlayBucketScopedTimelineAnnotations.length} · items:${itemsLabel}`
+  }, [
+    marketOverlayBucketScopedTimelineAnnotations,
+    marketOverlayChartPoints,
     marketOverlayMarkerDeltaFilter,
   ])
   const marketOverlayMarkerModeShortcutSummary = useMemo(
@@ -5609,6 +5657,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Delta Basis Comparison Summary">
               Delta basis compare: {marketOverlayMarkerDeltaBasisComparisonSummary}
+            </p>
+            <p aria-label="Overlay Marker Delta Basis Divergence Summary">
+              Delta basis divergence: {marketOverlayMarkerDeltaBasisDivergenceSummary}
             </p>
             <p aria-label="Overlay Marker Mode Shortcut Summary">
               Mode shortcuts: {marketOverlayMarkerModeShortcutSummary}
