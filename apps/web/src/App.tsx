@@ -1099,6 +1099,28 @@ function App() {
       ) ?? marketOverlayTimelineAnnotations[marketOverlayTimelineAnnotations.length - 1]
     )
   }, [marketOverlaySelectedMarkerId, marketOverlayTimelineAnnotations])
+  const marketOverlayActiveTimelineIndex = useMemo(() => {
+    if (!marketOverlayActiveTimelineAnnotation) {
+      return -1
+    }
+    return marketOverlayTimelineAnnotations.findIndex(
+      (annotation) => annotation.id === marketOverlayActiveTimelineAnnotation.id,
+    )
+  }, [marketOverlayActiveTimelineAnnotation, marketOverlayTimelineAnnotations])
+  const marketOverlayMarkerNavigationLabel = useMemo(() => {
+    if (!marketOverlayActiveTimelineAnnotation || marketOverlayActiveTimelineIndex < 0) {
+      return `0/0 · selected:none`
+    }
+    return `${marketOverlayActiveTimelineIndex + 1}/${marketOverlayTimelineAnnotations.length} · selected:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayTimelineAnnotations.length,
+  ])
+  const canSelectPreviousMarketOverlayMarker = marketOverlayActiveTimelineIndex > 0
+  const canSelectNextMarketOverlayMarker =
+    marketOverlayActiveTimelineIndex >= 0 &&
+    marketOverlayActiveTimelineIndex < marketOverlayTimelineAnnotations.length - 1
   const marketOverlayMarkerDrilldown = useMemo(() => {
     const latest = marketOverlayVisibleAnnotations[0]
     return {
@@ -1132,8 +1154,11 @@ function App() {
       marketOverlayChartPoints[marketOverlayChartPoints.length - 1]
     const baseline = marketOverlayAverageClose ?? point.value
     const deltaFromAverage = point.value - baseline
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1]
+    const deltaToLatest = point.value - latestPoint.value
+    const deltaToLatestPct = latestPoint.value === 0 ? 0 : (deltaToLatest / latestPoint.value) * 100
     const ageLabel = formatElapsedMs(Date.now() - marketOverlayActiveTimelineAnnotation.timestamp)
-    return `${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · t${point.time} · close:${point.value.toFixed(2)} · Δavg:${deltaFromAverage >= 0 ? '+' : ''}${deltaFromAverage.toFixed(2)} · age:${ageLabel} · tone:${marketOverlayActiveTimelineAnnotation.tone}`
+    return `${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · t${point.time} · close:${point.value.toFixed(2)} · Δavg:${deltaFromAverage >= 0 ? '+' : ''}${deltaFromAverage.toFixed(2)} · Δlatest:${deltaToLatest >= 0 ? '+' : ''}${deltaToLatest.toFixed(2)} (${deltaToLatestPct >= 0 ? '+' : ''}${deltaToLatestPct.toFixed(2)}%) · age:${ageLabel} · tone:${marketOverlayActiveTimelineAnnotation.tone}`
   }, [marketOverlayActiveTimelineAnnotation, marketOverlayAverageClose, marketOverlayChartPoints])
   const marketOverlayMarkerTimelineRows = useMemo(() => {
     if (marketOverlayVisibleAnnotations.length === 0) {
@@ -1219,6 +1244,32 @@ function App() {
     }
     setMarketOverlaySelectedMarkerId(marketOverlayVisibleAnnotations[0].id)
   }, [marketOverlaySelectedMarkerId, marketOverlayVisibleAnnotations])
+
+  const selectPreviousMarketOverlayMarker = useCallback(() => {
+    if (!canSelectPreviousMarketOverlayMarker) {
+      return
+    }
+    const previous = marketOverlayTimelineAnnotations[marketOverlayActiveTimelineIndex - 1]
+    if (!previous) {
+      return
+    }
+    setMarketOverlaySelectedMarkerId(previous.id)
+  }, [
+    canSelectPreviousMarketOverlayMarker,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayTimelineAnnotations,
+  ])
+
+  const selectNextMarketOverlayMarker = useCallback(() => {
+    if (!canSelectNextMarketOverlayMarker) {
+      return
+    }
+    const next = marketOverlayTimelineAnnotations[marketOverlayActiveTimelineIndex + 1]
+    if (!next) {
+      return
+    }
+    setMarketOverlaySelectedMarkerId(next.id)
+  }, [canSelectNextMarketOverlayMarker, marketOverlayActiveTimelineIndex, marketOverlayTimelineAnnotations])
 
   useEffect(() => {
     const container = marketOverlayChartContainerRef.current
@@ -3404,6 +3455,7 @@ function App() {
     const markerWindow = marketOverlayMarkerWindow
     const markerAge = marketOverlayMarkerAgeFilter
     const markerBucket = marketOverlayMarkerBucket
+    const markerNavigation = marketOverlayMarkerNavigationLabel.replace(' · ', '|')
     const markerSummary = `t${marketOverlayAnnotationSummary.tradeCount}/r${marketOverlayAnnotationSummary.riskCount}/f${marketOverlayAnnotationSummary.feedCount}`
     const correlationHint = marketOverlayCorrelationHint
     const trendLabel = marketOverlayTrend.label
@@ -3411,9 +3463,9 @@ function App() {
     const pulseSummary = marketOverlayPulse.summary
     const regimeSummary = marketOverlayRegime.summary
     const summaryByMode: Record<MarketOverlayMode, string> = {
-      'price-only': `candles:${candles} · chartPoints:${chartPoints} · chartLens:${chartLens} · markerFocus:${markerFocus} · markerWindow:${markerWindow} · markerAge:${markerAge} · markerBucket:${markerBucket} · markers:${markerSummary} · corr:${correlationHint} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
-      'with-trades': `candles:${candles} · tradeEvents:${tradeEvents} · chartPoints:${chartPoints} · chartLens:${chartLens} · markerFocus:${markerFocus} · markerWindow:${markerWindow} · markerAge:${markerAge} · markerBucket:${markerBucket} · markers:${markerSummary} · corr:${correlationHint} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
-      'with-risk': `candles:${candles} · tradeEvents:${tradeEvents} · riskAlerts:${alerts} · chartPoints:${chartPoints} · chartLens:${chartLens} · markerFocus:${markerFocus} · markerWindow:${markerWindow} · markerAge:${markerAge} · markerBucket:${markerBucket} · markers:${markerSummary} · corr:${correlationHint} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
+      'price-only': `candles:${candles} · chartPoints:${chartPoints} · chartLens:${chartLens} · markerFocus:${markerFocus} · markerWindow:${markerWindow} · markerAge:${markerAge} · markerBucket:${markerBucket} · markerNav:${markerNavigation} · markers:${markerSummary} · corr:${correlationHint} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
+      'with-trades': `candles:${candles} · tradeEvents:${tradeEvents} · chartPoints:${chartPoints} · chartLens:${chartLens} · markerFocus:${markerFocus} · markerWindow:${markerWindow} · markerAge:${markerAge} · markerBucket:${markerBucket} · markerNav:${markerNavigation} · markers:${markerSummary} · corr:${correlationHint} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
+      'with-risk': `candles:${candles} · tradeEvents:${tradeEvents} · riskAlerts:${alerts} · chartPoints:${chartPoints} · chartLens:${chartLens} · markerFocus:${markerFocus} · markerWindow:${markerWindow} · markerAge:${markerAge} · markerBucket:${markerBucket} · markerNav:${markerNavigation} · markers:${markerSummary} · corr:${correlationHint} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
     }
     setMarketOverlaySnapshotSummary(summaryByMode[marketOverlayMode])
     setMarketOverlaySnapshotAt(new Date().toISOString())
@@ -3424,6 +3476,7 @@ function App() {
     marketOverlayAnnotationSummary.tradeCount,
     marketOverlayCorrelationHint,
     marketOverlayChartLens,
+    marketOverlayMarkerNavigationLabel,
     marketOverlayMarkerBucket,
     marketOverlayMarkerAgeFilter,
     marketOverlayMarkerFocus,
@@ -3602,6 +3655,23 @@ function App() {
             <p aria-label="Overlay Marker Timeline Bucket Summary">
               Timeline buckets: {marketOverlayMarkerBucketSummary}
             </p>
+            <p aria-label="Overlay Marker Navigation">Marker nav: {marketOverlayMarkerNavigationLabel}</p>
+            <div className="market-overlay-marker-navigation">
+              <button
+                type="button"
+                onClick={selectPreviousMarketOverlayMarker}
+                disabled={!canSelectPreviousMarketOverlayMarker}
+              >
+                Previous Marker
+              </button>
+              <button
+                type="button"
+                onClick={selectNextMarketOverlayMarker}
+                disabled={!canSelectNextMarketOverlayMarker}
+              >
+                Next Marker
+              </button>
+            </div>
             <div className="market-overlay-timeline-list" aria-label="Overlay Marker Timeline">
               {marketOverlayMarkerTimelineRows.length === 0 ? (
                 <span className="overlay-marker-chip overlay-marker-none">none</span>

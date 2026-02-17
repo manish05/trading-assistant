@@ -59,6 +59,11 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
       'Timeline buckets: mode:none · buckets:0 · latest:none · count:0',
     )
+    expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
+      'Marker nav: 0/0 · selected:none',
+    )
+    expect(screen.getByRole('button', { name: 'Previous Marker' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Next Marker' })).toBeDisabled()
     expect(screen.getByLabelText('Overlay Marker Timeline')).toHaveTextContent('none')
     expect(screen.getByLabelText('Overlay Markers')).toHaveTextContent('none')
     expect(screen.getByLabelText('Overlay Chart Runtime')).toBeInTheDocument()
@@ -319,7 +324,7 @@ describe('Dashboard shell', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Refresh Overlay Snapshot' }))
     expect(screen.getByLabelText('Overlay Snapshot Summary')).toHaveTextContent(
-      'Summary: candles:0 · chartPoints:0 · chartLens:price-only · markerFocus:all · markerWindow:5 · markerAge:all · markerBucket:none · markers:t0/r0/f0 · corr:none · trend:neutral · vol:n/a · pulse:quiet(0) · regime:observe',
+      'Summary: candles:0 · chartPoints:0 · chartLens:price-only · markerFocus:all · markerWindow:5 · markerAge:all · markerBucket:none · markerNav:0/0|selected:none · markers:t0/r0/f0 · corr:none · trend:neutral · vol:n/a · pulse:quiet(0) · regime:observe',
     )
     expect(screen.getByLabelText('Overlay Snapshot Time')).not.toHaveTextContent('Snapshot: never')
 
@@ -328,7 +333,7 @@ describe('Dashboard shell', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: 'Refresh Overlay Snapshot' }))
     expect(screen.getByLabelText('Overlay Snapshot Summary')).toHaveTextContent(
-      'Summary: candles:0 · tradeEvents:0 · chartPoints:0 · chartLens:price-only · markerFocus:all · markerWindow:5 · markerAge:all · markerBucket:none · markers:t0/r0/f0 · corr:none · trend:neutral · vol:n/a · pulse:quiet(0) · regime:observe',
+      'Summary: candles:0 · tradeEvents:0 · chartPoints:0 · chartLens:price-only · markerFocus:all · markerWindow:5 · markerAge:all · markerBucket:none · markerNav:0/0|selected:none · markers:t0/r0/f0 · corr:none · trend:neutral · vol:n/a · pulse:quiet(0) · regime:observe',
     )
 
     fireEvent.change(screen.getByLabelText('Overlay Mode'), {
@@ -336,7 +341,7 @@ describe('Dashboard shell', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: 'Refresh Overlay Snapshot' }))
     expect(screen.getByLabelText('Overlay Snapshot Summary')).toHaveTextContent(
-      'Summary: candles:0 · tradeEvents:0 · riskAlerts:0 · chartPoints:0 · chartLens:price-only · markerFocus:all · markerWindow:5 · markerAge:all · markerBucket:none · markers:t0/r0/f0 · corr:none · trend:neutral · vol:n/a · pulse:quiet(0) · regime:observe',
+      'Summary: candles:0 · tradeEvents:0 · riskAlerts:0 · chartPoints:0 · chartLens:price-only · markerFocus:all · markerWindow:5 · markerAge:all · markerBucket:none · markerNav:0/0|selected:none · markers:t0/r0/f0 · corr:none · trend:neutral · vol:n/a · pulse:quiet(0) · regime:observe',
     )
   })
 
@@ -466,6 +471,11 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
       'Timeline buckets: mode:none · buckets:0 · latest:none · count:0',
     )
+    expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
+      'Marker nav: 0/0 · selected:none',
+    )
+    expect(screen.getByRole('button', { name: 'Previous Marker' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Next Marker' })).toBeDisabled()
     expect(screen.getByLabelText('Overlay Marker Timeline')).toHaveTextContent('none')
     expect(screen.getByLabelText('Overlay Markers')).toHaveTextContent('none')
     expect(screen.getByLabelText('Overlay Trend')).toHaveTextContent('Trend: neutral')
@@ -522,6 +532,11 @@ describe('Dashboard shell', () => {
       expect(screen.getByLabelText('Overlay Marker Timeline')).toHaveTextContent(
         'trade:closed:queued · t1 · close:1.00',
       )
+      expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
+        'Marker nav: 2/2 · selected:risk:live_trading_disabled:raised',
+      )
+      expect(screen.getByRole('button', { name: 'Previous Marker' })).toBeEnabled()
+      expect(screen.getByRole('button', { name: 'Next Marker' })).toBeDisabled()
       expect(screen.getByLabelText('Overlay Markers')).toHaveTextContent(
         'risk:live_trading_disabled:raised',
       )
@@ -551,7 +566,12 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Markers')).not.toHaveTextContent('trade:closed:queued')
 
     fireEvent.change(screen.getByLabelText('Marker Focus'), { target: { value: 'all' } })
-    fireEvent.click(screen.getByRole('button', { name: 'trade:closed:queued' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Previous Marker' }))
+    expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
+      'Marker nav: 1/2 · selected:trade:closed:queued',
+    )
+    expect(screen.getByRole('button', { name: 'Previous Marker' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Next Marker' })).toBeEnabled()
     expect(screen.getByLabelText('Overlay Correlation Hint')).toHaveTextContent(
       'Correlation: trade:closed:queued@1.00(t1)',
     )
@@ -569,7 +589,7 @@ describe('Dashboard shell', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Refresh Overlay Snapshot' }))
     expect(screen.getByLabelText('Overlay Snapshot Summary')).toHaveTextContent(
-      'Summary: candles:2 · tradeEvents:1 · riskAlerts:1 · chartPoints:2 · chartLens:diagnostics · markerFocus:all · markerWindow:5 · markerAge:all · markerBucket:none · markers:t1/r1/f0 · corr:trade:closed:queued@1.00(t1) · trend:up (+1.00) · vol:1.00 · pulse:intense(5) · regime:risk_on',
+      'Summary: candles:2 · tradeEvents:1 · riskAlerts:1 · chartPoints:2 · chartLens:diagnostics · markerFocus:all · markerWindow:5 · markerAge:all · markerBucket:none · markerNav:1/2|selected:trade:closed:queued · markers:t1/r1/f0 · corr:trade:closed:queued@1.00(t1) · trend:up (+1.00) · vol:1.00 · pulse:intense(5) · regime:risk_on',
     )
 
     sendSpy.mockRestore()
@@ -687,6 +707,9 @@ describe('Dashboard shell', () => {
         'Marker focus: all · window:5 · age:all · visible:2 · latest:risk:live_trading_disabled:raised',
       )
     })
+    expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
+      'Marker nav: 2/2 · selected:risk:live_trading_disabled:raised',
+    )
     expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
       'Timeline buckets: mode:none · buckets:2 · latest:t2 · count:1',
     )
@@ -709,6 +732,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Drilldown Detail')).toHaveTextContent(
       'Marker detail: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
+      'Marker nav: 0/0 · selected:none',
+    )
     expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
       'Timeline buckets: mode:60s · buckets:0 · latest:none · count:0',
     )
@@ -719,6 +745,9 @@ describe('Dashboard shell', () => {
         'Marker focus: all · window:5 · age:last-300s · visible:2 · latest:risk:live_trading_disabled:raised',
       )
     })
+    expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
+      'Marker nav: 2/2 · selected:risk:live_trading_disabled:raised',
+    )
     expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
       `Timeline buckets: mode:60s · buckets:1 · latest:${expectedBucket} · count:2`,
     )
