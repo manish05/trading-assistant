@@ -42,6 +42,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Bucket Scope')).toHaveValue('all-buckets')
     expect(screen.getByLabelText('Timeline Order')).toHaveValue('newest-first')
     expect(screen.getByLabelText('Marker Wrap')).toHaveValue('bounded')
+    expect(screen.getByLabelText('Selection Mode')).toHaveValue('sticky')
     expect(screen.getByLabelText('Chart Lens')).toHaveValue('price-only')
     expect(screen.getByLabelText('Overlay Mode')).toHaveValue('price-only')
     expect(screen.getByLabelText('Overlay Legend')).toBeInTheDocument()
@@ -296,6 +297,9 @@ describe('Dashboard shell', () => {
     fireEvent.change(screen.getByLabelText('Marker Wrap'), {
       target: { value: 'wrap' },
     })
+    fireEvent.change(screen.getByLabelText('Selection Mode'), {
+      target: { value: 'follow-latest' },
+    })
 
     expect(window.localStorage.getItem('quick-action-market-overlay-mode-v1')).toBe('with-risk')
     expect(window.localStorage.getItem('quick-action-market-overlay-chart-lens-v1')).toBe(
@@ -314,6 +318,9 @@ describe('Dashboard shell', () => {
       'oldest-first',
     )
     expect(window.localStorage.getItem('quick-action-market-overlay-marker-wrap-v1')).toBe('wrap')
+    expect(window.localStorage.getItem('quick-action-market-overlay-selection-mode-v1')).toBe(
+      'follow-latest',
+    )
   })
 
   it('shows chart fallback runtime when ResizeObserver is unavailable', async () => {
@@ -946,6 +953,150 @@ describe('Dashboard shell', () => {
 
     sendSpy.mockRestore()
     dateNowSpy.mockRestore()
+  })
+
+  it('supports follow-latest selection mode for incoming markers', async () => {
+    const sendSpy = vi
+      .spyOn(WebSocket.prototype, 'send')
+      .mockImplementation(function (
+        this: WebSocket,
+        data: string | ArrayBufferLike | Blob | ArrayBufferView<ArrayBufferLike>,
+      ) {
+        if (typeof data !== 'string') {
+          return
+        }
+        const payload = JSON.parse(data) as {
+          type?: string
+          id?: string
+          method?: string
+          params?: {
+            action?: string
+          }
+        }
+        if (payload.type !== 'req' || !payload.id) {
+          return
+        }
+
+        if (payload.method === 'feeds.getCandles') {
+          queueMicrotask(() => {
+            this.onmessage?.(
+              new MessageEvent('message', {
+                data: JSON.stringify({
+                  type: 'res',
+                  id: payload.id,
+                  ok: true,
+                  payload: {
+                    symbol: 'ETHUSDm',
+                    timeframe: '5m',
+                    candles: [{ close: 1 }, { close: 2 }],
+                  },
+                }),
+              }),
+            )
+          })
+          return
+        }
+
+        if (payload.method === 'risk.emergencyStop') {
+          queueMicrotask(() => {
+            if (payload.params?.action === 'close_all') {
+              this.onmessage?.(
+                new MessageEvent('message', {
+                  data: JSON.stringify({
+                    type: 'event',
+                    event: 'event.trade.closed',
+                    payload: {
+                      status: 'queued',
+                    },
+                  }),
+                }),
+              )
+            }
+            if (payload.params?.action === 'disable_live') {
+              this.onmessage?.(
+                new MessageEvent('message', {
+                  data: JSON.stringify({
+                    type: 'event',
+                    event: 'event.risk.alert',
+                    payload: {
+                      status: 'raised',
+                      kind: 'live_trading_disabled',
+                    },
+                  }),
+                }),
+              )
+            }
+            this.onmessage?.(
+              new MessageEvent('message', {
+                data: JSON.stringify({
+                  type: 'res',
+                  id: payload.id,
+                  ok: true,
+                  payload: {
+                    emergency: true,
+                    action: payload.params?.action ?? 'pause_trading',
+                    reason: 'test',
+                    updatedAt: '2025-01-01T00:00:00Z',
+                    actionCounts: {
+                      pause_trading: 0,
+                      cancel_all: 0,
+                      close_all: 0,
+                      disable_live: 0,
+                    },
+                  },
+                }),
+              }),
+            )
+          })
+        }
+      })
+
+    render(<App />)
+
+    fireEvent.change(screen.getByLabelText('Min Request Gap (ms)'), { target: { value: '0' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Get Candles' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Close All Now' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Disable Live Now' }))
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
+        'Marker nav: 2/2 · selected:risk:live_trading_disabled:raised',
+      )
+    })
+
+    fireEvent.keyDown(screen.getByRole('button', { name: 'risk:live_trading_disabled:raised' }), {
+      key: 'ArrowLeft',
+    })
+    expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
+      'Marker nav: 1/2 · selected:trade:closed:queued',
+    )
+
+    fireEvent.change(screen.getByLabelText('Selection Mode'), { target: { value: 'follow-latest' } })
+    expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
+      'Marker nav: 2/2 · selected:risk:live_trading_disabled:raised',
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close All Now' }))
+    await waitFor(() => {
+      expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
+        'Marker nav: 3/3 · selected:trade:closed:queued',
+      )
+    })
+
+    fireEvent.change(screen.getByLabelText('Selection Mode'), { target: { value: 'sticky' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Previous Marker' }))
+    expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
+      'Marker nav: 2/3 · selected:risk:live_trading_disabled:raised',
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Disable Live Now' }))
+    await waitFor(() => {
+      expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
+        'Marker nav: 2/4 · selected:risk:live_trading_disabled:raised',
+      )
+    })
+
+    sendSpy.mockRestore()
   })
 
   it('sends account and feed management requests', async () => {

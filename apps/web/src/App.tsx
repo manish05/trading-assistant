@@ -80,6 +80,7 @@ type MarketOverlayMarkerBucket = 'none' | '30s' | '60s'
 type MarketOverlayBucketScope = 'all-buckets' | 'latest-bucket'
 type MarketOverlayTimelineOrder = 'newest-first' | 'oldest-first'
 type MarketOverlayMarkerWrap = 'bounded' | 'wrap'
+type MarketOverlaySelectionMode = 'sticky' | 'follow-latest'
 type MarketOverlayChartPoint = { time: number; value: number }
 type MarketOverlayChartMarker = {
   time: number
@@ -180,6 +181,7 @@ const MARKET_OVERLAY_MARKER_BUCKET_STORAGE_KEY = 'quick-action-market-overlay-ma
 const MARKET_OVERLAY_BUCKET_SCOPE_STORAGE_KEY = 'quick-action-market-overlay-bucket-scope-v1'
 const MARKET_OVERLAY_TIMELINE_ORDER_STORAGE_KEY = 'quick-action-market-overlay-timeline-order-v1'
 const MARKET_OVERLAY_MARKER_WRAP_STORAGE_KEY = 'quick-action-market-overlay-marker-wrap-v1'
+const MARKET_OVERLAY_SELECTION_MODE_STORAGE_KEY = 'quick-action-market-overlay-selection-mode-v1'
 const MAX_IMPORT_REPORT_NAMES = 6
 const FEED_CANDLE_FETCH_LIMIT = 50
 const DEVICE_NOTIFY_TEST_MESSAGE = 'Dashboard test notification'
@@ -482,6 +484,15 @@ const readMarketOverlayMarkerWrapFromStorage = (): MarketOverlayMarkerWrap => {
   return window.localStorage.getItem(MARKET_OVERLAY_MARKER_WRAP_STORAGE_KEY) === 'wrap'
     ? 'wrap'
     : 'bounded'
+}
+
+const readMarketOverlaySelectionModeFromStorage = (): MarketOverlaySelectionMode => {
+  if (typeof window === 'undefined') {
+    return 'sticky'
+  }
+  return window.localStorage.getItem(MARKET_OVERLAY_SELECTION_MODE_STORAGE_KEY) === 'follow-latest'
+    ? 'follow-latest'
+    : 'sticky'
 }
 
 const sanitizePreset = (value: unknown): QuickActionPreset | null => {
@@ -871,6 +882,9 @@ function App() {
   )
   const [marketOverlayMarkerWrap, setMarketOverlayMarkerWrap] = useState<MarketOverlayMarkerWrap>(
     readMarketOverlayMarkerWrapFromStorage,
+  )
+  const [marketOverlaySelectionMode, setMarketOverlaySelectionMode] = useState<MarketOverlaySelectionMode>(
+    readMarketOverlaySelectionModeFromStorage,
   )
   const [marketOverlaySelectedMarkerId, setMarketOverlaySelectedMarkerId] = useState<string | null>(
     null,
@@ -1367,6 +1381,20 @@ function App() {
       }
       return
     }
+    if (marketOverlaySelectionMode === 'follow-latest') {
+      const latestScoped =
+        marketOverlayScopedTimelineAnnotations[marketOverlayScopedTimelineAnnotations.length - 1] ?? null
+      if (!latestScoped) {
+        if (marketOverlaySelectedMarkerId !== null) {
+          setMarketOverlaySelectedMarkerId(null)
+        }
+        return
+      }
+      if (marketOverlaySelectedMarkerId !== latestScoped.id) {
+        setMarketOverlaySelectedMarkerId(latestScoped.id)
+      }
+      return
+    }
     if (
       marketOverlaySelectedMarkerId &&
       marketOverlayScopedVisibleAnnotations.some((annotation) => annotation.id === marketOverlaySelectedMarkerId)
@@ -1374,7 +1402,12 @@ function App() {
       return
     }
     setMarketOverlaySelectedMarkerId(marketOverlayScopedVisibleAnnotations[0].id)
-  }, [marketOverlayScopedVisibleAnnotations, marketOverlaySelectedMarkerId])
+  }, [
+    marketOverlayScopedTimelineAnnotations,
+    marketOverlayScopedVisibleAnnotations,
+    marketOverlaySelectedMarkerId,
+    marketOverlaySelectionMode,
+  ])
 
   const selectPreviousMarketOverlayMarker = useCallback(() => {
     if (!canSelectPreviousMarketOverlayMarker) {
@@ -3450,6 +3483,10 @@ function App() {
   }, [marketOverlayMarkerWrap])
 
   useEffect(() => {
+    window.localStorage.setItem(MARKET_OVERLAY_SELECTION_MODE_STORAGE_KEY, marketOverlaySelectionMode)
+  }, [marketOverlaySelectionMode])
+
+  useEffect(() => {
     window.localStorage.setItem(HELPER_RESET_TIMESTAMP_FORMAT_STORAGE_KEY, helperResetTimestampFormat)
   }, [helperResetTimestampFormat])
 
@@ -3847,6 +3884,18 @@ function App() {
               >
                 <option value="bounded">bounded</option>
                 <option value="wrap">wrap</option>
+              </select>
+            </label>
+            <label>
+              Selection Mode
+              <select
+                value={marketOverlaySelectionMode}
+                onChange={(event) =>
+                  setMarketOverlaySelectionMode(event.target.value as MarketOverlaySelectionMode)
+                }
+              >
+                <option value="sticky">sticky</option>
+                <option value="follow-latest">follow-latest</option>
               </select>
             </label>
             <label>
