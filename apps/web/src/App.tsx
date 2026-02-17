@@ -696,6 +696,18 @@ function App() {
       Number(onboardingChecklist.feed),
     [onboardingChecklist],
   )
+  const marketOverlayLiveSummary = useMemo(() => {
+    const candles = lastFetchedCandlesCount ?? 0
+    const tradeEvents = tradeControlEvents.length
+    const alerts = riskAlerts.length
+    if (marketOverlayMode === 'price-only') {
+      return `candles:${candles}`
+    }
+    if (marketOverlayMode === 'with-trades') {
+      return `candles:${candles} · tradeEvents:${tradeEvents}`
+    }
+    return `candles:${candles} · tradeEvents:${tradeEvents} · riskAlerts:${alerts}`
+  }, [lastFetchedCandlesCount, marketOverlayMode, riskAlerts.length, tradeControlEvents.length])
 
   const websocketUrl = useMemo(() => {
     const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws'
@@ -2701,6 +2713,25 @@ function App() {
                 <option value="with-risk">with-risk</option>
               </select>
             </label>
+            <div className="market-overlay-legend" aria-label="Overlay Legend">
+              <span className="overlay-chip active">price</span>
+              <span
+                className={`overlay-chip ${marketOverlayMode !== 'price-only' ? 'active' : 'inactive'}`}
+              >
+                trades
+              </span>
+              <span
+                className={`overlay-chip ${marketOverlayMode === 'with-risk' ? 'active' : 'inactive'}`}
+              >
+                risk
+              </span>
+              <span
+                className={`overlay-chip ${marketOverlayMode === 'with-risk' ? 'active' : 'inactive'}`}
+              >
+                feed
+              </span>
+            </div>
+            <p aria-label="Overlay Live Summary">Live: {marketOverlayLiveSummary}</p>
             <button type="button" onClick={refreshMarketOverlaySnapshot}>
               Refresh Overlay Snapshot
             </button>

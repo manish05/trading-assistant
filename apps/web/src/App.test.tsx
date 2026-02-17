@@ -36,6 +36,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Create Agent' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Run Onboarding Flow' })).toBeInTheDocument()
     expect(screen.getByLabelText('Overlay Mode')).toHaveValue('price-only')
+    expect(screen.getByLabelText('Overlay Legend')).toBeInTheDocument()
+    expect(screen.getByText('price', { selector: '.overlay-chip' })).toHaveClass('active')
+    expect(screen.getByLabelText('Overlay Live Summary')).toHaveTextContent('Live: candles:0')
     expect(screen.getByRole('button', { name: 'Refresh Overlay Snapshot' })).toBeInTheDocument()
     expect(screen.getByLabelText('Overlay Snapshot Time')).toHaveTextContent('Snapshot: never')
     expect(screen.getByLabelText('Overlay Snapshot Summary')).toHaveTextContent('Summary: none')
@@ -256,6 +259,131 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Snapshot Summary')).toHaveTextContent(
       'Summary: candles:0 · tradeEvents:0 · riskAlerts:0',
     )
+  })
+
+  it('updates overlay legend and live summary by selected mode and events', async () => {
+    const sendSpy = vi
+      .spyOn(WebSocket.prototype, 'send')
+      .mockImplementation(function (
+        this: WebSocket,
+        data: string | ArrayBufferLike | Blob | ArrayBufferView<ArrayBufferLike>,
+      ) {
+        if (typeof data !== 'string') {
+          return
+        }
+        const payload = JSON.parse(data) as {
+          type?: string
+          id?: string
+          method?: string
+          params?: {
+            action?: string
+          }
+        }
+        if (payload.type !== 'req' || !payload.id) {
+          return
+        }
+
+        if (payload.method === 'feeds.getCandles') {
+          queueMicrotask(() => {
+            this.onmessage?.(
+              new MessageEvent('message', {
+                data: JSON.stringify({
+                  type: 'res',
+                  id: payload.id,
+                  ok: true,
+                  payload: {
+                    symbol: 'ETHUSDm',
+                    timeframe: '5m',
+                    candles: [{ close: 1 }, { close: 2 }],
+                  },
+                }),
+              }),
+            )
+          })
+          return
+        }
+
+        if (payload.method === 'risk.emergencyStop') {
+          queueMicrotask(() => {
+            if (payload.params?.action === 'close_all') {
+              this.onmessage?.(
+                new MessageEvent('message', {
+                  data: JSON.stringify({
+                    type: 'event',
+                    event: 'event.trade.closed',
+                    payload: {
+                      status: 'queued',
+                    },
+                  }),
+                }),
+              )
+            }
+            if (payload.params?.action === 'disable_live') {
+              this.onmessage?.(
+                new MessageEvent('message', {
+                  data: JSON.stringify({
+                    type: 'event',
+                    event: 'event.risk.alert',
+                    payload: {
+                      status: 'raised',
+                      kind: 'live_trading_disabled',
+                    },
+                  }),
+                }),
+              )
+            }
+            this.onmessage?.(
+              new MessageEvent('message', {
+                data: JSON.stringify({
+                  type: 'res',
+                  id: payload.id,
+                  ok: true,
+                  payload: {
+                    emergency: true,
+                    action: payload.params?.action ?? 'pause_trading',
+                    reason: 'test',
+                    updatedAt: '2025-01-01T00:00:00Z',
+                    actionCounts: {
+                      pause_trading: 0,
+                      cancel_all: 0,
+                      close_all: 0,
+                      disable_live: 0,
+                    },
+                  },
+                }),
+              }),
+            )
+          })
+        }
+      })
+
+    render(<App />)
+
+    fireEvent.change(screen.getByLabelText('Min Request Gap (ms)'), { target: { value: '0' } })
+    fireEvent.change(screen.getByLabelText('Overlay Mode'), { target: { value: 'with-trades' } })
+
+    const legend = screen.getByLabelText('Overlay Legend')
+    expect(within(legend).getByText('trades', { selector: '.overlay-chip' })).toHaveClass('active')
+    expect(within(legend).getByText('risk', { selector: '.overlay-chip' })).toHaveClass('inactive')
+    expect(screen.getByLabelText('Overlay Live Summary')).toHaveTextContent(
+      'Live: candles:0 · tradeEvents:0',
+    )
+
+    fireEvent.change(screen.getByLabelText('Overlay Mode'), { target: { value: 'with-risk' } })
+    expect(within(legend).getByText('risk', { selector: '.overlay-chip' })).toHaveClass('active')
+    expect(within(legend).getByText('feed', { selector: '.overlay-chip' })).toHaveClass('active')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Get Candles' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Close All Now' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Disable Live Now' }))
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Overlay Live Summary')).toHaveTextContent(
+        'Live: candles:2 · tradeEvents:1 · riskAlerts:1',
+      )
+    })
+
+    sendSpy.mockRestore()
   })
 
   it('sends account and feed management requests', async () => {

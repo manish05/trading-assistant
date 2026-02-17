@@ -94,6 +94,31 @@
   color: #9fb0cc;
 }
 
+.market-overlay-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.overlay-chip {
+  border-radius: 999px;
+  border: 1px solid #2d4a7e;
+  padding: 0.08rem 0.42rem;
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.overlay-chip.active {
+  background: #163056;
+  color: #dbe7fb;
+}
+
+.overlay-chip.inactive {
+  background: #12213a;
+  color: #7f91b0;
+}
+
 .market-overlay-controls label {
   display: inline-flex;
   align-items: center;
