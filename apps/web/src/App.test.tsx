@@ -35,6 +35,10 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Agents' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Create Agent' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Run Onboarding Flow' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Overlay Mode')).toHaveValue('price-only')
+    expect(screen.getByRole('button', { name: 'Refresh Overlay Snapshot' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Overlay Snapshot Time')).toHaveTextContent('Snapshot: never')
+    expect(screen.getByLabelText('Overlay Snapshot Summary')).toHaveTextContent('Summary: none')
     expect(screen.getByText('Intervention Panel')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Pause Trading Now' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Cancel All Now' })).toBeInTheDocument()
@@ -217,6 +221,40 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByText('Copytrade Preview', { selector: 'dt' }).closest('div')).toHaveTextContent(
       'none',
+    )
+  })
+
+  it('persists market overlay mode preference in localStorage', () => {
+    render(<App />)
+
+    fireEvent.change(screen.getByLabelText('Overlay Mode'), {
+      target: { value: 'with-risk' },
+    })
+
+    expect(window.localStorage.getItem('quick-action-market-overlay-mode-v1')).toBe('with-risk')
+  })
+
+  it('refreshes market overlay snapshot summary by selected mode', () => {
+    render(<App />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh Overlay Snapshot' }))
+    expect(screen.getByLabelText('Overlay Snapshot Summary')).toHaveTextContent('Summary: candles:0')
+    expect(screen.getByLabelText('Overlay Snapshot Time')).not.toHaveTextContent('Snapshot: never')
+
+    fireEvent.change(screen.getByLabelText('Overlay Mode'), {
+      target: { value: 'with-trades' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh Overlay Snapshot' }))
+    expect(screen.getByLabelText('Overlay Snapshot Summary')).toHaveTextContent(
+      'Summary: candles:0 · tradeEvents:0',
+    )
+
+    fireEvent.change(screen.getByLabelText('Overlay Mode'), {
+      target: { value: 'with-risk' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh Overlay Snapshot' }))
+    expect(screen.getByLabelText('Overlay Snapshot Summary')).toHaveTextContent(
+      'Summary: candles:0 · tradeEvents:0 · riskAlerts:0',
     )
   })
 

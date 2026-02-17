@@ -86,6 +86,38 @@
   text-align: center;
 }
 
+.market-overlay-controls {
+  margin-top: 0.65rem;
+  display: grid;
+  gap: 0.45rem;
+  font-size: 0.74rem;
+  color: #9fb0cc;
+}
+
+.market-overlay-controls label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.market-overlay-controls select {
+  background: #14223a;
+  border: 1px solid #2d4a7e;
+  color: #e8edf5;
+  border-radius: 6px;
+  padding: 0.18rem 0.28rem;
+  font-size: 0.72rem;
+}
+
+.market-overlay-controls button {
+  width: fit-content;
+  background: #1d335a;
+  color: #e8edf5;
+  border: 1px solid #2d4a7e;
+  border-radius: 8px;
+  padding: 0.3rem 0.55rem;
+}
+
 .panel-heading {
   display: flex;
   justify-content: space-between;

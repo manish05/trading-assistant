@@ -60,6 +60,7 @@ type QuickActionHistory = {
 type HistoryFilter = 'all' | QuickActionHistory['status']
 type TimestampFormat = 'absolute' | 'relative'
 type RiskEmergencyAction = 'pause_trading' | 'cancel_all' | 'close_all' | 'disable_live'
+type MarketOverlayMode = 'price-only' | 'with-trades' | 'with-risk'
 
 type QuickActionPreset = {
   managedAccountId: string
@@ -122,6 +123,7 @@ const HELPER_RESET_BADGE_SECTION_STORAGE_KEY = 'quick-action-helper-reset-badge-
 const HELPER_RESET_LOCK_STORAGE_KEY = 'quick-action-helper-reset-lock-v1'
 const HELPER_LOCK_COUNTERS_RESET_AT_STORAGE_KEY = 'quick-action-helper-lock-counters-reset-at-v1'
 const BLOCK_TELEMETRY_VISIBILITY_STORAGE_KEY = 'quick-action-block-telemetry-visibility-v1'
+const MARKET_OVERLAY_MODE_STORAGE_KEY = 'quick-action-market-overlay-mode-v1'
 const MAX_IMPORT_REPORT_NAMES = 6
 const FEED_CANDLE_FETCH_LIMIT = 50
 const DEVICE_NOTIFY_TEST_MESSAGE = 'Dashboard test notification'
@@ -331,6 +333,17 @@ const readBlockTelemetryVisibilityFromStorage = (): boolean => {
     return true
   }
   return window.localStorage.getItem(BLOCK_TELEMETRY_VISIBILITY_STORAGE_KEY) !== 'hidden'
+}
+
+const readMarketOverlayModeFromStorage = (): MarketOverlayMode => {
+  if (typeof window === 'undefined') {
+    return 'price-only'
+  }
+  const raw = window.localStorage.getItem(MARKET_OVERLAY_MODE_STORAGE_KEY)
+  if (raw === 'with-trades' || raw === 'with-risk') {
+    return raw
+  }
+  return 'price-only'
 }
 
 const sanitizePreset = (value: unknown): QuickActionPreset | null => {
@@ -670,6 +683,11 @@ function App() {
   const [lastSuccessByMethod, setLastSuccessByMethod] = useState<Record<string, string>>({})
   const [lastErrorByMethod, setLastErrorByMethod] = useState<Record<string, string>>({})
   const [blocks, setBlocks] = useState<BlockItem[]>([])
+  const [marketOverlayMode, setMarketOverlayMode] = useState<MarketOverlayMode>(
+    readMarketOverlayModeFromStorage,
+  )
+  const [marketOverlaySnapshotAt, setMarketOverlaySnapshotAt] = useState<string | null>(null)
+  const [marketOverlaySnapshotSummary, setMarketOverlaySnapshotSummary] = useState<string>('none')
 
   const onboardingCompletedCount = useMemo(
     () =>
@@ -2435,6 +2453,10 @@ function App() {
   }, [isBlockTelemetryVisible])
 
   useEffect(() => {
+    window.localStorage.setItem(MARKET_OVERLAY_MODE_STORAGE_KEY, marketOverlayMode)
+  }, [marketOverlayMode])
+
+  useEffect(() => {
     window.localStorage.setItem(HELPER_RESET_TIMESTAMP_FORMAT_STORAGE_KEY, helperResetTimestampFormat)
   }, [helperResetTimestampFormat])
 
@@ -2641,6 +2663,19 @@ function App() {
     withLockTelemetrySection,
   ])
 
+  const refreshMarketOverlaySnapshot = useCallback(() => {
+    const candles = lastFetchedCandlesCount ?? 0
+    const tradeEvents = tradeControlEvents.length
+    const alerts = riskAlerts.length
+    const summaryByMode: Record<MarketOverlayMode, string> = {
+      'price-only': `candles:${candles}`,
+      'with-trades': `candles:${candles} · tradeEvents:${tradeEvents}`,
+      'with-risk': `candles:${candles} · tradeEvents:${tradeEvents} · riskAlerts:${alerts}`,
+    }
+    setMarketOverlaySnapshotSummary(summaryByMode[marketOverlayMode])
+    setMarketOverlaySnapshotAt(new Date().toISOString())
+  }, [lastFetchedCandlesCount, marketOverlayMode, riskAlerts.length, tradeControlEvents.length])
+
   return (
     <div className="dashboard-shell">
       <header className="dashboard-header">
@@ -2654,6 +2689,28 @@ function App() {
           <div className="placeholder-chart">
             <span>Chart overlay surface (lightweight-charts integration in progress)</span>
           </div>
+          <section className="market-overlay-controls">
+            <label>
+              Overlay Mode
+              <select
+                value={marketOverlayMode}
+                onChange={(event) => setMarketOverlayMode(event.target.value as MarketOverlayMode)}
+              >
+                <option value="price-only">price-only</option>
+                <option value="with-trades">with-trades</option>
+                <option value="with-risk">with-risk</option>
+              </select>
+            </label>
+            <button type="button" onClick={refreshMarketOverlaySnapshot}>
+              Refresh Overlay Snapshot
+            </button>
+            <p aria-label="Overlay Snapshot Time">
+              Snapshot: {marketOverlaySnapshotAt ?? 'never'}
+            </p>
+            <p aria-label="Overlay Snapshot Summary">
+              Summary: {marketOverlaySnapshotSummary}
+            </p>
+          </section>
         </section>
 
         <section className="panel feed-panel">
