@@ -863,6 +863,9 @@ describe('Dashboard shell', () => {
       expect(payload).toContain('last reset=never')
       expect(payload).toContain('resetFormat=absolute')
       expect(payload).toContain('staleAfterHours=24')
+      expect(payload).toContain('resetLock=locked')
+      expect(payload).toContain('resetBadgeVisible=yes')
+      expect(payload).toContain('resetBadgeSection=expanded')
     })
   })
 

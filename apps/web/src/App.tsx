@@ -1264,6 +1264,9 @@ function App() {
       `last reset=${resetText}`,
       `resetFormat=${helperResetTimestampFormat}`,
       `staleAfterHours=${helperResetStaleThresholdHours}`,
+      `resetLock=${isHelperResetLocked ? 'locked' : 'unlocked'}`,
+      `resetBadgeVisible=${isHelperResetBadgeVisible ? 'yes' : 'no'}`,
+      `resetBadgeSection=${isHelperResetBadgeSectionExpanded ? 'expanded' : 'collapsed'}`,
     ].join('\n')
     try {
       if (!navigator.clipboard?.writeText) {
@@ -1284,7 +1287,15 @@ function App() {
         severity: 'warn',
       })
     }
-  }, [appendBlock, helperDiagnosticsLastResetAt, helperResetStaleThresholdHours, helperResetTimestampFormat])
+  }, [
+    appendBlock,
+    helperDiagnosticsLastResetAt,
+    isHelperResetBadgeSectionExpanded,
+    isHelperResetBadgeVisible,
+    isHelperResetLocked,
+    helperResetStaleThresholdHours,
+    helperResetTimestampFormat,
+  ])
 
   const resetHelperDiagnosticsPreferences = useCallback(() => {
     if (isHelperResetLocked) {
