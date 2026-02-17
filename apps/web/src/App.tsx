@@ -85,6 +85,7 @@ const IMPORT_HELPER_DIAGNOSTICS_STORAGE_KEY = 'quick-action-import-helper-diagno
 const STATUS_SHORTCUT_LEGEND_STORAGE_KEY = 'quick-action-status-shortcut-legend-v1'
 const STATUS_SHORTCUT_LEGEND_ORDER_STORAGE_KEY = 'quick-action-status-shortcut-legend-order-v1'
 const STATUS_SHORTCUT_LEGEND_DENSITY_STORAGE_KEY = 'quick-action-status-shortcut-legend-density-v1'
+const IMPORT_SNAPSHOT_TOGGLES_STORAGE_KEY = 'quick-action-import-snapshot-toggles-v1'
 const MAX_IMPORT_REPORT_NAMES = 6
 const DEFAULT_PRESET_TEMPLATE: QuickActionPreset = {
   managedAccountId: 'acct_demo_1',
@@ -199,6 +200,13 @@ const readStatusShortcutLegendDensityFromStorage = (): ShortcutLegendDensity => 
   }
   const raw = window.localStorage.getItem(STATUS_SHORTCUT_LEGEND_DENSITY_STORAGE_KEY)
   return raw === 'inline' ? 'inline' : 'chips'
+}
+
+const readImportSnapshotTogglesExpandedFromStorage = (): boolean => {
+  if (typeof window === 'undefined') {
+    return true
+  }
+  return window.localStorage.getItem(IMPORT_SNAPSHOT_TOGGLES_STORAGE_KEY) !== 'collapsed'
 }
 
 const sanitizePreset = (value: unknown): QuickActionPreset | null => {
@@ -332,6 +340,9 @@ function App() {
   const [hintModeLiveNote, setHintModeLiveNote] = useState<string>('')
   const [showShortcutLegendInStatus, setShowShortcutLegendInStatus] = useState<boolean>(
     readStatusShortcutLegendFromStorage,
+  )
+  const [isImportSnapshotTogglesExpanded, setIsImportSnapshotTogglesExpanded] = useState<boolean>(
+    readImportSnapshotTogglesExpandedFromStorage,
   )
   const [shortcutLegendOrder, setShortcutLegendOrder] = useState<ShortcutLegendOrder>(
     readStatusShortcutLegendOrderFromStorage,
@@ -1250,6 +1261,13 @@ function App() {
   }, [showShortcutLegendInStatus])
 
   useEffect(() => {
+    window.localStorage.setItem(
+      IMPORT_SNAPSHOT_TOGGLES_STORAGE_KEY,
+      isImportSnapshotTogglesExpanded ? 'expanded' : 'collapsed',
+    )
+  }, [isImportSnapshotTogglesExpanded])
+
+  useEffect(() => {
     window.localStorage.setItem(STATUS_SHORTCUT_LEGEND_ORDER_STORAGE_KEY, shortcutLegendOrder)
   }, [shortcutLegendOrder])
 
@@ -1934,16 +1952,26 @@ function App() {
                 <div className="import-snapshot-toggles" aria-label="Import Snapshot Toggles">
                   <button
                     type="button"
-                    onClick={() => setIsImportHintVisible((current) => !current)}
+                    onClick={() => setIsImportSnapshotTogglesExpanded((current) => !current)}
                   >
-                    {isImportHintVisible ? 'Quick Hide Hints' : 'Quick Show Hints'}
+                    {isImportSnapshotTogglesExpanded ? 'Hide Quick Toggles' : 'Show Quick Toggles'}
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowShortcutLegendInStatus((current) => !current)}
-                  >
-                    {showShortcutLegendInStatus ? 'Quick Hide Legend' : 'Quick Show Legend'}
-                  </button>
+                  {isImportSnapshotTogglesExpanded ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setIsImportHintVisible((current) => !current)}
+                      >
+                        {isImportHintVisible ? 'Quick Hide Hints' : 'Quick Show Hints'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowShortcutLegendInStatus((current) => !current)}
+                      >
+                        {showShortcutLegendInStatus ? 'Quick Hide Legend' : 'Quick Show Legend'}
+                      </button>
+                    </>
+                  ) : null}
                 </div>
               </dd>
             </div>

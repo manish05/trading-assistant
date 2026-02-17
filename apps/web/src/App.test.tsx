@@ -67,6 +67,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Legend Order')).toHaveValue('import-first')
     expect(screen.getByLabelText('Legend Density')).toHaveValue('chips')
     expect(screen.getByRole('button', { name: 'Copy Shortcut Cheat Sheet' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Hide Quick Toggles' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Quick Hide Hints' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Quick Show Legend' })).toBeInTheDocument()
     expect(screen.getByText('Helper Diagnostics')).toBeInTheDocument()
@@ -558,6 +559,7 @@ describe('Dashboard shell', () => {
 
   it('supports helper quick toggles from status snapshot row', () => {
     render(<App />)
+    expect(screen.getByRole('button', { name: 'Hide Quick Toggles' })).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Quick Hide Hints' }))
     expect(screen.getByRole('button', { name: 'Quick Show Hints' })).toBeInTheDocument()
@@ -566,6 +568,22 @@ describe('Dashboard shell', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Quick Show Legend' }))
     expect(screen.getByRole('button', { name: 'Quick Hide Legend' })).toBeInTheDocument()
     expect(screen.getByText('Import Shortcut Legend', { selector: 'dt' })).toBeInTheDocument()
+  })
+
+  it('persists snapshot quick-toggle expansion state', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Hide Quick Toggles' }))
+
+    expect(screen.getByRole('button', { name: 'Show Quick Toggles' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Quick Hide Hints' })).not.toBeInTheDocument()
+    expect(window.localStorage.getItem('quick-action-import-snapshot-toggles-v1')).toBe('collapsed')
+  })
+
+  it('initializes snapshot quick-toggle expansion state from localStorage', () => {
+    window.localStorage.setItem('quick-action-import-snapshot-toggles-v1', 'collapsed')
+    render(<App />)
+    expect(screen.getByRole('button', { name: 'Show Quick Toggles' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Quick Hide Hints' })).not.toBeInTheDocument()
   })
 
   it('updates helper diagnostics summary counters in status panel', () => {
