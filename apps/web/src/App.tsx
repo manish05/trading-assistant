@@ -88,6 +88,7 @@ const STATUS_SHORTCUT_LEGEND_STORAGE_KEY = 'quick-action-status-shortcut-legend-
 const STATUS_SHORTCUT_LEGEND_ORDER_STORAGE_KEY = 'quick-action-status-shortcut-legend-order-v1'
 const STATUS_SHORTCUT_LEGEND_DENSITY_STORAGE_KEY = 'quick-action-status-shortcut-legend-density-v1'
 const IMPORT_SNAPSHOT_TOGGLES_STORAGE_KEY = 'quick-action-import-snapshot-toggles-v1'
+const HELPER_DIAGNOSTICS_RESET_AT_STORAGE_KEY = 'quick-action-helper-diagnostics-reset-at-v1'
 const MAX_IMPORT_REPORT_NAMES = 6
 const DEFAULT_PRESET_TEMPLATE: QuickActionPreset = {
   managedAccountId: 'acct_demo_1',
@@ -217,6 +218,14 @@ const readImportSnapshotTogglesExpandedFromStorage = (): boolean => {
     return true
   }
   return window.localStorage.getItem(IMPORT_SNAPSHOT_TOGGLES_STORAGE_KEY) !== 'collapsed'
+}
+
+const readHelperDiagnosticsResetAtFromStorage = (): string | null => {
+  if (typeof window === 'undefined') {
+    return null
+  }
+  const raw = window.localStorage.getItem(HELPER_DIAGNOSTICS_RESET_AT_STORAGE_KEY)
+  return raw && raw.length > 0 ? raw : null
 }
 
 const sanitizePreset = (value: unknown): QuickActionPreset | null => {
@@ -362,6 +371,9 @@ function App() {
   )
   const [helperDiagnosticsDisplayMode, setHelperDiagnosticsDisplayMode] =
     useState<HelperDiagnosticsDisplayMode>(readImportHelperDiagnosticsModeFromStorage)
+  const [helperDiagnosticsLastResetAt, setHelperDiagnosticsLastResetAt] = useState<string | null>(
+    readHelperDiagnosticsResetAtFromStorage,
+  )
   const [availablePresetNames, setAvailablePresetNames] = useState<string[]>(() =>
     Object.keys(readPresetStoreFromStorage()).sort(),
   )
@@ -1113,6 +1125,7 @@ function App() {
       `expanded=${isImportHelperDiagnosticsExpanded ? 'yes' : 'no'}`,
       `enabled=${Number(isImportHintVisible) + Number(showShortcutLegendInStatus)}/2`,
       `density=${shortcutLegendDensity}`,
+      `resetAt=${helperDiagnosticsLastResetAt ?? 'never'}`,
       `hintVisible=${isImportHintVisible ? 'yes' : 'no'}`,
       `legendVisible=${showShortcutLegendInStatus ? 'yes' : 'no'}`,
       `legendOrder=${shortcutLegendOrder}`,
@@ -1140,6 +1153,7 @@ function App() {
     appendBlock,
     isImportHelperDiagnosticsExpanded,
     isImportHintVisible,
+    helperDiagnosticsLastResetAt,
     shortcutLegendDensity,
     shortcutLegendOrder,
     showShortcutLegendInStatus,
@@ -1154,6 +1168,7 @@ function App() {
     setShortcutLegendOrder('import-first')
     setShortcutLegendDensity('chips')
     setHelperDiagnosticsDisplayMode('compact')
+    setHelperDiagnosticsLastResetAt(new Date().toISOString())
     appendBlock({
       id: `blk_${Date.now()}`,
       title: 'helper diagnostics reset',
@@ -1321,6 +1336,14 @@ function App() {
       helperDiagnosticsDisplayMode,
     )
   }, [helperDiagnosticsDisplayMode])
+
+  useEffect(() => {
+    if (helperDiagnosticsLastResetAt) {
+      window.localStorage.setItem(HELPER_DIAGNOSTICS_RESET_AT_STORAGE_KEY, helperDiagnosticsLastResetAt)
+      return
+    }
+    window.localStorage.removeItem(HELPER_DIAGNOSTICS_RESET_AT_STORAGE_KEY)
+  }, [helperDiagnosticsLastResetAt])
 
   useEffect(() => {
     window.localStorage.setItem(IMPORT_HINT_MODE_STORAGE_KEY, importHintMode)
@@ -2059,6 +2082,9 @@ function App() {
                 </span>
                 <span className="import-summary-badge badge-hint-mode">
                   density:{shortcutLegendDensity}
+                </span>
+                <span className="import-summary-badge badge-hint-mode">
+                  reset:{helperDiagnosticsLastResetAt ?? 'never'}
                 </span>
                 {helperDiagnosticsDisplayMode === 'verbose' ? (
                   <>

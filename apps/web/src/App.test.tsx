@@ -78,6 +78,9 @@ describe('Dashboard shell', () => {
     expect(
       screen.getByText('enabled:1/2', { selector: '.import-snapshot-badges .import-summary-badge' }),
     ).toBeInTheDocument()
+    expect(
+      screen.getByText('reset:never', { selector: '.import-snapshot-badges .import-summary-badge' }),
+    ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Copy Helper Summary' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Reset Helper Prefs' })).toBeInTheDocument()
     expect(screen.getByText('Last import: none')).toBeInTheDocument()
@@ -592,6 +595,16 @@ describe('Dashboard shell', () => {
     expect(screen.queryByRole('button', { name: 'Quick Hide Hints' })).not.toBeInTheDocument()
   })
 
+  it('initializes helper reset timestamp from localStorage', () => {
+    window.localStorage.setItem('quick-action-helper-diagnostics-reset-at-v1', '2026-02-17T00:00:00.000Z')
+    render(<App />)
+    expect(
+      screen.getByText('reset:2026-02-17T00:00:00.000Z', {
+        selector: '.import-snapshot-badges .import-summary-badge',
+      }),
+    ).toBeInTheDocument()
+  })
+
   it('updates helper diagnostics summary counters in status panel', () => {
     render(<App />)
     expect(
@@ -655,6 +668,7 @@ describe('Dashboard shell', () => {
       expect(payload).toContain('expanded=yes')
       expect(payload).toContain('enabled=1/2')
       expect(payload).toContain('density=chips')
+      expect(payload).toContain('resetAt=never')
     })
   })
 
@@ -677,6 +691,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Legend Density')).toHaveValue('chips')
     expect(screen.getByRole('button', { name: 'Use Verbose Diagnostics' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Hide Quick Toggles' })).toBeInTheDocument()
+    expect(window.localStorage.getItem('quick-action-helper-diagnostics-reset-at-v1')).toBeTruthy()
   })
 
   it('reports accepted and rejected preset names after import', async () => {
