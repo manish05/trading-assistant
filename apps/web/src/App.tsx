@@ -83,6 +83,7 @@ const IMPORT_HINT_VISIBILITY_STORAGE_KEY = 'quick-action-import-hint-visibility-
 const IMPORT_HINT_MODE_STORAGE_KEY = 'quick-action-import-hint-mode-v1'
 const STATUS_SHORTCUT_LEGEND_STORAGE_KEY = 'quick-action-status-shortcut-legend-v1'
 const STATUS_SHORTCUT_LEGEND_ORDER_STORAGE_KEY = 'quick-action-status-shortcut-legend-order-v1'
+const STATUS_SHORTCUT_LEGEND_DENSITY_STORAGE_KEY = 'quick-action-status-shortcut-legend-density-v1'
 const MAX_IMPORT_REPORT_NAMES = 6
 const DEFAULT_PRESET_TEMPLATE: QuickActionPreset = {
   managedAccountId: 'acct_demo_1',
@@ -182,6 +183,14 @@ const readStatusShortcutLegendOrderFromStorage = (): ShortcutLegendOrder => {
   }
   const raw = window.localStorage.getItem(STATUS_SHORTCUT_LEGEND_ORDER_STORAGE_KEY)
   return raw === 'clear-first' ? 'clear-first' : 'import-first'
+}
+
+const readStatusShortcutLegendDensityFromStorage = (): ShortcutLegendDensity => {
+  if (typeof window === 'undefined') {
+    return 'chips'
+  }
+  const raw = window.localStorage.getItem(STATUS_SHORTCUT_LEGEND_DENSITY_STORAGE_KEY)
+  return raw === 'inline' ? 'inline' : 'chips'
 }
 
 const sanitizePreset = (value: unknown): QuickActionPreset | null => {
@@ -317,8 +326,9 @@ function App() {
   const [shortcutLegendOrder, setShortcutLegendOrder] = useState<ShortcutLegendOrder>(
     readStatusShortcutLegendOrderFromStorage,
   )
-  const [shortcutLegendDensity, setShortcutLegendDensity] =
-    useState<ShortcutLegendDensity>('chips')
+  const [shortcutLegendDensity, setShortcutLegendDensity] = useState<ShortcutLegendDensity>(
+    readStatusShortcutLegendDensityFromStorage,
+  )
   const [availablePresetNames, setAvailablePresetNames] = useState<string[]>(() =>
     Object.keys(readPresetStoreFromStorage()).sort(),
   )
@@ -1225,6 +1235,10 @@ function App() {
   useEffect(() => {
     window.localStorage.setItem(STATUS_SHORTCUT_LEGEND_ORDER_STORAGE_KEY, shortcutLegendOrder)
   }, [shortcutLegendOrder])
+
+  useEffect(() => {
+    window.localStorage.setItem(STATUS_SHORTCUT_LEGEND_DENSITY_STORAGE_KEY, shortcutLegendDensity)
+  }, [shortcutLegendDensity])
 
   const filteredHistory =
     historyFilter === 'all'

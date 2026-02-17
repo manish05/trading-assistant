@@ -509,19 +509,25 @@ describe('Dashboard shell', () => {
     })
     expect(within(legendRow).queryByText('Esc', { selector: '.hotkey-chip' })).not.toBeInTheDocument()
     expect(within(legendRow).getByText(/Esc=clear/)).toBeInTheDocument()
+    expect(window.localStorage.getItem('quick-action-status-shortcut-legend-density-v1')).toBe(
+      'inline',
+    )
   })
 
   it('initializes status shortcut legend visibility from localStorage', () => {
     window.localStorage.setItem('quick-action-status-shortcut-legend-v1', 'visible')
     window.localStorage.setItem('quick-action-status-shortcut-legend-order-v1', 'clear-first')
+    window.localStorage.setItem('quick-action-status-shortcut-legend-density-v1', 'inline')
     render(<App />)
     expect(screen.getByText('Import Shortcut Legend', { selector: 'dt' })).toHaveTextContent(
       'Import Shortcut Legend (detailed)',
     )
     expect(screen.getByRole('button', { name: 'Hide Legend in Status' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Legend Density')).toHaveValue('inline')
     const legendRow = screen.getByText('Import Shortcut Legend', { selector: 'dt' })
       .nextElementSibling as HTMLElement
     expect(within(legendRow).getAllByText(/Ctrl\/Cmd\+Enter|Esc|\//)[0]).toHaveTextContent('Esc')
+    expect(within(legendRow).getByText(/Esc=clear/)).toBeInTheDocument()
   })
 
   it('reports accepted and rejected preset names after import', async () => {
