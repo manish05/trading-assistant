@@ -1287,7 +1287,9 @@ function App() {
       appendBlock({
         id: `blk_${Date.now()}`,
         title: 'helper reset badge copied',
-        content: 'Copied helper reset badge text to clipboard.',
+        content: `Copied helper reset badge text to clipboard (lock: ${
+          isHelperResetLocked ? 'locked' : 'unlocked'
+        }).`,
         severity: 'info',
       })
     } catch {

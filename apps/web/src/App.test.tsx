@@ -880,6 +880,9 @@ describe('Dashboard shell', () => {
       expect(payload).toContain('resetLock=locked')
       expect(payload).toContain('resetBadgeVisible=yes')
       expect(payload).toContain('resetBadgeSection=expanded')
+      expect(
+        screen.getByText('Copied helper reset badge text to clipboard (lock: locked).'),
+      ).toBeInTheDocument()
     })
   })
 
