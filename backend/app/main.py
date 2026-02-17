@@ -59,6 +59,15 @@ def create_app(
     app.state.queue_snapshot_store = queue_snapshot_store
     app.state.audit_store = AuditStore(data_dir=data_dir)
     app.state.account_registry = AccountRegistry(state_path=state_dir / "accounts.json")
+    for configured_account in config.accounts:
+        app.state.account_registry.connect(
+            account_id=configured_account.account_id,
+            connector_id=configured_account.connector_id,
+            provider_account_id=configured_account.provider_account_id,
+            mode=configured_account.mode,
+            label=configured_account.label,
+            allowed_symbols=configured_account.allowed_symbols,
+        )
     app.state.device_registry = DeviceRegistry(state_path=state_dir / "devices.json")
     app.state.feed_service = FeedService()
     app.state.memory_index = MemoryIndex(db_path=Path(data_dir) / "memory.db")

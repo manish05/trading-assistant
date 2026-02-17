@@ -819,3 +819,50 @@ def test_gateway_feeds_namespace_methods(tmp_path) -> None:
     assert unsubscribe_event is not None
     assert unsubscribe_event["event"] == "event.feed.event"
     assert unsubscribe_event["payload"]["action"] == "unsubscribed"
+
+
+def test_gateway_bootstraps_accounts_from_config(tmp_path) -> None:
+    config_path = tmp_path / "config.json5"
+    config_path.write_text(
+        """
+        {
+          gateway: {
+            host: "0.0.0.0",
+            port: 18789,
+            auth: {
+              mode: "token",
+              token: "dev-token",
+            },
+          },
+          accounts: [
+            {
+              accountId: "acct_bootstrap_1",
+              connectorId: "metaapi_mcp",
+              providerAccountId: "provider_bootstrap_1",
+              mode: "demo",
+              label: "Bootstrap account",
+              allowedSymbols: ["ETHUSDm"],
+            },
+          ],
+        }
+        """,
+        encoding="utf-8",
+    )
+    client = TestClient(create_app(data_dir=tmp_path, config_path=config_path))
+
+    with client.websocket_connect("/ws") as websocket:
+        websocket.send_json(_connect_payload())
+        _ = websocket.receive_json()
+
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_accounts_list_bootstrap_1",
+                "method": "accounts.list",
+                "params": {},
+            }
+        )
+        response = websocket.receive_json()
+
+    assert response["ok"] is True
+    assert response["payload"]["accounts"][0]["accountId"] == "acct_bootstrap_1"
