@@ -1357,6 +1357,13 @@ function App() {
       marketOverlayScopedTimelineAnnotations.length,
     ],
   )
+  const marketOverlayMarkerDeltaBasisShortcutSummary = useMemo(() => {
+    const cycleHint =
+      marketOverlayMarkerDeltaBasis === 'latest'
+        ? 'cycle:k=average'
+        : 'cycle:k=latest'
+    return `keys:h/m/k · latest:h · average:m · ${cycleHint} · active:${marketOverlayMarkerDeltaBasis}`
+  }, [marketOverlayMarkerDeltaBasis])
   const marketOverlayMarkerModeShortcutSummary = useMemo(
     () => {
       const isLocked = marketOverlaySelectionMode === 'follow-latest'
@@ -5516,6 +5523,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Delta Shortcut Summary">
               Delta shortcuts: {marketOverlayMarkerDeltaShortcutSummary}
+            </p>
+            <p aria-label="Overlay Marker Delta Basis Shortcut Summary">
+              Delta basis shortcuts: {marketOverlayMarkerDeltaBasisShortcutSummary}
             </p>
             <p aria-label="Overlay Marker Mode Shortcut Summary">
               Mode shortcuts: {marketOverlayMarkerModeShortcutSummary}

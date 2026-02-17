@@ -81,6 +81,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Delta Shortcut Summary')).toHaveTextContent(
       'Delta shortcuts: keys:k/u/j/f/n/0/+/- · basis:latest · mode:all · matched:0/0 · active:off',
     )
+    expect(screen.getByLabelText('Overlay Marker Delta Basis Shortcut Summary')).toHaveTextContent(
+      'Delta basis shortcuts: keys:h/m/k · latest:h · average:m · cycle:k=average · active:latest',
+    )
     expect(screen.getByLabelText('Overlay Marker Mode Shortcut Summary')).toHaveTextContent(
       'Mode shortcuts: focus:a/t/r/d=all · age:y=all · window:v=5 · bucket:b=none · order:o/l=newest-first · scope:g=all-buckets · wrap:w=bounded · selection:s=sticky · basis:k=latest · delta:u/j/f/n/0/+/-=all · nav:manual',
     )
@@ -454,6 +457,9 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Overlay Marker Delta Shortcut Summary')).toHaveTextContent(
       'Delta shortcuts: keys:k/u/j/f/n/0/+/- · basis:average · mode:all · matched:0/0 · active:off',
+    )
+    expect(screen.getByLabelText('Overlay Marker Delta Basis Shortcut Summary')).toHaveTextContent(
+      'Delta basis shortcuts: keys:h/m/k · latest:h · average:m · cycle:k=latest · active:average',
     )
     expect(screen.getByLabelText('Overlay Marker Mode Shortcut Summary')).toHaveTextContent(
       'Mode shortcuts: focus:a/t/r/d=all · age:y=all · window:v=5 · bucket:b=none · order:o/l=newest-first · scope:g=all-buckets · wrap:w=bounded · selection:s=sticky · basis:k=average · delta:u/j/f/n/0/+/-=all · nav:manual',
@@ -1385,6 +1391,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Delta Shortcut Summary')).toHaveTextContent(
       'Delta shortcuts: keys:k/u/j/f/n/0/+/- · basis:average · mode:all · matched:2/2 · active:on',
     )
+    expect(screen.getByLabelText('Overlay Marker Delta Basis Shortcut Summary')).toHaveTextContent(
+      'Delta basis shortcuts: keys:h/m/k · latest:h · average:m · cycle:k=latest · active:average',
+    )
     expect(screen.getByLabelText('Overlay Marker Mode Shortcut Summary')).toHaveTextContent(
       'Mode shortcuts: focus:a/t/r/d=all · age:y=all · window:v=5 · bucket:b=none · order:o/l=newest-first · scope:g=all-buckets · wrap:w=bounded · selection:s=sticky · basis:k=average · delta:u/j/f/n/0/+/-=all · nav:manual',
     )
@@ -1420,6 +1429,9 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Overlay Marker Delta Shortcut Summary')).toHaveTextContent(
       'Delta shortcuts: keys:k/u/j/f/n/0/+/- · basis:latest · mode:all · matched:2/2 · active:on',
+    )
+    expect(screen.getByLabelText('Overlay Marker Delta Basis Shortcut Summary')).toHaveTextContent(
+      'Delta basis shortcuts: keys:h/m/k · latest:h · average:m · cycle:k=average · active:latest',
     )
     expect(screen.getByLabelText('Overlay Marker Mode Shortcut Summary')).toHaveTextContent(
       'Mode shortcuts: focus:a/t/r/d=all · age:y=all · window:v=5 · bucket:b=none · order:o/l=newest-first · scope:g=all-buckets · wrap:w=bounded · selection:s=sticky · basis:k=latest · delta:u/j/f/n/0/+/-=all · nav:manual',
