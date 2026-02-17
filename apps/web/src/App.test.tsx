@@ -63,6 +63,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
       'Timeline buckets: mode:none · scope:all-buckets · buckets:0 · latest:none · count:0',
     )
+    expect(screen.getByLabelText('Overlay Marker Scope Summary')).toHaveTextContent(
+      'Scope: visible:t0/r0/f0 · selectedKind:none',
+    )
     expect(screen.getByLabelText('Overlay Marker Behavior')).toHaveTextContent(
       'Marker behavior: wrap:bounded · selection:sticky · nav:manual',
     )
@@ -502,6 +505,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
       'Timeline buckets: mode:none · scope:all-buckets · buckets:0 · latest:none · count:0',
     )
+    expect(screen.getByLabelText('Overlay Marker Scope Summary')).toHaveTextContent(
+      'Scope: visible:t0/r0/f0 · selectedKind:none',
+    )
     expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
       'Marker nav: 0/0 · selected:none',
     )
@@ -561,6 +567,9 @@ describe('Dashboard shell', () => {
       )
       expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
         'Timeline buckets: mode:none · scope:all-buckets · buckets:2 · latest:t2 · count:2',
+      )
+      expect(screen.getByLabelText('Overlay Marker Scope Summary')).toHaveTextContent(
+        'Scope: visible:t1/r1/f0 · selectedKind:risk',
       )
       expect(screen.getByLabelText('Overlay Marker Timeline')).toHaveTextContent(
         'risk:live_trading_disabled:raised · t2 · close:2.00',
@@ -625,6 +634,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Correlation Hint')).toHaveTextContent(
       'Correlation: risk:live_trading_disabled:raised@2.00(t2)',
     )
+    expect(screen.getByLabelText('Overlay Marker Scope Summary')).toHaveTextContent(
+      'Scope: visible:t0/r1/f0 · selectedKind:risk',
+    )
     expect(screen.getByLabelText('Overlay Markers')).toHaveTextContent(
       'risk:live_trading_disabled:raised',
     )
@@ -650,6 +662,9 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Overlay Marker Drilldown Detail')).toHaveTextContent(
       'Marker detail: trade:closed:queued · t1 · close:1.00 · Δavg:-0.50',
+    )
+    expect(screen.getByLabelText('Overlay Marker Scope Summary')).toHaveTextContent(
+      'Scope: visible:t1/r1/f0 · selectedKind:trade',
     )
     expect(screen.getByLabelText('Overlay Marker Drilldown Detail')).toHaveTextContent(
       'Δavg:-0.50 (-33.33%)',
@@ -1081,6 +1096,9 @@ describe('Dashboard shell', () => {
         'Marker nav: 2/2 · selected:risk:live_trading_disabled:raised',
       )
     })
+    expect(screen.getByLabelText('Overlay Marker Scope Summary')).toHaveTextContent(
+      'Scope: visible:t1/r1/f0 · selectedKind:risk',
+    )
     expect(screen.getByLabelText('Overlay Marker Behavior')).toHaveTextContent(
       'Marker behavior: wrap:bounded · selection:sticky · nav:manual',
     )
@@ -1122,6 +1140,9 @@ describe('Dashboard shell', () => {
         'Marker nav: 3/3 · selected:trade:closed:queued',
       )
     })
+    expect(screen.getByLabelText('Overlay Marker Scope Summary')).toHaveTextContent(
+      'Scope: visible:t2/r1/f0 · selectedKind:trade',
+    )
 
     fireEvent.change(screen.getByLabelText('Selection Mode'), { target: { value: 'sticky' } })
     expect(screen.getByLabelText('Overlay Marker Behavior')).toHaveTextContent(
@@ -1137,6 +1158,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
       'Marker nav: 2/3 · selected:risk:live_trading_disabled:raised',
     )
+    expect(screen.getByLabelText('Overlay Marker Scope Summary')).toHaveTextContent(
+      'Scope: visible:t2/r1/f0 · selectedKind:risk',
+    )
 
     fireEvent.click(screen.getByRole('button', { name: 'Disable Live Now' }))
     await waitFor(() => {
@@ -1144,6 +1168,9 @@ describe('Dashboard shell', () => {
         'Marker nav: 2/4 · selected:risk:live_trading_disabled:raised',
       )
     })
+    expect(screen.getByLabelText('Overlay Marker Scope Summary')).toHaveTextContent(
+      'Scope: visible:t2/r2/f0 · selectedKind:risk',
+    )
 
     sendSpy.mockRestore()
   })

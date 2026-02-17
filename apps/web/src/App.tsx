@@ -1264,6 +1264,13 @@ function App() {
     marketOverlayMarkerWindow,
     marketOverlayScopedVisibleAnnotations,
   ])
+  const marketOverlayMarkerScopeSummary = useMemo(() => {
+    const tradeCount = marketOverlayScopedVisibleAnnotations.filter((annotation) => annotation.kind === 'trade').length
+    const riskCount = marketOverlayScopedVisibleAnnotations.filter((annotation) => annotation.kind === 'risk').length
+    const feedCount = marketOverlayScopedVisibleAnnotations.filter((annotation) => annotation.kind === 'feed').length
+    const selectedKind = marketOverlayActiveTimelineAnnotation?.kind ?? 'none'
+    return `visible:t${tradeCount}/r${riskCount}/f${feedCount} · selectedKind:${selectedKind}`
+  }, [marketOverlayActiveTimelineAnnotation, marketOverlayScopedVisibleAnnotations])
   const marketOverlayCorrelationHint = useMemo(() => {
     if (!marketOverlayActiveTimelineAnnotation || marketOverlayChartPoints.length === 0) {
       return 'none'
@@ -3986,6 +3993,9 @@ function App() {
             </div>
             <p aria-label="Overlay Marker Timeline Bucket Summary">
               Timeline buckets: {marketOverlayMarkerBucketSummary}
+            </p>
+            <p aria-label="Overlay Marker Scope Summary">
+              Scope: {marketOverlayMarkerScopeSummary}
             </p>
             <p aria-label="Overlay Marker Behavior">Marker behavior: {marketOverlayMarkerBehaviorLabel}</p>
             <p aria-label="Overlay Marker Navigation">Marker nav: {marketOverlayMarkerNavigationLabel}</p>
