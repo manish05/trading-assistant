@@ -99,6 +99,7 @@ const HELPER_RESET_LOCK_STORAGE_KEY = 'quick-action-helper-reset-lock-v1'
 const HELPER_LOCK_COUNTERS_RESET_AT_STORAGE_KEY = 'quick-action-helper-lock-counters-reset-at-v1'
 const BLOCK_TELEMETRY_VISIBILITY_STORAGE_KEY = 'quick-action-block-telemetry-visibility-v1'
 const MAX_IMPORT_REPORT_NAMES = 6
+const FEED_CANDLE_FETCH_LIMIT = 50
 const DEVICE_NOTIFY_TEST_MESSAGE = 'Dashboard test notification'
 const DEFAULT_PRESET_TEMPLATE: QuickActionPreset = {
   managedAccountId: 'acct_demo_1',
@@ -496,6 +497,7 @@ function App() {
   const [feedTopic, setFeedTopic] = useState<string>(DEFAULT_PRESET_TEMPLATE.feedTopic)
   const [feedSymbol, setFeedSymbol] = useState<string>(DEFAULT_PRESET_TEMPLATE.feedSymbol)
   const [feedTimeframe, setFeedTimeframe] = useState<string>(DEFAULT_PRESET_TEMPLATE.feedTimeframe)
+  const [lastFetchedCandlesCount, setLastFetchedCandlesCount] = useState<number | null>(null)
   const [subscriptionCount, setSubscriptionCount] = useState<number | null>(null)
   const [activeSubscriptionId, setActiveSubscriptionId] = useState<string | null>(null)
   const [feedLifecycle, setFeedLifecycle] = useState<FeedLifecycleBadge[]>([])
@@ -1100,6 +1102,16 @@ function App() {
       setActiveSubscriptionId(null)
     }
   }, [activeSubscriptionId, appendBlock, lockTelemetryFailureSuffix, sendRequest])
+
+  const sendFeedGetCandles = useCallback(async () => {
+    const payload = await sendRequest('feeds.getCandles', {
+      symbol: feedSymbol,
+      timeframe: feedTimeframe,
+      limit: FEED_CANDLE_FETCH_LIMIT,
+    })
+    const candlesRaw = payload?.candles
+    setLastFetchedCandlesCount(Array.isArray(candlesRaw) ? candlesRaw.length : 0)
+  }, [feedSymbol, feedTimeframe, sendRequest])
 
   const collectCurrentPreset = useCallback((): QuickActionPreset => {
     return {
@@ -2133,6 +2145,9 @@ function App() {
               <button type="button" onClick={() => void sendFeedSubscribe()}>
                 Subscribe Feed
               </button>
+              <button type="button" onClick={() => void sendFeedGetCandles()}>
+                Get Candles
+              </button>
               <button
                 type="button"
                 onClick={() => void sendFeedUnsubscribe()}
@@ -2625,6 +2640,10 @@ function App() {
             <div>
               <dt>Feed Subscriptions</dt>
               <dd>{subscriptionCount ?? 'n/a'}</dd>
+            </div>
+            <div>
+              <dt>Candles (last fetch)</dt>
+              <dd>{lastFetchedCandlesCount ?? 'n/a'}</dd>
             </div>
             <div>
               <dt>Active Subscription</dt>

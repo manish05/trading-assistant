@@ -40,6 +40,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Unpair Device' })).toBeInTheDocument()
     expect(screen.getByLabelText('Device Notify Message')).toHaveValue('Dashboard test notification')
     expect(screen.getByRole('button', { name: 'Subscribe Feed' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Get Candles' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Unsubscribe Feed' })).toBeDisabled()
     expect(screen.getByLabelText('Refresh Interval (sec)')).toBeInTheDocument()
     expect(screen.getByLabelText('Min Request Gap (ms)')).toBeInTheDocument()
@@ -217,6 +218,7 @@ describe('Dashboard shell', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Notify Device' }))
     fireEvent.click(screen.getByRole('button', { name: 'Unpair Device' }))
     fireEvent.click(screen.getByRole('button', { name: 'Subscribe Feed' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Get Candles' }))
 
     await waitFor(() => {
       const payloads = sendSpy.mock.calls.map(([serialized]) =>
@@ -234,6 +236,7 @@ describe('Dashboard shell', () => {
       expect(methods).toContain('devices.notifyTest')
       expect(methods).toContain('devices.unpair')
       expect(methods).toContain('feeds.subscribe')
+      expect(methods).toContain('feeds.getCandles')
 
       const accountConnect = payloads.find((payload) => payload.method === 'accounts.connect')
       expect(accountConnect?.params).toMatchObject({
@@ -271,6 +274,60 @@ describe('Dashboard shell', () => {
         symbols: ['BTCUSDm'],
         timeframes: ['1h'],
       })
+
+      const feedCandles = payloads.find((payload) => payload.method === 'feeds.getCandles')
+      expect(feedCandles?.params).toMatchObject({
+        symbol: 'BTCUSDm',
+        timeframe: '1h',
+        limit: 50,
+      })
+    })
+
+    sendSpy.mockRestore()
+  })
+
+  it('updates candles last-fetch status after get-candles response', async () => {
+    const sendSpy = vi
+      .spyOn(WebSocket.prototype, 'send')
+      .mockImplementation(function (
+        this: WebSocket,
+        data: string | ArrayBufferLike | Blob | ArrayBufferView<ArrayBufferLike>,
+      ) {
+        if (typeof data !== 'string') {
+          return
+        }
+        const payload = JSON.parse(data) as {
+          type?: string
+          id?: string
+          method?: string
+        }
+        if (payload.type === 'req' && payload.method === 'feeds.getCandles' && payload.id) {
+          queueMicrotask(() => {
+            this.onmessage?.(
+              new MessageEvent('message', {
+                data: JSON.stringify({
+                  type: 'res',
+                  id: payload.id,
+                  ok: true,
+                  payload: {
+                    symbol: 'ETHUSDm',
+                    timeframe: '5m',
+                    candles: [{ close: 1 }, { close: 2 }, { close: 3 }],
+                  },
+                }),
+              }),
+            )
+          })
+        }
+      })
+
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Get Candles' }))
+
+    await waitFor(() => {
+      const candlesRow = screen.getByText('Candles (last fetch)').closest('div')
+      expect(candlesRow).not.toBeNull()
+      expect(within(candlesRow as HTMLElement).getByText('3')).toBeInTheDocument()
     })
 
     sendSpy.mockRestore()
