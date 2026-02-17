@@ -10,6 +10,7 @@ from app.gateway.ws_handler import handle_gateway_websocket
 from app.memory.index import MemoryIndex
 from app.plugins.registry import PluginConfig, PluginRecord, PluginRegistry
 from app.queues.agent_queue import AgentQueue
+from app.queues.snapshot_store import QueueSnapshotStore
 from app.trades.service import TradeExecutionService
 
 
@@ -36,11 +37,16 @@ def create_app(
     resolved_plugins = plugin_registry.resolve()
 
     app = FastAPI(title="OpenClaw Inspired Platform Backend")
+    state_dir = Path(data_dir) / "state"
+    state_dir.mkdir(parents=True, exist_ok=True)
+    queue_snapshot_store = QueueSnapshotStore(state_path=state_dir / "agent_queues.json")
+
     app.state.started_at = datetime.now(UTC)
     app.state.app_config = config
-    app.state.agent_queues: dict[str, AgentQueue] = {}
+    app.state.agent_queues: dict[str, AgentQueue] = queue_snapshot_store.load()
+    app.state.queue_snapshot_store = queue_snapshot_store
     app.state.audit_store = AuditStore(data_dir=data_dir)
-    app.state.device_registry = DeviceRegistry()
+    app.state.device_registry = DeviceRegistry(state_path=state_dir / "devices.json")
     app.state.memory_index = MemoryIndex(db_path=Path(data_dir) / "memory.db")
     app.state.resolved_plugins = resolved_plugins
     app.state.trade_execution_service = TradeExecutionService()
@@ -55,6 +61,7 @@ def create_app(
             websocket,
             started_at=app.state.started_at,
             agent_queues=app.state.agent_queues,
+            queue_snapshot_store=app.state.queue_snapshot_store,
             audit_store=app.state.audit_store,
             app_config=app.state.app_config,
             device_registry=app.state.device_registry,

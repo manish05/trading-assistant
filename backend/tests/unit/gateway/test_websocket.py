@@ -30,8 +30,8 @@ def _read_event_then_response(websocket):
     return None, first
 
 
-def test_websocket_rejects_non_connect_first_request() -> None:
-    client = TestClient(create_app())
+def test_websocket_rejects_non_connect_first_request(tmp_path) -> None:
+    client = TestClient(create_app(data_dir=tmp_path))
 
     with client.websocket_connect("/ws") as websocket:
         websocket.send_json(
@@ -50,8 +50,8 @@ def test_websocket_rejects_non_connect_first_request() -> None:
     assert response["error"]["code"] == "INVALID_REQUEST"
 
 
-def test_websocket_connect_then_ping_returns_payload() -> None:
-    client = TestClient(create_app())
+def test_websocket_connect_then_ping_returns_payload(tmp_path) -> None:
+    client = TestClient(create_app(data_dir=tmp_path))
 
     with client.websocket_connect("/ws") as websocket:
         websocket.send_json(_connect_payload())
@@ -73,8 +73,8 @@ def test_websocket_connect_then_ping_returns_payload() -> None:
     assert "now" in ping_response["payload"]
 
 
-def test_websocket_status_returns_runtime_snapshot() -> None:
-    client = TestClient(create_app())
+def test_websocket_status_returns_runtime_snapshot(tmp_path) -> None:
+    client = TestClient(create_app(data_dir=tmp_path))
 
     with client.websocket_connect("/ws") as websocket:
         websocket.send_json(_connect_payload())
@@ -95,8 +95,8 @@ def test_websocket_status_returns_runtime_snapshot() -> None:
     assert status_response["payload"]["protocolVersion"] == 1
 
 
-def test_websocket_risk_preview_returns_decision() -> None:
-    client = TestClient(create_app())
+def test_websocket_risk_preview_returns_decision(tmp_path) -> None:
+    client = TestClient(create_app(data_dir=tmp_path))
 
     with client.websocket_connect("/ws") as websocket:
         websocket.send_json(_connect_payload())
@@ -140,8 +140,8 @@ def test_websocket_risk_preview_returns_decision() -> None:
     assert len(response["payload"]["violations"]) == 2
 
 
-def test_websocket_agent_run_updates_queue_status() -> None:
-    client = TestClient(create_app())
+def test_websocket_agent_run_updates_queue_status(tmp_path) -> None:
+    client = TestClient(create_app(data_dir=tmp_path))
 
     with client.websocket_connect("/ws") as websocket:
         websocket.send_json(_connect_payload())
@@ -386,6 +386,98 @@ def test_gateway_device_pair_and_notify_methods(tmp_path) -> None:
     assert len(list_response["payload"]["devices"]) == 1
     assert notify_response["ok"] is True
     assert notify_response["payload"]["status"] == "queued"
+
+
+def test_gateway_persists_device_and_queue_state_between_app_instances(tmp_path) -> None:
+    first_client = TestClient(create_app(data_dir=tmp_path))
+
+    with first_client.websocket_connect("/ws") as websocket:
+        websocket.send_json(_connect_payload())
+        _ = websocket.receive_json()
+
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_device_pair_persist_1",
+                "method": "devices.pair",
+                "params": {
+                    "deviceId": "dev_android_1",
+                    "platform": "android",
+                    "label": "Pixel",
+                    "pushToken": "push_123",
+                },
+            }
+        )
+        _ = websocket.receive_json()
+
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_agent_run_persist_1",
+                "method": "agent.run",
+                "params": {
+                    "agentId": "agent_persist_1",
+                    "request": {
+                        "request_id": "persist_req_1",
+                        "kind": "hook_trigger",
+                        "priority": "normal",
+                        "payload": {"message": "first"},
+                    },
+                },
+            }
+        )
+        _ = websocket.receive_json()
+
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_agent_run_persist_2",
+                "method": "agent.run",
+                "params": {
+                    "agentId": "agent_persist_1",
+                    "request": {
+                        "request_id": "persist_req_2",
+                        "kind": "hook_trigger",
+                        "priority": "normal",
+                        "payload": {"message": "second"},
+                    },
+                },
+            }
+        )
+        _ = websocket.receive_json()
+
+    second_client = TestClient(create_app(data_dir=tmp_path))
+
+    with second_client.websocket_connect("/ws") as websocket:
+        websocket.send_json(_connect_payload())
+        _ = websocket.receive_json()
+
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_devices_list_persist_1",
+                "method": "devices.list",
+                "params": {},
+            }
+        )
+        devices_response = websocket.receive_json()
+
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_queue_status_persist_1",
+                "method": "agent.queue.status",
+                "params": {"agentId": "agent_persist_1"},
+            }
+        )
+        queue_response = websocket.receive_json()
+
+    assert devices_response["ok"] is True
+    assert devices_response["payload"]["devices"][0]["deviceId"] == "dev_android_1"
+
+    assert queue_response["ok"] is True
+    assert queue_response["payload"]["activeRequestId"] == "persist_req_1"
+    assert queue_response["payload"]["pendingCount"] == 1
 
 
 def test_gateway_config_and_plugin_status_methods(tmp_path) -> None:

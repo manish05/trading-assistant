@@ -17,6 +17,7 @@ from app.memory.index import MemoryIndex
 from app.plugins.registry import ResolvedPlugins
 from app.protocol.frames import RequestFrame, parse_gateway_frame
 from app.queues.agent_queue import AgentQueue, AgentRequest, QueueSettings
+from app.queues.snapshot_store import QueueSnapshotStore
 from app.risk.engine import AccountRiskSnapshot, RiskEngine, RiskPolicy, TradeIntent
 from app.trades.service import TradeExecutionService
 
@@ -181,12 +182,12 @@ def _event_frame(event_name: str, payload: dict[str, Any]) -> dict:
     }
 
 
-def _get_or_create_queue(agent_id: str, queues: dict[str, AgentQueue]) -> AgentQueue:
+def _get_or_create_queue(agent_id: str, queues: dict[str, AgentQueue]) -> tuple[AgentQueue, bool]:
     if agent_id in queues:
-        return queues[agent_id]
+        return queues[agent_id], False
     queue = AgentQueue(QueueSettings(mode="followup", cap=50, drop_policy="old"))
     queues[agent_id] = queue
-    return queue
+    return queue, True
 
 
 async def handle_gateway_websocket(
@@ -194,6 +195,7 @@ async def handle_gateway_websocket(
     *,
     started_at: datetime,
     agent_queues: dict[str, AgentQueue],
+    queue_snapshot_store: QueueSnapshotStore,
     audit_store: AuditStore,
     app_config: AppConfig,
     device_registry: DeviceRegistry,
@@ -393,7 +395,7 @@ async def handle_gateway_websocket(
                 )
                 continue
 
-            queue = _get_or_create_queue(params.agentId, agent_queues)
+            queue, _ = _get_or_create_queue(params.agentId, agent_queues)
             request = AgentRequest(
                 request_id=params.request.request_id,
                 agent_id=params.agentId,
@@ -403,6 +405,7 @@ async def handle_gateway_websocket(
                 payload=params.request.payload,
             )
             decision = queue.enqueue(request, now_ms=int(datetime.now(UTC).timestamp() * 1000))
+            queue_snapshot_store.save(agent_queues)
             decision_payload = decision.model_dump(mode="json")
             audit_store.append(
                 actor="user",
@@ -441,7 +444,9 @@ async def handle_gateway_websocket(
                 )
                 continue
 
-            queue = _get_or_create_queue(params.agentId, agent_queues)
+            queue, created = _get_or_create_queue(params.agentId, agent_queues)
+            if created:
+                queue_snapshot_store.save(agent_queues)
             await websocket.send_json(
                 _ok_response(
                     frame.id,

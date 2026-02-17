@@ -137,6 +137,37 @@ class AgentQueue:
         self.active_request = next_request
         return next_request
 
+    def snapshot(self) -> dict:
+        return {
+            "settings": self.settings.model_dump(mode="json"),
+            "activeRequest": (
+                self.active_request.model_dump(mode="json") if self.active_request else None
+            ),
+            "pending": [request.model_dump(mode="json") for request in self.pending],
+            "collectBuffer": [request.model_dump(mode="json") for request in self.collect_buffer],
+            "collectLastEnqueueMs": self._collect_last_enqueue_ms,
+        }
+
+    @classmethod
+    def from_snapshot(cls, snapshot: dict) -> "AgentQueue":
+        settings = QueueSettings.model_validate(snapshot.get("settings", {}))
+        queue = cls(settings=settings)
+
+        active_request_payload = snapshot.get("activeRequest")
+        if active_request_payload is not None:
+            queue.active_request = AgentRequest.model_validate(active_request_payload)
+
+        queue.pending = [
+            AgentRequest.model_validate(request_payload)
+            for request_payload in snapshot.get("pending", [])
+        ]
+        queue.collect_buffer = [
+            AgentRequest.model_validate(request_payload)
+            for request_payload in snapshot.get("collectBuffer", [])
+        ]
+        queue._collect_last_enqueue_ms = snapshot.get("collectLastEnqueueMs")
+        return queue
+
     def _has_capacity_for_pending(self) -> bool:
         occupied = len(self.pending) + (1 if self.active_request else 0)
         return occupied < self.settings.cap
