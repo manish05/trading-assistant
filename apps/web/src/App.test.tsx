@@ -394,6 +394,15 @@ describe('Dashboard shell', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Copy History' }))
     await waitFor(() => {
       expect(writeText).toHaveBeenCalledTimes(1)
+      const payload = String(writeText.mock.calls[0][0])
+      expect(payload).toContain('filter=all')
+      expect(payload).toContain('lockCounterResetAt=never')
+      expect(payload).toContain('lockToggleTotal=0')
+      expect(payload).toContain('lockToggleAlt+L=0')
+      expect(payload).toContain('lockToggleControls=0')
+      expect(payload).toContain('lockToggleSnapshot=0')
+      expect(payload).toContain('---')
+      expect(payload).toContain('accounts.list')
     })
   })
 
