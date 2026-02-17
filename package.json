@@ -1,0 +1,16 @@
+{
+  "name": "openclaw-inspired-platform",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "web:dev": "cd apps/web && bun run dev",
+    "web:build": "cd apps/web && bun run build",
+    "web:test": "cd apps/web && bun run test",
+    "web:lint": "cd apps/web && bun run lint",
+    "backend:test": "cd backend && python3 -m pytest",
+    "backend:lint": "cd backend && python3 -m ruff check .",
+    "check": "bun run backend:test && bun run web:build"
+  }
+}
