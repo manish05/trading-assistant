@@ -1819,11 +1819,19 @@ function App() {
                 </dt>
                 <dd className="import-snapshot-badges status-legend-hotkeys">
                   {(shortcutLegendOrder === 'clear-first'
-                    ? ['Esc', 'Ctrl/Cmd+Enter', '/']
-                    : ['Ctrl/Cmd+Enter', 'Esc', '/']
+                    ? [
+                        { label: 'Esc', title: 'Clear preset JSON input' },
+                        { label: 'Ctrl/Cmd+Enter', title: 'Run preset JSON import' },
+                        { label: '/', title: 'Toggle compact/detailed hints (empty input only)' },
+                      ]
+                    : [
+                        { label: 'Ctrl/Cmd+Enter', title: 'Run preset JSON import' },
+                        { label: 'Esc', title: 'Clear preset JSON input' },
+                        { label: '/', title: 'Toggle compact/detailed hints (empty input only)' },
+                      ]
                   ).map((shortcut) => (
-                    <span key={shortcut} className="hotkey-chip">
-                      {shortcut}
+                    <span key={shortcut.label} className="hotkey-chip" title={shortcut.title}>
+                      {shortcut.label}
                     </span>
                   ))}
                 </dd>

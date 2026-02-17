@@ -490,6 +490,10 @@ describe('Dashboard shell', () => {
     expect(within(legendRow).getAllByText(/Ctrl\/Cmd\+Enter|Esc|\//)[0]).toHaveTextContent(
       'Ctrl/Cmd+Enter',
     )
+    expect(within(legendRow).getByText('Ctrl/Cmd+Enter')).toHaveAttribute(
+      'title',
+      'Run preset JSON import',
+    )
 
     fireEvent.change(screen.getByLabelText('Legend Order'), {
       target: { value: 'clear-first' },
