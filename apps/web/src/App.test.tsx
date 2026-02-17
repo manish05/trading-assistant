@@ -23,6 +23,10 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Connect Account' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Disconnect Account' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Feeds' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Devices' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Pair Device' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Register Push' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Unpair Device' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Subscribe Feed' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Unsubscribe Feed' })).toBeDisabled()
   })
@@ -35,6 +39,10 @@ describe('Dashboard shell', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Connect Account' }))
     fireEvent.click(screen.getByRole('button', { name: 'Disconnect Account' }))
     fireEvent.click(screen.getByRole('button', { name: 'Feeds' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Devices' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Pair Device' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Register Push' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Unpair Device' }))
     fireEvent.click(screen.getByRole('button', { name: 'Subscribe Feed' }))
 
     await waitFor(() => {
@@ -47,6 +55,10 @@ describe('Dashboard shell', () => {
       expect(methods).toContain('accounts.connect')
       expect(methods).toContain('accounts.disconnect')
       expect(methods).toContain('feeds.list')
+      expect(methods).toContain('devices.list')
+      expect(methods).toContain('devices.pair')
+      expect(methods).toContain('devices.registerPush')
+      expect(methods).toContain('devices.unpair')
       expect(methods).toContain('feeds.subscribe')
     })
 

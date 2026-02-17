@@ -35,6 +35,8 @@ function App() {
   const [accountCount, setAccountCount] = useState<number | null>(null)
   const [managedAccountId, setManagedAccountId] = useState<string>('acct_demo_1')
   const [accountConnectionStatus, setAccountConnectionStatus] = useState<string>('unknown')
+  const [deviceCount, setDeviceCount] = useState<number | null>(null)
+  const [managedDeviceId, setManagedDeviceId] = useState<string>('dev_iphone_1')
   const [feedCount, setFeedCount] = useState<number | null>(null)
   const [subscriptionCount, setSubscriptionCount] = useState<number | null>(null)
   const [activeSubscriptionId, setActiveSubscriptionId] = useState<string | null>(null)
@@ -199,6 +201,73 @@ function App() {
     setActiveSubscriptionId(nextActiveId ?? null)
   }, [sendRequest])
 
+  const sendDevicesList = useCallback(async () => {
+    const payload = await sendRequest('devices.list', {})
+    const devicesRaw = payload?.devices
+    const devices = Array.isArray(devicesRaw) ? devicesRaw : []
+    setDeviceCount(devices.length)
+  }, [sendRequest])
+
+  const sendDevicePair = useCallback(async () => {
+    const payload = await sendRequest('devices.pair', {
+      deviceId: managedDeviceId,
+      platform: 'ios',
+      label: 'Dashboard iPhone',
+      pushToken: 'push_dashboard_1',
+    })
+    const device = payload?.device
+    if (device && typeof device === 'object' && 'deviceId' in device) {
+      if (typeof device.deviceId === 'string') {
+        setManagedDeviceId(device.deviceId)
+      }
+    }
+  }, [managedDeviceId, sendRequest])
+
+  const sendDeviceRegisterPush = useCallback(async () => {
+    if (!managedDeviceId) {
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'devices.registerPush skipped',
+        content: 'No managed device id available.',
+        severity: 'warn',
+      })
+      return
+    }
+
+    const payload = await sendRequest('devices.registerPush', {
+      deviceId: managedDeviceId,
+      pushToken: 'push_dashboard_rotated',
+    })
+    const device = payload?.device
+    if (device && typeof device === 'object' && 'deviceId' in device) {
+      if (typeof device.deviceId === 'string') {
+        setManagedDeviceId(device.deviceId)
+      }
+    }
+  }, [appendBlock, managedDeviceId, sendRequest])
+
+  const sendDeviceUnpair = useCallback(async () => {
+    if (!managedDeviceId) {
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'devices.unpair skipped',
+        content: 'No managed device id available.',
+        severity: 'warn',
+      })
+      return
+    }
+
+    const payload = await sendRequest('devices.unpair', {
+      deviceId: managedDeviceId,
+    })
+    if (!payload) {
+      return
+    }
+    if (payload.status === 'removed') {
+      setDeviceCount((current) => (current === null ? current : Math.max(current - 1, 0)))
+    }
+  }, [appendBlock, managedDeviceId, sendRequest])
+
   const sendFeedSubscribe = useCallback(async () => {
     const payload = await sendRequest('feeds.subscribe', {
       topics: ['market.candle.closed'],
@@ -361,6 +430,18 @@ function App() {
               <button type="button" onClick={() => void sendFeedsList()}>
                 Feeds
               </button>
+              <button type="button" onClick={() => void sendDevicesList()}>
+                Devices
+              </button>
+              <button type="button" onClick={() => void sendDevicePair()}>
+                Pair Device
+              </button>
+              <button type="button" onClick={() => void sendDeviceRegisterPush()}>
+                Register Push
+              </button>
+              <button type="button" onClick={() => void sendDeviceUnpair()}>
+                Unpair Device
+              </button>
               <button type="button" onClick={() => void sendFeedSubscribe()}>
                 Subscribe Feed
               </button>
@@ -417,6 +498,14 @@ function App() {
             <div>
               <dt>Feeds (last fetch)</dt>
               <dd>{feedCount ?? 'n/a'}</dd>
+            </div>
+            <div>
+              <dt>Devices (last fetch)</dt>
+              <dd>{deviceCount ?? 'n/a'}</dd>
+            </div>
+            <div>
+              <dt>Managed Device</dt>
+              <dd>{managedDeviceId}</dd>
             </div>
             <div>
               <dt>Feed Subscriptions</dt>
