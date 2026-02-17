@@ -75,6 +75,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Delta Summary')).toHaveTextContent(
       'Delta summary: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Delta Tone Summary')).toHaveTextContent(
+      'Delta tones: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Delta Extremes')).toHaveTextContent(
       'Delta extremes: none',
     )
@@ -550,6 +553,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Delta Summary')).toHaveTextContent(
       'Delta summary: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Delta Tone Summary')).toHaveTextContent(
+      'Delta tones: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Delta Extremes')).toHaveTextContent(
       'Delta extremes: none',
     )
@@ -649,6 +655,9 @@ describe('Dashboard shell', () => {
       expect(screen.getByLabelText('Overlay Marker Delta Summary')).toHaveTextContent(
         'Delta summary: Δlatest:-0.50 (n:2) · Δavg:+0.00 (n:2) · Δprev:+1.00 (n:1)',
       )
+      expect(screen.getByLabelText('Overlay Marker Delta Tone Summary')).toHaveTextContent(
+        'Delta tones: up:1 · down:0 · flat:0 · n/a:1 · dominant:up',
+      )
       expect(screen.getByLabelText('Overlay Marker Delta Extremes')).toHaveTextContent(
         'Delta extremes: rise:risk:live_trading_disabled:raised:+0.00 (+0.00%) · drop:trade:closed:queued:-1.00 (-50.00%) · spread:1.00',
       )
@@ -744,6 +753,9 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Overlay Marker Delta Summary')).toHaveTextContent(
       'Delta summary: Δlatest:+0.00 (n:1) · Δavg:+0.50 (n:1) · Δprev:+1.00 (n:1)',
+    )
+    expect(screen.getByLabelText('Overlay Marker Delta Tone Summary')).toHaveTextContent(
+      'Delta tones: up:1 · down:0 · flat:0 · n/a:0 · dominant:up',
     )
     expect(screen.getByLabelText('Overlay Marker Delta Extremes')).toHaveTextContent(
       'Delta extremes: rise:risk:live_trading_disabled:raised:+0.00 (+0.00%) · drop:risk:live_trading_disabled:raised:+0.00 (+0.00%) · spread:0.00',

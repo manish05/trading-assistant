@@ -1616,6 +1616,54 @@ function App() {
     marketOverlayScopedTimelineAnnotations,
     marketOverlayScopedVisibleAnnotations,
   ])
+  const marketOverlayMarkerDeltaToneSummary = useMemo(() => {
+    if (marketOverlayScopedTimelineAnnotations.length === 0 || marketOverlayChartPoints.length === 0) {
+      return 'none'
+    }
+    const chartPointIndexByTime = new Map(
+      marketOverlayChartPoints.map((point, index) => [point.time, index] as const),
+    )
+    let upCount = 0
+    let downCount = 0
+    let flatCount = 0
+    let unavailableCount = 0
+    marketOverlayScopedTimelineAnnotations.forEach((annotation) => {
+      const pointIndex = chartPointIndexByTime.get(annotation.time) ?? -1
+      if (pointIndex <= 0) {
+        unavailableCount += 1
+        return
+      }
+      const currentPoint = marketOverlayChartPoints[pointIndex]
+      const previousPoint = marketOverlayChartPoints[pointIndex - 1]
+      if (!currentPoint || !previousPoint) {
+        unavailableCount += 1
+        return
+      }
+      const deltaToPrevious = currentPoint.value - previousPoint.value
+      if (deltaToPrevious > 0) {
+        upCount += 1
+        return
+      }
+      if (deltaToPrevious < 0) {
+        downCount += 1
+        return
+      }
+      flatCount += 1
+    })
+    const ranked = [
+      { key: 'up', count: upCount },
+      { key: 'down', count: downCount },
+      { key: 'flat', count: flatCount },
+    ].sort((left, right) => right.count - left.count)
+    const highestCount = ranked[0]?.count ?? 0
+    const dominant =
+      highestCount === 0
+        ? 'none'
+        : ranked.filter((entry) => entry.count === highestCount).length > 1
+          ? 'mixed'
+          : ranked[0]?.key ?? 'none'
+    return `up:${upCount} · down:${downCount} · flat:${flatCount} · n/a:${unavailableCount} · dominant:${dominant}`
+  }, [marketOverlayChartPoints, marketOverlayScopedTimelineAnnotations])
   const marketOverlayMarkerDeltaExtremes = useMemo(() => {
     if (marketOverlayScopedTimelineAnnotations.length === 0 || marketOverlayChartPoints.length === 0) {
       return 'none'
@@ -4623,6 +4671,9 @@ function App() {
               Scope: {marketOverlayMarkerScopeSummary}
             </p>
             <p aria-label="Overlay Marker Delta Summary">Delta summary: {marketOverlayMarkerDeltaSummary}</p>
+            <p aria-label="Overlay Marker Delta Tone Summary">
+              Delta tones: {marketOverlayMarkerDeltaToneSummary}
+            </p>
             <p aria-label="Overlay Marker Delta Extremes">
               Delta extremes: {marketOverlayMarkerDeltaExtremes}
             </p>
