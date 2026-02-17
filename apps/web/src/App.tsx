@@ -678,7 +678,7 @@ function App() {
         appendBlock({
           id: `blk_${Date.now()}`,
           title: `${method} failed`,
-          content: 'Gateway is not connected.',
+          content: `Gateway is not connected.${lockTelemetryFailureSuffix}`,
           severity: 'error',
         })
         return null
@@ -764,7 +764,7 @@ function App() {
       })
       return response.payload ?? {}
     },
-    [appendBlock, minRequestGapMsInput, patchHistory, pushHistory],
+    [appendBlock, lockTelemetryFailureSuffix, minRequestGapMsInput, patchHistory, pushHistory],
   )
 
   const sendPing = useCallback(() => {
@@ -842,7 +842,7 @@ function App() {
       appendBlock({
         id: `blk_${Date.now()}`,
         title: 'accounts.disconnect skipped',
-        content: 'No managed account id available.',
+        content: `No managed account id available.${lockTelemetryFailureSuffix}`,
         severity: 'warn',
       })
       return
@@ -854,7 +854,7 @@ function App() {
         setAccountConnectionStatus(account.status)
       }
     }
-  }, [appendBlock, managedAccountId, sendRequest])
+  }, [appendBlock, lockTelemetryFailureSuffix, managedAccountId, sendRequest])
 
   const sendFeedsList = useCallback(async () => {
     const payload = await sendRequest('feeds.list', {})
@@ -909,7 +909,7 @@ function App() {
       appendBlock({
         id: `blk_${Date.now()}`,
         title: 'devices.registerPush skipped',
-        content: 'No managed device id available.',
+        content: `No managed device id available.${lockTelemetryFailureSuffix}`,
         severity: 'warn',
       })
       return
@@ -925,14 +925,14 @@ function App() {
         setManagedDeviceId(device.deviceId)
       }
     }
-  }, [appendBlock, managedDeviceId, managedDeviceRotatePushToken, sendRequest])
+  }, [appendBlock, lockTelemetryFailureSuffix, managedDeviceId, managedDeviceRotatePushToken, sendRequest])
 
   const sendDeviceUnpair = useCallback(async () => {
     if (!managedDeviceId) {
       appendBlock({
         id: `blk_${Date.now()}`,
         title: 'devices.unpair skipped',
-        content: 'No managed device id available.',
+        content: `No managed device id available.${lockTelemetryFailureSuffix}`,
         severity: 'warn',
       })
       return
@@ -947,7 +947,7 @@ function App() {
     if (payload.status === 'removed') {
       setDeviceCount((current) => (current === null ? current : Math.max(current - 1, 0)))
     }
-  }, [appendBlock, managedDeviceId, sendRequest])
+  }, [appendBlock, lockTelemetryFailureSuffix, managedDeviceId, sendRequest])
 
   const sendFeedSubscribe = useCallback(async () => {
     const payload = await sendRequest('feeds.subscribe', {
@@ -978,7 +978,7 @@ function App() {
       appendBlock({
         id: `blk_${Date.now()}`,
         title: 'feeds.unsubscribe skipped',
-        content: 'No active feed subscription id available.',
+        content: `No active feed subscription id available.${lockTelemetryFailureSuffix}`,
         severity: 'warn',
       })
       return
@@ -998,7 +998,7 @@ function App() {
     if (payload.status === 'removed') {
       setActiveSubscriptionId(null)
     }
-  }, [activeSubscriptionId, appendBlock, sendRequest])
+  }, [activeSubscriptionId, appendBlock, lockTelemetryFailureSuffix, sendRequest])
 
   const collectCurrentPreset = useCallback((): QuickActionPreset => {
     return {
@@ -1066,7 +1066,7 @@ function App() {
       appendBlock({
         id: `blk_${Date.now()}`,
         title: 'preset save skipped',
-        content: 'Preset name is required.',
+        content: `Preset name is required.${lockTelemetryFailureSuffix}`,
         severity: 'warn',
       })
       return
@@ -1075,14 +1075,14 @@ function App() {
     store[normalizedName] = collectCurrentPreset()
     writePresetStore(store)
     setSelectedPresetName(normalizedName)
-  }, [appendBlock, collectCurrentPreset, presetNameInput, readPresetStore, writePresetStore])
+  }, [appendBlock, collectCurrentPreset, lockTelemetryFailureSuffix, presetNameInput, readPresetStore, writePresetStore])
 
   const loadSelectedPreset = useCallback(() => {
     if (!selectedPresetName) {
       appendBlock({
         id: `blk_${Date.now()}`,
         title: 'preset load skipped',
-        content: 'Select a preset first.',
+        content: `Select a preset first.${lockTelemetryFailureSuffix}`,
         severity: 'warn',
       })
       return
@@ -1099,14 +1099,14 @@ function App() {
       return
     }
     applyPreset(preset)
-  }, [appendBlock, applyPreset, readPresetStore, selectedPresetName])
+  }, [appendBlock, applyPreset, lockTelemetryFailureSuffix, readPresetStore, selectedPresetName])
 
   const deleteSelectedPreset = useCallback(() => {
     if (!selectedPresetName) {
       appendBlock({
         id: `blk_${Date.now()}`,
         title: 'preset delete skipped',
-        content: 'Select a preset first.',
+        content: `Select a preset first.${lockTelemetryFailureSuffix}`,
         severity: 'warn',
       })
       return
@@ -1118,7 +1118,7 @@ function App() {
     delete store[selectedPresetName]
     writePresetStore(store)
     setSelectedPresetName('')
-  }, [appendBlock, readPresetStore, selectedPresetName, writePresetStore])
+  }, [appendBlock, lockTelemetryFailureSuffix, readPresetStore, selectedPresetName, writePresetStore])
 
   const exportPresetsJson = useCallback(async () => {
     const store = readPresetStore()
@@ -1138,11 +1138,11 @@ function App() {
       appendBlock({
         id: `blk_${Date.now()}`,
         title: 'presets export failed',
-        content: 'Clipboard access failed or is unavailable.',
+        content: `Clipboard access failed or is unavailable.${lockTelemetryFailureSuffix}`,
         severity: 'warn',
       })
     }
-  }, [appendBlock, readPresetStore])
+  }, [appendBlock, lockTelemetryFailureSuffix, readPresetStore])
 
   const importPresetsJson = useCallback(() => {
     const source = presetImportInput.trim()
@@ -1150,7 +1150,7 @@ function App() {
       appendBlock({
         id: `blk_${Date.now()}`,
         title: 'preset import skipped',
-        content: 'Import JSON field is empty.',
+        content: `Import JSON field is empty.${lockTelemetryFailureSuffix}`,
         severity: 'warn',
       })
       return
@@ -1163,7 +1163,7 @@ function App() {
       appendBlock({
         id: `blk_${Date.now()}`,
         title: 'preset import failed',
-        content: 'Invalid JSON payload.',
+        content: `Invalid JSON payload.${lockTelemetryFailureSuffix}`,
         severity: 'error',
       })
       return
@@ -1173,7 +1173,7 @@ function App() {
       appendBlock({
         id: `blk_${Date.now()}`,
         title: 'preset import failed',
-        content: 'Expected a JSON object keyed by preset name.',
+        content: `Expected a JSON object keyed by preset name.${lockTelemetryFailureSuffix}`,
         severity: 'error',
       })
       return
@@ -1225,6 +1225,7 @@ function App() {
     })
   }, [
     appendBlock,
+    lockTelemetryFailureSuffix,
     lockTelemetryToastDetailsWithLabel,
     presetImportInput,
     presetImportMode,

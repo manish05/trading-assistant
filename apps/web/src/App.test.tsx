@@ -309,6 +309,48 @@ describe('Dashboard shell', () => {
     })
   })
 
+  it('shows lock telemetry in preset validation warnings', () => {
+    render(<App />)
+
+    fireEvent.change(screen.getByLabelText('Preset Name'), {
+      target: { value: '   ' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Save Preset' }))
+    expect(
+      screen.getByText('Preset name is required. Lock telemetry: lock toggles: 0, tone: none, reset: never.'),
+    ).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Load Preset' }))
+    expect(
+      screen.getByText('Select a preset first. Lock telemetry: lock toggles: 0, tone: none, reset: never.'),
+    ).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Import Presets JSON' }))
+    expect(
+      screen.getByText(
+        'Import JSON field is empty. Lock telemetry: lock toggles: 0, tone: none, reset: never.',
+      ),
+    ).toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText('Import Presets JSON'), {
+      target: { value: '{"oops":' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Import Presets JSON' }))
+    expect(
+      screen.getByText('Invalid JSON payload. Lock telemetry: lock toggles: 0, tone: none, reset: never.'),
+    ).toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText('Import Presets JSON'), {
+      target: { value: '[]' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Import Presets JSON' }))
+    expect(
+      screen.getByText(
+        'Expected a JSON object keyed by preset name. Lock telemetry: lock toggles: 0, tone: none, reset: never.',
+      ),
+    ).toBeInTheDocument()
+  })
+
   it('adds quick-action history entries when requests are sent', async () => {
     render(<App />)
 
