@@ -218,6 +218,28 @@
     'Courier New', monospace;
 }
 
+.preset-import-report {
+  margin-top: 0.45rem;
+  border: 1px solid #2d4a7e;
+  border-radius: 8px;
+  padding: 0.45rem 0.55rem;
+  display: grid;
+  gap: 0.2rem;
+  font-size: 0.7rem;
+  color: #9fb0cc;
+  background: #12213a;
+}
+
+.preset-import-report div {
+  display: grid;
+  grid-template-columns: 88px 1fr;
+  gap: 0.4rem;
+}
+
+.preset-import-report strong {
+  color: #d9e4f7;
+}
+
 .block-card {
   border-radius: 10px;
   border: 1px solid #2d3d5f;

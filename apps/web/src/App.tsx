@@ -56,6 +56,12 @@ type QuickActionPreset = {
   minRequestGapMsInput: string
 }
 type PresetImportMode = 'overwrite' | 'merge'
+type PresetImportReport = {
+  mode: PresetImportMode
+  accepted: string[]
+  rejected: string[]
+  importedAt: string
+}
 
 const PRESETS_STORAGE_KEY = 'quick-action-presets-v1'
 const HISTORY_FILTER_STORAGE_KEY = 'quick-action-history-filter-v1'
@@ -229,6 +235,7 @@ function App() {
   const [presetImportMode, setPresetImportMode] = useState<PresetImportMode>(
     readPresetImportModeFromStorage,
   )
+  const [presetImportReport, setPresetImportReport] = useState<PresetImportReport | null>(null)
   const [availablePresetNames, setAvailablePresetNames] = useState<string[]>(() =>
     Object.keys(readPresetStoreFromStorage()).sort(),
   )
@@ -788,30 +795,38 @@ function App() {
 
     const incomingRaw = parsed as Record<string, unknown>
     const incoming: Record<string, QuickActionPreset> = {}
-    let rejectedCount = 0
+    const acceptedNames: string[] = []
+    const rejectedNames: string[] = []
     for (const [name, value] of Object.entries(incomingRaw)) {
       if (!name.trim()) {
-        rejectedCount += 1
+        rejectedNames.push('(empty)')
         continue
       }
       const sanitized = sanitizePreset(value)
       if (!sanitized) {
-        rejectedCount += 1
+        rejectedNames.push(name)
         continue
       }
       incoming[name] = sanitized
+      acceptedNames.push(name)
     }
     const store = readPresetStore()
     const merged =
       presetImportMode === 'merge' ? { ...incoming, ...store } : { ...store, ...incoming }
     writePresetStore(merged)
     setPresetImportInput('')
+    setPresetImportReport({
+      mode: presetImportMode,
+      accepted: acceptedNames,
+      rejected: rejectedNames,
+      importedAt: new Date().toISOString(),
+    })
     appendBlock({
       id: `blk_${Date.now()}`,
       title: 'presets imported',
       content:
-        `Imported ${Object.keys(incoming).length} preset entries (${presetImportMode}). ` +
-        `Rejected ${rejectedCount}.`,
+        `Imported ${acceptedNames.length} preset entries (${presetImportMode}). ` +
+        `Rejected ${rejectedNames.length}.`,
       severity: 'info',
     })
   }, [appendBlock, presetImportInput, presetImportMode, readPresetStore, writePresetStore])
@@ -1201,6 +1216,26 @@ function App() {
                 placeholder='{"preset_name": { ... }}'
               />
             </label>
+            {presetImportReport ? (
+              <div className="preset-import-report">
+                <div>
+                  <strong>Last Import</strong>
+                  <span>{presetImportReport.importedAt}</span>
+                </div>
+                <div>
+                  <strong>Mode</strong>
+                  <span>{presetImportReport.mode}</span>
+                </div>
+                <div>
+                  <strong>Accepted</strong>
+                  <span>{presetImportReport.accepted.join(', ') || 'none'}</span>
+                </div>
+                <div>
+                  <strong>Rejected</strong>
+                  <span>{presetImportReport.rejected.join(', ') || 'none'}</span>
+                </div>
+              </div>
+            ) : null}
           </section>
           <div className="block-list">
             {blocks.length === 0 ? (

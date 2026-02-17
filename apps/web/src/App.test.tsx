@@ -323,6 +323,10 @@ describe('Dashboard shell', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('option', { name: 'imported-template' })).toBeInTheDocument()
+      expect(screen.getByText('Accepted')).toBeInTheDocument()
+      expect(
+        screen.getByText('imported-template', { selector: '.preset-import-report span' }),
+      ).toBeInTheDocument()
     })
   })
 
@@ -372,5 +376,26 @@ describe('Dashboard shell', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Load Preset' }))
 
     expect(screen.getByLabelText('Feed Symbol')).toHaveValue('ETHUSDm')
+  })
+
+  it('reports accepted and rejected preset names after import', async () => {
+    render(<App />)
+
+    fireEvent.change(screen.getByLabelText('Import Presets JSON'), {
+      target: {
+        value: '{"good-template":{"feedSymbol":"SOLUSDm"},"bad-template":123}',
+      },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Import Presets JSON' }))
+
+    await waitFor(() => {
+      expect(
+        screen.getByText('good-template', { selector: '.preset-import-report span' }),
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText('bad-template', { selector: '.preset-import-report span' }),
+      ).toBeInTheDocument()
+      expect(screen.getByText('Rejected')).toBeInTheDocument()
+    })
   })
 })
