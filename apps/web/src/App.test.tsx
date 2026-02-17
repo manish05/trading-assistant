@@ -39,6 +39,8 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Notify Device' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Unpair Device' })).toBeInTheDocument()
     expect(screen.getByLabelText('Device Notify Message')).toHaveValue('Dashboard test notification')
+    expect(screen.getByLabelText('Emergency Action')).toHaveValue('pause_trading')
+    expect(screen.getByLabelText('Emergency Reason')).toHaveValue('dashboard emergency stop trigger')
     expect(screen.getByRole('button', { name: 'Subscribe Feed' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Get Candles' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Risk Status' })).toBeInTheDocument()
@@ -207,6 +209,12 @@ describe('Dashboard shell', () => {
     fireEvent.change(screen.getByLabelText('Device Notify Message'), {
       target: { value: 'custom-notify-message' },
     })
+    fireEvent.change(screen.getByLabelText('Emergency Action'), {
+      target: { value: 'close_all' },
+    })
+    fireEvent.change(screen.getByLabelText('Emergency Reason'), {
+      target: { value: 'operator close-all drill' },
+    })
     fireEvent.change(screen.getByLabelText('Feed Topic'), {
       target: { value: 'market.tick' },
     })
@@ -283,8 +291,8 @@ describe('Dashboard shell', () => {
 
       const riskEmergencyStop = payloads.find((payload) => payload.method === 'risk.emergencyStop')
       expect(riskEmergencyStop?.params).toMatchObject({
-        action: 'pause_trading',
-        reason: 'dashboard emergency stop trigger',
+        action: 'close_all',
+        reason: 'operator close-all drill',
       })
 
       const feedSubscribe = payloads.find((payload) => payload.method === 'feeds.subscribe')
@@ -530,6 +538,12 @@ describe('Dashboard shell', () => {
     fireEvent.change(screen.getByLabelText('Feed Symbol'), {
       target: { value: 'SOLUSDm' },
     })
+    fireEvent.change(screen.getByLabelText('Emergency Action'), {
+      target: { value: 'disable_live' },
+    })
+    fireEvent.change(screen.getByLabelText('Emergency Reason'), {
+      target: { value: 'preset emergency reason' },
+    })
     fireEvent.click(screen.getByRole('button', { name: 'Save Preset' }))
 
     await waitFor(() => {
@@ -539,12 +553,20 @@ describe('Dashboard shell', () => {
     fireEvent.change(screen.getByLabelText('Feed Symbol'), {
       target: { value: 'BTCUSDm' },
     })
+    fireEvent.change(screen.getByLabelText('Emergency Action'), {
+      target: { value: 'pause_trading' },
+    })
+    fireEvent.change(screen.getByLabelText('Emergency Reason'), {
+      target: { value: 'different reason' },
+    })
     fireEvent.change(screen.getByLabelText('Saved Presets'), {
       target: { value: 'swing-template' },
     })
     fireEvent.click(screen.getByRole('button', { name: 'Load Preset' }))
 
     expect(screen.getByLabelText('Feed Symbol')).toHaveValue('SOLUSDm')
+    expect(screen.getByLabelText('Emergency Action')).toHaveValue('disable_live')
+    expect(screen.getByLabelText('Emergency Reason')).toHaveValue('preset emergency reason')
 
     fireEvent.click(screen.getByRole('button', { name: 'Delete Preset' }))
     await waitFor(() => {

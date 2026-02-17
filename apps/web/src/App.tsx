@@ -38,6 +38,7 @@ type QuickActionHistory = {
 
 type HistoryFilter = 'all' | QuickActionHistory['status']
 type TimestampFormat = 'absolute' | 'relative'
+type RiskEmergencyAction = 'pause_trading' | 'cancel_all' | 'close_all' | 'disable_live'
 
 type QuickActionPreset = {
   managedAccountId: string
@@ -50,6 +51,8 @@ type QuickActionPreset = {
   managedDevicePairPushToken: string
   managedDeviceRotatePushToken: string
   managedDeviceNotifyMessage: string
+  riskEmergencyAction: RiskEmergencyAction
+  riskEmergencyReason: string
   feedTopic: string
   feedSymbol: string
   feedTimeframe: string
@@ -101,6 +104,7 @@ const BLOCK_TELEMETRY_VISIBILITY_STORAGE_KEY = 'quick-action-block-telemetry-vis
 const MAX_IMPORT_REPORT_NAMES = 6
 const FEED_CANDLE_FETCH_LIMIT = 50
 const DEVICE_NOTIFY_TEST_MESSAGE = 'Dashboard test notification'
+const DEFAULT_RISK_EMERGENCY_REASON = 'dashboard emergency stop trigger'
 const DEFAULT_PRESET_TEMPLATE: QuickActionPreset = {
   managedAccountId: 'acct_demo_1',
   managedProviderAccountId: 'provider_demo_1',
@@ -112,6 +116,8 @@ const DEFAULT_PRESET_TEMPLATE: QuickActionPreset = {
   managedDevicePairPushToken: 'push_dashboard_1',
   managedDeviceRotatePushToken: 'push_dashboard_rotated',
   managedDeviceNotifyMessage: DEVICE_NOTIFY_TEST_MESSAGE,
+  riskEmergencyAction: 'pause_trading',
+  riskEmergencyReason: DEFAULT_RISK_EMERGENCY_REASON,
   feedTopic: 'market.candle.closed',
   feedSymbol: 'ETHUSDm',
   feedTimeframe: '5m',
@@ -307,6 +313,13 @@ const sanitizePreset = (value: unknown): QuickActionPreset | null => {
       ? candidate
       : DEFAULT_PRESET_TEMPLATE[key]
   }
+  const riskEmergencyActionRaw = pick('riskEmergencyAction')
+  const riskEmergencyAction: RiskEmergencyAction =
+    riskEmergencyActionRaw === 'cancel_all' ||
+    riskEmergencyActionRaw === 'close_all' ||
+    riskEmergencyActionRaw === 'disable_live'
+      ? riskEmergencyActionRaw
+      : 'pause_trading'
   return {
     managedAccountId: pick('managedAccountId'),
     managedProviderAccountId: pick('managedProviderAccountId'),
@@ -318,6 +331,8 @@ const sanitizePreset = (value: unknown): QuickActionPreset | null => {
     managedDevicePairPushToken: pick('managedDevicePairPushToken'),
     managedDeviceRotatePushToken: pick('managedDeviceRotatePushToken'),
     managedDeviceNotifyMessage: pick('managedDeviceNotifyMessage'),
+    riskEmergencyAction,
+    riskEmergencyReason: pick('riskEmergencyReason'),
     feedTopic: pick('feedTopic'),
     feedSymbol: pick('feedSymbol'),
     feedTimeframe: pick('feedTimeframe'),
@@ -430,6 +445,12 @@ function App() {
   )
   const [managedDeviceNotifyMessage, setManagedDeviceNotifyMessage] = useState<string>(
     DEFAULT_PRESET_TEMPLATE.managedDeviceNotifyMessage,
+  )
+  const [riskEmergencyAction, setRiskEmergencyAction] = useState<RiskEmergencyAction>(
+    DEFAULT_PRESET_TEMPLATE.riskEmergencyAction,
+  )
+  const [riskEmergencyReason, setRiskEmergencyReason] = useState<string>(
+    DEFAULT_PRESET_TEMPLATE.riskEmergencyReason,
   )
   const [autoRefreshEnabled, setAutoRefreshEnabled] = useState<boolean>(false)
   const [refreshSecondsInput, setRefreshSecondsInput] = useState<string>(
@@ -927,11 +948,11 @@ function App() {
 
   const sendRiskEmergencyStop = useCallback(async () => {
     const payload = await sendRequest('risk.emergencyStop', {
-      action: 'pause_trading',
-      reason: 'dashboard emergency stop trigger',
+      action: riskEmergencyAction,
+      reason: riskEmergencyReason.trim() || DEFAULT_RISK_EMERGENCY_REASON,
     })
     applyRiskStatusPayload(payload)
-  }, [applyRiskStatusPayload, sendRequest])
+  }, [applyRiskStatusPayload, riskEmergencyAction, riskEmergencyReason, sendRequest])
 
   const sendAccountsList = useCallback(async () => {
     const payload = await sendRequest('accounts.list', {})
@@ -1178,6 +1199,8 @@ function App() {
       managedDevicePairPushToken,
       managedDeviceRotatePushToken,
       managedDeviceNotifyMessage,
+      riskEmergencyAction,
+      riskEmergencyReason,
       feedTopic,
       feedSymbol,
       feedTimeframe,
@@ -1197,6 +1220,8 @@ function App() {
     managedDevicePlatform,
     managedDeviceRotatePushToken,
     managedDeviceNotifyMessage,
+    riskEmergencyAction,
+    riskEmergencyReason,
     managedProviderAccountId,
     minRequestGapMsInput,
     refreshSecondsInput,
@@ -1213,6 +1238,8 @@ function App() {
     setManagedDevicePairPushToken(preset.managedDevicePairPushToken)
     setManagedDeviceRotatePushToken(preset.managedDeviceRotatePushToken)
     setManagedDeviceNotifyMessage(preset.managedDeviceNotifyMessage)
+    setRiskEmergencyAction(preset.riskEmergencyAction)
+    setRiskEmergencyReason(preset.riskEmergencyReason)
     setFeedTopic(preset.feedTopic)
     setFeedSymbol(preset.feedSymbol)
     setFeedTimeframe(preset.feedTimeframe)
@@ -2296,6 +2323,27 @@ function App() {
                 <input
                   value={managedDeviceNotifyMessage}
                   onChange={(event) => setManagedDeviceNotifyMessage(event.target.value)}
+                />
+              </label>
+              <label>
+                Emergency Action
+                <select
+                  value={riskEmergencyAction}
+                  onChange={(event) =>
+                    setRiskEmergencyAction(event.target.value as RiskEmergencyAction)
+                  }
+                >
+                  <option value="pause_trading">pause_trading</option>
+                  <option value="cancel_all">cancel_all</option>
+                  <option value="close_all">close_all</option>
+                  <option value="disable_live">disable_live</option>
+                </select>
+              </label>
+              <label>
+                Emergency Reason
+                <input
+                  value={riskEmergencyReason}
+                  onChange={(event) => setRiskEmergencyReason(event.target.value)}
                 />
               </label>
               <label>
