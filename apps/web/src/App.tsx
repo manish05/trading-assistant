@@ -570,11 +570,6 @@ function App() {
     [helperLockCountersLastResetAt, helperResetLockToggleCount, helperResetLockToggleToneClass],
   )
 
-  const lockTelemetryToastDetailsWithLabel = useMemo(
-    () => `lock ${lockTelemetryToastDetails}`,
-    [lockTelemetryToastDetails],
-  )
-
   const lockTelemetrySourceToastDetails = useMemo(
     () =>
       `sources: Alt+L=${helperResetLockSourceCounts['Alt+L']}, controls=${helperResetLockSourceCounts.controls}, snapshot=${helperResetLockSourceCounts.snapshot}`,
@@ -641,14 +636,14 @@ function App() {
     appendBlock({
       id: `blk_${Date.now()}`,
       title: 'helper lock counters reset',
-      content: `Reset helper lock counters (${lockTelemetryToastDetailsWithLabel}).`,
+      content: `Reset helper lock counters (${lockTelemetryToastDetailsWithLabelAndSources}).`,
       severity: 'info',
     })
   }, [
     appendBlock,
     helperResetLockToggleCount,
     lockTelemetryFailureSuffix,
-    lockTelemetryToastDetailsWithLabel,
+    lockTelemetryToastDetailsWithLabelAndSources,
   ])
 
   const pushHistory = useCallback((item: QuickActionHistory) => {
@@ -1220,13 +1215,13 @@ function App() {
       content:
         `Imported ${acceptedNames.length} preset entries (${presetImportMode}). ` +
         `Created ${createdCount}, preserved ${preservedCount}, overwritten ${overwrittenCount}, ` +
-        `rejected ${rejectedNames.length}. Lock telemetry: ${lockTelemetryToastDetailsWithLabel}.`,
+        `rejected ${rejectedNames.length}. Lock telemetry: ${lockTelemetryToastDetailsWithLabelAndSources}.`,
       severity: 'info',
     })
   }, [
     appendBlock,
     lockTelemetryFailureSuffix,
-    lockTelemetryToastDetailsWithLabel,
+    lockTelemetryToastDetailsWithLabelAndSources,
     presetImportInput,
     presetImportMode,
     readPresetStore,
@@ -1551,10 +1546,15 @@ function App() {
     appendBlock({
       id: `blk_${Date.now()}`,
       title: 'helper diagnostics reset',
-      content: `Reset helper diagnostics preferences to defaults (${lockTelemetryToastDetailsWithLabel}).`,
+      content: `Reset helper diagnostics preferences to defaults (${lockTelemetryToastDetailsWithLabelAndSources}).`,
       severity: 'info',
     })
-  }, [appendBlock, isHelperResetLocked, lockTelemetryFailureSuffix, lockTelemetryToastDetailsWithLabel])
+  }, [
+    appendBlock,
+    isHelperResetLocked,
+    lockTelemetryFailureSuffix,
+    lockTelemetryToastDetailsWithLabelAndSources,
+  ])
 
   const clearPresetImportReport = useCallback(() => {
     if (!presetImportReport) {
@@ -1564,10 +1564,10 @@ function App() {
     appendBlock({
       id: `blk_${Date.now()}`,
       title: 'import report cleared',
-      content: `Cleared the latest preset import diagnostics (${lockTelemetryToastDetailsWithLabel}).`,
+      content: `Cleared the latest preset import diagnostics (${lockTelemetryToastDetailsWithLabelAndSources}).`,
       severity: 'info',
     })
-  }, [appendBlock, lockTelemetryToastDetailsWithLabel, presetImportReport])
+  }, [appendBlock, lockTelemetryToastDetailsWithLabelAndSources, presetImportReport])
 
   useEffect(() => {
     if (!autoRefreshEnabled) {

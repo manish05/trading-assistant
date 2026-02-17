@@ -984,7 +984,9 @@ describe('Dashboard shell', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Reset Lock Counters' }))
 
     expect(
-      screen.getByText('Reset helper lock counters (lock toggles: 2, tone: active, reset: never).'),
+      screen.getByText(
+        'Reset helper lock counters (lock toggles: 2, tone: active, reset: never; sources: Alt+L=0, controls=2, snapshot=0).',
+      ),
     ).toBeInTheDocument()
     expect(screen.getByText('lockToggles:0')).toBeInTheDocument()
     expect(screen.getByText('srcControls:0')).toBeInTheDocument()
@@ -1296,7 +1298,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Helper Reset Badge')).toHaveClass('tone-fresh')
     expect(
       screen.getByText(
-        'Reset helper diagnostics preferences to defaults (lock toggles: 1, tone: active, reset: never).',
+          'Reset helper diagnostics preferences to defaults (lock toggles: 1, tone: active, reset: never; sources: Alt+L=0, controls=1, snapshot=0).',
       ),
     ).toBeInTheDocument()
   })
@@ -1334,7 +1336,7 @@ describe('Dashboard shell', () => {
       expect(screen.getByText(/Last import: .*accepted 1 .*rejected 1/)).toBeInTheDocument()
       expect(
         screen.getByText(
-          'Imported 1 preset entries (overwrite). Created 1, preserved 0, overwritten 0, rejected 1. Lock telemetry: lock toggles: 0, tone: none, reset: never.',
+          'Imported 1 preset entries (overwrite). Created 1, preserved 0, overwritten 0, rejected 1. Lock telemetry: lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0.',
         ),
       ).toBeInTheDocument()
     })
@@ -1512,7 +1514,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Clear Import Report' })).toBeDisabled()
     expect(
       screen.getByText(
-        'Cleared the latest preset import diagnostics (lock toggles: 0, tone: none, reset: never).',
+        'Cleared the latest preset import diagnostics (lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0).',
       ),
     ).toBeInTheDocument()
   })
