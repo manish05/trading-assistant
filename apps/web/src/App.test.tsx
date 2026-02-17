@@ -576,6 +576,178 @@ describe('Dashboard shell', () => {
     sendSpy.mockRestore()
   })
 
+  it('includes lock telemetry in risk emergency event blocks', async () => {
+    const sendSpy = vi
+      .spyOn(WebSocket.prototype, 'send')
+      .mockImplementation(function (
+        this: WebSocket,
+        data: string | ArrayBufferLike | Blob | ArrayBufferView<ArrayBufferLike>,
+      ) {
+        if (typeof data !== 'string') {
+          return
+        }
+        const payload = JSON.parse(data) as {
+          type?: string
+          id?: string
+          method?: string
+        }
+        if (payload.type === 'req' && payload.method === 'risk.emergencyStop' && payload.id) {
+          queueMicrotask(() => {
+            this.onmessage?.(
+              new MessageEvent('message', {
+                data: JSON.stringify({
+                  type: 'event',
+                  event: 'event.risk.emergencyStop',
+                  payload: {
+                    requestId: payload.id,
+                    status: {
+                      emergencyStopActive: true,
+                      lastAction: 'pause_trading',
+                      lastReason: 'event telemetry visible',
+                      updatedAt: '2026-02-17T12:00:00.000Z',
+                      actionCounts: {
+                        pause_trading: 1,
+                        cancel_all: 0,
+                        close_all: 0,
+                        disable_live: 0,
+                      },
+                    },
+                  },
+                }),
+              }),
+            )
+          })
+          queueMicrotask(() => {
+            this.onmessage?.(
+              new MessageEvent('message', {
+                data: JSON.stringify({
+                  type: 'res',
+                  id: payload.id,
+                  ok: true,
+                  payload: {
+                    emergencyStopActive: true,
+                    lastAction: 'pause_trading',
+                    lastReason: 'event telemetry visible',
+                    updatedAt: '2026-02-17T12:00:00.000Z',
+                    actionCounts: {
+                      pause_trading: 1,
+                      cancel_all: 0,
+                      close_all: 0,
+                      disable_live: 0,
+                    },
+                  },
+                }),
+              }),
+            )
+          })
+        }
+      })
+
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Emergency Stop' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('event.risk.emergencyStop')).toBeInTheDocument()
+    })
+
+    const eventCard = screen.getByText('event.risk.emergencyStop').closest('article')
+    expect(eventCard).not.toBeNull()
+    expect(
+      within(eventCard as HTMLElement).getByText(
+        /\[LockTelemetry\] lock toggles: 0, tone: none, reset: never; sources: Alt\+L=0, controls=0, snapshot=0/,
+      ),
+    ).toBeInTheDocument()
+
+    sendSpy.mockRestore()
+  })
+
+  it('omits lock telemetry in risk emergency event blocks when block telemetry is hidden', async () => {
+    const sendSpy = vi
+      .spyOn(WebSocket.prototype, 'send')
+      .mockImplementation(function (
+        this: WebSocket,
+        data: string | ArrayBufferLike | Blob | ArrayBufferView<ArrayBufferLike>,
+      ) {
+        if (typeof data !== 'string') {
+          return
+        }
+        const payload = JSON.parse(data) as {
+          type?: string
+          id?: string
+          method?: string
+        }
+        if (payload.type === 'req' && payload.method === 'risk.emergencyStop' && payload.id) {
+          queueMicrotask(() => {
+            this.onmessage?.(
+              new MessageEvent('message', {
+                data: JSON.stringify({
+                  type: 'event',
+                  event: 'event.risk.emergencyStop',
+                  payload: {
+                    requestId: payload.id,
+                    status: {
+                      emergencyStopActive: true,
+                      lastAction: 'pause_trading',
+                      lastReason: 'event telemetry hidden',
+                      updatedAt: '2026-02-17T12:10:00.000Z',
+                      actionCounts: {
+                        pause_trading: 1,
+                        cancel_all: 0,
+                        close_all: 0,
+                        disable_live: 0,
+                      },
+                    },
+                  },
+                }),
+              }),
+            )
+          })
+          queueMicrotask(() => {
+            this.onmessage?.(
+              new MessageEvent('message', {
+                data: JSON.stringify({
+                  type: 'res',
+                  id: payload.id,
+                  ok: true,
+                  payload: {
+                    emergencyStopActive: true,
+                    lastAction: 'pause_trading',
+                    lastReason: 'event telemetry hidden',
+                    updatedAt: '2026-02-17T12:10:00.000Z',
+                    actionCounts: {
+                      pause_trading: 1,
+                      cancel_all: 0,
+                      close_all: 0,
+                      disable_live: 0,
+                    },
+                  },
+                }),
+              }),
+            )
+          })
+        }
+      })
+
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Hide Block Telemetry' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Emergency Stop' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('event.risk.emergencyStop')).toBeInTheDocument()
+    })
+
+    const eventCard = screen.getByText('event.risk.emergencyStop').closest('article')
+    expect(eventCard).not.toBeNull()
+    expect(within(eventCard as HTMLElement).getByText(/"lastReason": "event telemetry hidden"/)).toBeInTheDocument()
+    expect(
+      within(eventCard as HTMLElement).queryByText(
+        /\[LockTelemetry\] lock toggles: 0, tone: none, reset: never; sources: Alt\+L=0, controls=0, snapshot=0/,
+      ),
+    ).not.toBeInTheDocument()
+
+    sendSpy.mockRestore()
+  })
+
   it('debounces repeated requests for the same method', async () => {
     const sendSpy = vi.spyOn(WebSocket.prototype, 'send')
     render(<App />)
