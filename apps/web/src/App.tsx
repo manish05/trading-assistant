@@ -896,6 +896,41 @@ function App() {
     }
   }, [appendBlock, presetImportReport])
 
+  const copyPresetImportNames = useCallback(async () => {
+    if (!presetImportReport) {
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'import names copy skipped',
+        content: 'No preset import report available yet.',
+        severity: 'warn',
+      })
+      return
+    }
+    const payload = [
+      `accepted:${presetImportReport.accepted.join(',')}`,
+      `rejected:${presetImportReport.rejected.join(',')}`,
+    ].join('\n')
+    try {
+      if (!navigator.clipboard?.writeText) {
+        throw new Error('Clipboard API unavailable')
+      }
+      await navigator.clipboard.writeText(payload)
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'import names copied',
+        content: 'Copied full accepted/rejected import names to clipboard.',
+        severity: 'info',
+      })
+    } catch {
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'import names copy failed',
+        content: 'Clipboard access failed or is unavailable.',
+        severity: 'warn',
+      })
+    }
+  }, [appendBlock, presetImportReport])
+
   const clearPresetImportReport = useCallback(() => {
     if (!presetImportReport) {
       return
@@ -1309,6 +1344,13 @@ function App() {
               </button>
               <button type="button" onClick={clearPresetImportReport} disabled={!presetImportReport}>
                 Clear Import Report
+              </button>
+              <button
+                type="button"
+                onClick={() => void copyPresetImportNames()}
+                disabled={!presetImportReport}
+              >
+                Copy Full Names
               </button>
               <button
                 type="button"

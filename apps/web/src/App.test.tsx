@@ -47,6 +47,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Import Presets JSON' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Copy Import Report' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Clear Import Report' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Copy Full Names' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Expand Report' })).toBeDisabled()
     expect(screen.getByLabelText('Import Mode')).toBeInTheDocument()
     expect(screen.getByLabelText('Import Mode Badge')).toBeInTheDocument()
@@ -508,5 +509,36 @@ describe('Dashboard shell', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Expand Report' }))
     expect(screen.getByText('Accepted')).toBeInTheDocument()
+  })
+
+  it('copies full accepted and rejected names without truncation', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(window.navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    })
+    render(<App />)
+    const manyPresets = Object.fromEntries(
+      Array.from({ length: 8 }, (_, idx) => [`full-template-${idx}`, { feedSymbol: 'ETHUSDm' }]),
+    )
+    fireEvent.change(screen.getByLabelText('Import Presets JSON'), {
+      target: {
+        value: JSON.stringify(manyPresets),
+      },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Import Presets JSON' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Copy Full Names' })).toBeEnabled()
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Copy Full Names' }))
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalled()
+      const payload = String(writeText.mock.calls[writeText.mock.calls.length - 1][0])
+      expect(payload).toContain('accepted:full-template-0')
+      expect(payload).toContain('full-template-7')
+      expect(payload).not.toContain('(+')
+    })
   })
 })
