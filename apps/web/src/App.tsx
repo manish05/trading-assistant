@@ -76,6 +76,7 @@ const PRESET_IMPORT_REPORT_EXPANDED_STORAGE_KEY = 'quick-action-preset-import-re
 const IMPORT_HINT_VISIBILITY_STORAGE_KEY = 'quick-action-import-hint-visibility-v1'
 const IMPORT_HINT_MODE_STORAGE_KEY = 'quick-action-import-hint-mode-v1'
 const STATUS_SHORTCUT_LEGEND_STORAGE_KEY = 'quick-action-status-shortcut-legend-v1'
+const STATUS_SHORTCUT_LEGEND_ORDER_STORAGE_KEY = 'quick-action-status-shortcut-legend-order-v1'
 const MAX_IMPORT_REPORT_NAMES = 6
 const DEFAULT_PRESET_TEMPLATE: QuickActionPreset = {
   managedAccountId: 'acct_demo_1',
@@ -167,6 +168,14 @@ const readStatusShortcutLegendFromStorage = (): boolean => {
     return false
   }
   return window.localStorage.getItem(STATUS_SHORTCUT_LEGEND_STORAGE_KEY) === 'visible'
+}
+
+const readStatusShortcutLegendOrderFromStorage = (): ShortcutLegendOrder => {
+  if (typeof window === 'undefined') {
+    return 'import-first'
+  }
+  const raw = window.localStorage.getItem(STATUS_SHORTCUT_LEGEND_ORDER_STORAGE_KEY)
+  return raw === 'clear-first' ? 'clear-first' : 'import-first'
 }
 
 const sanitizePreset = (value: unknown): QuickActionPreset | null => {
@@ -299,8 +308,9 @@ function App() {
   const [showShortcutLegendInStatus, setShowShortcutLegendInStatus] = useState<boolean>(
     readStatusShortcutLegendFromStorage,
   )
-  const [shortcutLegendOrder, setShortcutLegendOrder] =
-    useState<ShortcutLegendOrder>('import-first')
+  const [shortcutLegendOrder, setShortcutLegendOrder] = useState<ShortcutLegendOrder>(
+    readStatusShortcutLegendOrderFromStorage,
+  )
   const [availablePresetNames, setAvailablePresetNames] = useState<string[]>(() =>
     Object.keys(readPresetStoreFromStorage()).sort(),
   )
@@ -1203,6 +1213,10 @@ function App() {
       showShortcutLegendInStatus ? 'visible' : 'hidden',
     )
   }, [showShortcutLegendInStatus])
+
+  useEffect(() => {
+    window.localStorage.setItem(STATUS_SHORTCUT_LEGEND_ORDER_STORAGE_KEY, shortcutLegendOrder)
+  }, [shortcutLegendOrder])
 
   const filteredHistory =
     historyFilter === 'all'

@@ -499,15 +499,22 @@ describe('Dashboard shell', () => {
       target: { value: 'clear-first' },
     })
     expect(within(legendRow).getAllByText(/Ctrl\/Cmd\+Enter|Esc|\//)[0]).toHaveTextContent('Esc')
+    expect(window.localStorage.getItem('quick-action-status-shortcut-legend-order-v1')).toBe(
+      'clear-first',
+    )
   })
 
   it('initializes status shortcut legend visibility from localStorage', () => {
     window.localStorage.setItem('quick-action-status-shortcut-legend-v1', 'visible')
+    window.localStorage.setItem('quick-action-status-shortcut-legend-order-v1', 'clear-first')
     render(<App />)
     expect(screen.getByText('Import Shortcut Legend', { selector: 'dt' })).toHaveTextContent(
       'Import Shortcut Legend (detailed)',
     )
     expect(screen.getByRole('button', { name: 'Hide Legend in Status' })).toBeInTheDocument()
+    const legendRow = screen.getByText('Import Shortcut Legend', { selector: 'dt' })
+      .nextElementSibling as HTMLElement
+    expect(within(legendRow).getAllByText(/Ctrl\/Cmd\+Enter|Esc|\//)[0]).toHaveTextContent('Esc')
   })
 
   it('reports accepted and rejected preset names after import', async () => {
