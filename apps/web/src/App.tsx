@@ -105,6 +105,8 @@ const MAX_IMPORT_REPORT_NAMES = 6
 const FEED_CANDLE_FETCH_LIMIT = 50
 const DEVICE_NOTIFY_TEST_MESSAGE = 'Dashboard test notification'
 const DEFAULT_RISK_EMERGENCY_REASON = 'dashboard emergency stop trigger'
+const TRADE_ORDER_REFERENCE_ID = 'order_demo_1'
+const TRADE_POSITION_REFERENCE_ID = 'position_demo_1'
 const DEFAULT_PRESET_TEMPLATE: QuickActionPreset = {
   managedAccountId: 'acct_demo_1',
   managedProviderAccountId: 'provider_demo_1',
@@ -960,6 +962,57 @@ function App() {
     })
     applyRiskStatusPayload(payload)
   }, [applyRiskStatusPayload, riskEmergencyReason, sendRequest])
+
+  const sendTradePlace = useCallback(() => {
+    const accountId = managedAccountId.trim() || DEFAULT_PRESET_TEMPLATE.managedAccountId
+    const symbol = feedSymbol.trim() || DEFAULT_PRESET_TEMPLATE.feedSymbol
+    void sendRequest('trades.place', {
+      intent: {
+        account_id: accountId,
+        symbol,
+        action: 'PLACE_MARKET_ORDER',
+        side: 'buy',
+        volume: 0.1,
+        stop_loss: 2400.0,
+        take_profit: 2700.0,
+      },
+      policy: {
+        allowed_symbols: [symbol],
+        max_volume: 0.2,
+        max_concurrent_positions: 2,
+        max_daily_loss: 100.0,
+        require_stop_loss: true,
+      },
+      snapshot: {
+        open_positions: 0,
+        daily_pnl: -20.0,
+      },
+    })
+  }, [feedSymbol, managedAccountId, sendRequest])
+
+  const sendTradeModify = useCallback(() => {
+    void sendRequest('trades.modify', {
+      accountId: managedAccountId.trim() || DEFAULT_PRESET_TEMPLATE.managedAccountId,
+      orderId: TRADE_ORDER_REFERENCE_ID,
+      openPrice: 2500.0,
+      stopLoss: 2450.0,
+      takeProfit: 2600.0,
+    })
+  }, [managedAccountId, sendRequest])
+
+  const sendTradeCancel = useCallback(() => {
+    void sendRequest('trades.cancel', {
+      accountId: managedAccountId.trim() || DEFAULT_PRESET_TEMPLATE.managedAccountId,
+      orderId: TRADE_ORDER_REFERENCE_ID,
+    })
+  }, [managedAccountId, sendRequest])
+
+  const sendTradeClosePosition = useCallback(() => {
+    void sendRequest('trades.closePosition', {
+      accountId: managedAccountId.trim() || DEFAULT_PRESET_TEMPLATE.managedAccountId,
+      positionId: TRADE_POSITION_REFERENCE_ID,
+    })
+  }, [managedAccountId, sendRequest])
 
   const sendAccountsList = useCallback(async () => {
     const payload = await sendRequest('accounts.list', {})
@@ -2219,6 +2272,18 @@ function App() {
               </button>
               <button type="button" onClick={() => void sendRiskResume()}>
                 Resume Risk
+              </button>
+              <button type="button" onClick={sendTradePlace}>
+                Place Trade
+              </button>
+              <button type="button" onClick={sendTradeModify}>
+                Modify Trade
+              </button>
+              <button type="button" onClick={sendTradeCancel}>
+                Cancel Trade
+              </button>
+              <button type="button" onClick={sendTradeClosePosition}>
+                Close Position
               </button>
               <button type="button" onClick={() => void sendAccountsList()}>
                 Accounts

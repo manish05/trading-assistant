@@ -46,6 +46,10 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Risk Status' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Emergency Stop' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Resume Risk' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Place Trade' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Modify Trade' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Cancel Trade' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Close Position' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Unsubscribe Feed' })).toBeDisabled()
     expect(screen.getByLabelText('Refresh Interval (sec)')).toBeInTheDocument()
     expect(screen.getByLabelText('Min Request Gap (ms)')).toBeInTheDocument()
@@ -230,6 +234,10 @@ describe('Dashboard shell', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Risk Status' }))
     fireEvent.click(screen.getByRole('button', { name: 'Emergency Stop' }))
     fireEvent.click(screen.getByRole('button', { name: 'Resume Risk' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Place Trade' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Modify Trade' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel Trade' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Close Position' }))
     fireEvent.click(screen.getByRole('button', { name: 'Connect Account' }))
     fireEvent.click(screen.getByRole('button', { name: 'Disconnect Account' }))
     fireEvent.click(screen.getByRole('button', { name: 'Feeds' }))
@@ -251,6 +259,10 @@ describe('Dashboard shell', () => {
       expect(methods).toContain('risk.status')
       expect(methods).toContain('risk.emergencyStop')
       expect(methods).toContain('risk.resume')
+      expect(methods).toContain('trades.place')
+      expect(methods).toContain('trades.modify')
+      expect(methods).toContain('trades.cancel')
+      expect(methods).toContain('trades.closePosition')
       expect(methods).toContain('accounts.connect')
       expect(methods).toContain('accounts.disconnect')
       expect(methods).toContain('feeds.list')
@@ -301,6 +313,34 @@ describe('Dashboard shell', () => {
       const riskResume = payloads.find((payload) => payload.method === 'risk.resume')
       expect(riskResume?.params).toMatchObject({
         reason: 'operator close-all drill',
+      })
+
+      const tradePlace = payloads.find((payload) => payload.method === 'trades.place')
+      expect(tradePlace?.params).toMatchObject({
+        intent: {
+          account_id: 'acct_custom_9',
+          symbol: 'BTCUSDm',
+          action: 'PLACE_MARKET_ORDER',
+          side: 'buy',
+        },
+      })
+
+      const tradeModify = payloads.find((payload) => payload.method === 'trades.modify')
+      expect(tradeModify?.params).toMatchObject({
+        accountId: 'acct_custom_9',
+        orderId: 'order_demo_1',
+      })
+
+      const tradeCancel = payloads.find((payload) => payload.method === 'trades.cancel')
+      expect(tradeCancel?.params).toMatchObject({
+        accountId: 'acct_custom_9',
+        orderId: 'order_demo_1',
+      })
+
+      const tradeClose = payloads.find((payload) => payload.method === 'trades.closePosition')
+      expect(tradeClose?.params).toMatchObject({
+        accountId: 'acct_custom_9',
+        positionId: 'position_demo_1',
       })
 
       const feedSubscribe = payloads.find((payload) => payload.method === 'feeds.subscribe')
