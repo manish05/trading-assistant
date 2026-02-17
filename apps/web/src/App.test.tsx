@@ -71,6 +71,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Quick Hide Hints' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Quick Show Legend' })).toBeInTheDocument()
     expect(screen.getByText('Helper Diagnostics')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Use Verbose Diagnostics' })).toBeInTheDocument()
     expect(
       screen.getByText('enabled:1/2', { selector: '.import-snapshot-badges .import-summary-badge' }),
     ).toBeInTheDocument()
@@ -601,6 +602,22 @@ describe('Dashboard shell', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Quick Hide Hints' }))
     expect(
       screen.getByText('enabled:1/2', { selector: '.import-snapshot-badges .import-summary-badge' }),
+    ).toBeInTheDocument()
+  })
+
+  it('supports compact and verbose helper diagnostics display modes', () => {
+    render(<App />)
+    expect(
+      screen.queryByText('expanded:yes', { selector: '.import-snapshot-badges .import-summary-badge' }),
+    ).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Use Verbose Diagnostics' }))
+    expect(screen.getByRole('button', { name: 'Use Compact Diagnostics' })).toBeInTheDocument()
+    expect(
+      screen.getByText('expanded:yes', { selector: '.import-snapshot-badges .import-summary-badge' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText('hintVisible:yes', { selector: '.import-snapshot-badges .import-summary-badge' }),
     ).toBeInTheDocument()
   })
 

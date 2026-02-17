@@ -59,6 +59,7 @@ type PresetImportMode = 'overwrite' | 'merge'
 type ImportHintMode = 'detailed' | 'compact'
 type ShortcutLegendOrder = 'import-first' | 'clear-first'
 type ShortcutLegendDensity = 'chips' | 'inline'
+type HelperDiagnosticsDisplayMode = 'compact' | 'verbose'
 type ShortcutLegendItem = {
   label: string
   title: string
@@ -350,6 +351,8 @@ function App() {
   const [shortcutLegendDensity, setShortcutLegendDensity] = useState<ShortcutLegendDensity>(
     readStatusShortcutLegendDensityFromStorage,
   )
+  const [helperDiagnosticsDisplayMode, setHelperDiagnosticsDisplayMode] =
+    useState<HelperDiagnosticsDisplayMode>('compact')
   const [availablePresetNames, setAvailablePresetNames] = useState<string[]>(() =>
     Object.keys(readPresetStoreFromStorage()).sort(),
   )
@@ -2016,14 +2019,40 @@ function App() {
               <dt>Helper Diagnostics</dt>
               <dd className="import-snapshot-badges">
                 <span className="import-summary-badge badge-hint-mode">
-                  expanded:{isImportHelperDiagnosticsExpanded ? 'yes' : 'no'}
-                </span>
-                <span className="import-summary-badge badge-hint-mode">
                   enabled:{Number(isImportHintVisible) + Number(showShortcutLegendInStatus)}/2
                 </span>
                 <span className="import-summary-badge badge-hint-mode">
                   density:{shortcutLegendDensity}
                 </span>
+                {helperDiagnosticsDisplayMode === 'verbose' ? (
+                  <>
+                    <span className="import-summary-badge badge-hint-mode">
+                      expanded:{isImportHelperDiagnosticsExpanded ? 'yes' : 'no'}
+                    </span>
+                    <span className="import-summary-badge badge-hint-mode">
+                      hintVisible:{isImportHintVisible ? 'yes' : 'no'}
+                    </span>
+                    <span className="import-summary-badge badge-hint-mode">
+                      legendVisible:{showShortcutLegendInStatus ? 'yes' : 'no'}
+                    </span>
+                    <span className="import-summary-badge badge-hint-mode">
+                      legendOrder:{shortcutLegendOrder}
+                    </span>
+                  </>
+                ) : null}
+                <button
+                  type="button"
+                  className="summary-copy-button"
+                  onClick={() =>
+                    setHelperDiagnosticsDisplayMode((current) =>
+                      current === 'compact' ? 'verbose' : 'compact',
+                    )
+                  }
+                >
+                  {helperDiagnosticsDisplayMode === 'compact'
+                    ? 'Use Verbose Diagnostics'
+                    : 'Use Compact Diagnostics'}
+                </button>
                 <button
                   type="button"
                   className="summary-copy-button"
