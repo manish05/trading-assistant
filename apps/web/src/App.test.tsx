@@ -67,6 +67,8 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Legend Order')).toHaveValue('import-first')
     expect(screen.getByLabelText('Legend Density')).toHaveValue('chips')
     expect(screen.getByRole('button', { name: 'Copy Shortcut Cheat Sheet' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Quick Hide Hints' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Quick Show Legend' })).toBeInTheDocument()
     expect(screen.getByText('Last import: none')).toBeInTheDocument()
   })
 
@@ -548,6 +550,18 @@ describe('Dashboard shell', () => {
       .nextElementSibling as HTMLElement
     expect(within(legendRow).getAllByText(/Ctrl\/Cmd\+Enter|Esc|\//)[0]).toHaveTextContent('Esc')
     expect(within(legendRow).getByText(/Esc=clear/)).toBeInTheDocument()
+  })
+
+  it('supports helper quick toggles from status snapshot row', () => {
+    render(<App />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Quick Hide Hints' }))
+    expect(screen.getByRole('button', { name: 'Quick Show Hints' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Show Hints' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Quick Show Legend' }))
+    expect(screen.getByRole('button', { name: 'Quick Hide Legend' })).toBeInTheDocument()
+    expect(screen.getByText('Import Shortcut Legend', { selector: 'dt' })).toBeInTheDocument()
   })
 
   it('reports accepted and rejected preset names after import', async () => {

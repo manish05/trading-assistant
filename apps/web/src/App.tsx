@@ -1931,6 +1931,20 @@ function App() {
                 ) : (
                   <span className="lifecycle-badge">none</span>
                 )}
+                <div className="import-snapshot-toggles" aria-label="Import Snapshot Toggles">
+                  <button
+                    type="button"
+                    onClick={() => setIsImportHintVisible((current) => !current)}
+                  >
+                    {isImportHintVisible ? 'Quick Hide Hints' : 'Quick Show Hints'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowShortcutLegendInStatus((current) => !current)}
+                  >
+                    {showShortcutLegendInStatus ? 'Quick Hide Legend' : 'Quick Show Legend'}
+                  </button>
+                </div>
               </dd>
             </div>
             {showShortcutLegendInStatus ? (
