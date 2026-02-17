@@ -8,6 +8,7 @@ from app.devices.registry import DeviceRegistry
 from app.gateway.ws_handler import handle_gateway_websocket
 from app.memory.index import MemoryIndex
 from app.queues.agent_queue import AgentQueue
+from app.trades.service import TradeExecutionService
 
 
 def create_app(*, data_dir: str | Path = "data") -> FastAPI:
@@ -17,6 +18,7 @@ def create_app(*, data_dir: str | Path = "data") -> FastAPI:
     app.state.audit_store = AuditStore(data_dir=data_dir)
     app.state.device_registry = DeviceRegistry()
     app.state.memory_index = MemoryIndex(db_path=Path(data_dir) / "memory.db")
+    app.state.trade_execution_service = TradeExecutionService()
 
     @app.get("/health")
     async def health() -> dict[str, str]:
@@ -31,6 +33,7 @@ def create_app(*, data_dir: str | Path = "data") -> FastAPI:
             audit_store=app.state.audit_store,
             device_registry=app.state.device_registry,
             memory_index=app.state.memory_index,
+            trade_execution_service=app.state.trade_execution_service,
         )
 
     return app

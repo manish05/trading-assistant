@@ -16,6 +16,7 @@ from app.memory.index import MemoryIndex
 from app.protocol.frames import RequestFrame, parse_gateway_frame
 from app.queues.agent_queue import AgentQueue, AgentRequest, QueueSettings
 from app.risk.engine import AccountRiskSnapshot, RiskEngine, RiskPolicy, TradeIntent
+from app.trades.service import TradeExecutionService
 
 PROTOCOL_VERSION = 1
 SERVER_NAME = "mt5-claude-trader-v2"
@@ -96,6 +97,14 @@ class DeviceNotifyParams(BaseModel):
     message: str = Field(min_length=1)
 
 
+class TradesPlaceParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    intent: TradeIntent
+    policy: RiskPolicy
+    snapshot: AccountRiskSnapshot
+
+
 def _error_response(
     request_id: str,
     *,
@@ -142,6 +151,7 @@ async def handle_gateway_websocket(
     audit_store: AuditStore,
     device_registry: DeviceRegistry,
     memory_index: MemoryIndex,
+    trade_execution_service: TradeExecutionService,
 ) -> None:
     await websocket.accept()
 
@@ -512,6 +522,64 @@ async def handle_gateway_websocket(
                 data={"deviceId": params.deviceId, "status": notify_result["status"]},
             )
             await websocket.send_json(_ok_response(frame.id, payload=notify_result))
+            continue
+
+        if frame.method == "trades.place":
+            try:
+                params = TradesPlaceParams.model_validate(frame.params)
+            except ValidationError:
+                await websocket.send_json(
+                    _error_response(
+                        frame.id,
+                        code="INVALID_PARAMS",
+                        message="invalid trades.place params",
+                    )
+                )
+                continue
+
+            risk_decision = risk_engine.evaluate(
+                intent=params.intent,
+                policy=params.policy,
+                snapshot=params.snapshot,
+            )
+            if not risk_decision.allowed:
+                risk_payload = risk_decision.model_dump(mode="json")
+                audit_store.append(
+                    actor="user",
+                    action="trades.place.blocked",
+                    trace_id=frame.id,
+                    data={"decision": risk_payload},
+                )
+                await websocket.send_json(
+                    _error_response(
+                        frame.id,
+                        code="RISK_BLOCKED",
+                        message="trade blocked by risk policy",
+                        details={"decision": risk_payload},
+                    )
+                )
+                continue
+
+            execution = trade_execution_service.place(intent=params.intent)
+            execution_payload = trade_execution_service.as_payload(execution)
+            audit_store.append(
+                actor="user",
+                action="trades.place.executed",
+                trace_id=frame.id,
+                data={
+                    "intent": params.intent.model_dump(mode="json"),
+                    "execution": execution_payload,
+                },
+            )
+            await websocket.send_json(
+                _ok_response(
+                    frame.id,
+                    payload={
+                        "execution": execution_payload,
+                        "riskDecision": risk_decision.model_dump(mode="json"),
+                    },
+                )
+            )
             continue
 
         await websocket.send_json(
