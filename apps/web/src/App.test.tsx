@@ -369,6 +369,9 @@ describe('Dashboard shell', () => {
     fireEvent.change(screen.getByLabelText('Marker Age'), {
       target: { value: 'last-60s' },
     })
+    fireEvent.change(screen.getByLabelText('Delta Basis'), {
+      target: { value: 'average' },
+    })
     fireEvent.change(screen.getByLabelText('Delta Filter'), {
       target: { value: 'latest-down' },
     })
@@ -396,6 +399,9 @@ describe('Dashboard shell', () => {
     expect(window.localStorage.getItem('quick-action-market-overlay-marker-window-v1')).toBe('8')
     expect(window.localStorage.getItem('quick-action-market-overlay-marker-age-filter-v1')).toBe(
       'last-60s',
+    )
+    expect(window.localStorage.getItem('quick-action-market-overlay-marker-delta-basis-v1')).toBe(
+      'average',
     )
     expect(window.localStorage.getItem('quick-action-market-overlay-marker-delta-filter-v1')).toBe(
       'latest-down',
@@ -435,6 +441,23 @@ describe('Dashboard shell', () => {
         Reflect.deleteProperty(window, 'ResizeObserver')
       }
     }
+  })
+
+  it('initializes delta basis preference from localStorage', () => {
+    window.localStorage.setItem('quick-action-market-overlay-marker-delta-basis-v1', 'average')
+
+    render(<App />)
+
+    expect(screen.getByLabelText('Delta Basis')).toHaveValue('average')
+    expect(screen.getByLabelText('Overlay Marker Delta Filter Summary')).toHaveTextContent(
+      'Delta filter: basis:average · mode:all · matched:0/0 · up:0 · down:0 · flat:0 · n/a:0',
+    )
+    expect(screen.getByLabelText('Overlay Marker Delta Shortcut Summary')).toHaveTextContent(
+      'Delta shortcuts: keys:k/u/j/f/n/0/+/- · basis:average · mode:all · matched:0/0 · active:off',
+    )
+    expect(screen.getByLabelText('Overlay Marker Mode Shortcut Summary')).toHaveTextContent(
+      'Mode shortcuts: focus:a/t/r/d=all · age:y=all · window:v=5 · bucket:b=none · order:o/l=newest-first · scope:g=all-buckets · wrap:w=bounded · selection:s=sticky · basis:k=average · delta:u/j/f/n/0/+/-=all · nav:manual',
+    )
   })
 
   it('refreshes market overlay snapshot summary by selected mode', () => {
