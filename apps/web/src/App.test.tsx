@@ -532,10 +532,25 @@ describe('Dashboard shell', () => {
       const payload = String(writeText.mock.calls[writeText.mock.calls.length - 1][0])
       expect(payload).toContain('Import Shortcuts')
       expect(payload).toContain('Ctrl/Cmd+Enter')
+      expect(payload).toContain('Alt+L')
       expect(payload).toContain('Active mode: overwrite')
       expect(payload).toContain('Helper reset format: absolute')
       expect(payload).toContain('Helper reset stale-after hours: 24')
     })
+  })
+
+  it('toggles helper reset lock via Alt+L keyboard shortcut', () => {
+    render(<App />)
+    const input = screen.getByLabelText('Import Presets JSON')
+    expect(screen.getByRole('button', { name: 'Reset Helper Prefs' })).toBeDisabled()
+
+    fireEvent.keyDown(input, { key: 'l', altKey: true })
+    expect(screen.getByRole('button', { name: 'Lock Reset' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Reset Helper Prefs' })).toBeEnabled()
+
+    fireEvent.keyDown(input, { key: 'l', altKey: true })
+    expect(screen.getByRole('button', { name: 'Unlock Reset' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Reset Helper Prefs' })).toBeDisabled()
   })
 
   it('toggles import shortcut legend visibility in status panel', () => {

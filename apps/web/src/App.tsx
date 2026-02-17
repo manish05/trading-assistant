@@ -1171,6 +1171,7 @@ function App() {
       'Import Shortcuts',
       '- Ctrl/Cmd+Enter: run preset JSON import',
       '- Esc: clear preset JSON input',
+      '- Alt+L: toggle helper reset lock',
       '- Import mode overwrite: incoming presets replace conflicts',
       '- Import mode merge: existing presets keep conflicts',
       `- Active mode: ${presetImportMode}`,
@@ -1842,6 +1843,15 @@ function App() {
                 value={presetImportInput}
                 onChange={(event) => setPresetImportInput(event.target.value)}
                 onKeyDown={(event) => {
+                  if (event.altKey && event.key.toLowerCase() === 'l') {
+                    event.preventDefault()
+                    setIsHelperResetLocked((current) => {
+                      const next = !current
+                      setHintModeLiveNote(`Helper reset lock ${next ? 'enabled' : 'disabled'}.`)
+                      return next
+                    })
+                    return
+                  }
                   if (
                     event.key === '/' &&
                     !event.ctrlKey &&
