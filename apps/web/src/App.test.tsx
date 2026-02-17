@@ -421,6 +421,28 @@ describe('Dashboard shell', () => {
     })
   })
 
+  it('omits non-copy guard warning telemetry when block telemetry is hidden', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Hide Block Telemetry' }))
+
+    fireEvent.change(screen.getByLabelText('Account ID'), {
+      target: { value: '' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Disconnect Account' }))
+    expect(screen.getByText('No managed account id available.')).toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText('Device ID'), {
+      target: { value: '' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Register Push' }))
+    expect(screen.getByText('No managed device id available.')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reset Lock Counters' }))
+    expect(screen.getByText('No helper reset lock toggle history to clear.')).toBeInTheDocument()
+
+    expect(screen.queryByText(/Lock telemetry:/)).not.toBeInTheDocument()
+  })
+
   it('shows lock telemetry when selected preset no longer exists', async () => {
     render(<App />)
 
