@@ -1174,6 +1174,32 @@ function App() {
     showShortcutLegendInStatus,
   ])
 
+  const copyHelperResetBadge = useCallback(async () => {
+    const resetText = helperDiagnosticsLastResetAt
+      ? formatTimestamp(helperDiagnosticsLastResetAt, helperResetTimestampFormat)
+      : 'never'
+    const payload = [`last reset=${resetText}`, `resetFormat=${helperResetTimestampFormat}`].join('\n')
+    try {
+      if (!navigator.clipboard?.writeText) {
+        throw new Error('Clipboard API unavailable')
+      }
+      await navigator.clipboard.writeText(payload)
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'helper reset badge copied',
+        content: 'Copied helper reset badge text to clipboard.',
+        severity: 'info',
+      })
+    } catch {
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'helper reset badge copy failed',
+        content: 'Clipboard access failed or is unavailable.',
+        severity: 'warn',
+      })
+    }
+  }, [appendBlock, helperDiagnosticsLastResetAt, helperResetTimestampFormat])
+
   const resetHelperDiagnosticsPreferences = useCallback(() => {
     setIsImportHintVisible(true)
     setIsImportHelperDiagnosticsExpanded(true)
@@ -1743,6 +1769,13 @@ function App() {
                   ? formatTimestamp(helperDiagnosticsLastResetAt, helperResetTimestampFormat)
                   : 'never'}
               </span>
+              <button
+                type="button"
+                className="summary-copy-button"
+                onClick={() => void copyHelperResetBadge()}
+              >
+                Copy Reset Badge
+              </button>
             </div>
             {isImportHelperDiagnosticsExpanded && isImportHintVisible ? (
               <p className="preset-import-hint">

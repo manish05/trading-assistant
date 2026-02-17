@@ -56,6 +56,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Import Mode Badge')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Collapse Helper Diagnostics' })).toBeInTheDocument()
     expect(screen.getByLabelText('Helper Reset Badge')).toHaveTextContent('last reset: never')
+    expect(screen.getByRole('button', { name: 'Copy Reset Badge' })).toBeInTheDocument()
     expect(screen.getByText('Ctrl/Cmd+Enter', { selector: '.hotkey-chip' })).toBeInTheDocument()
     expect(screen.getByText('/', { selector: '.hotkey-chip' })).toHaveAttribute(
       'title',
@@ -691,6 +692,23 @@ describe('Dashboard shell', () => {
       expect(payload).toContain('enabled=1/2')
       expect(payload).toContain('density=chips')
       expect(payload).toContain('resetAt=never')
+      expect(payload).toContain('resetFormat=absolute')
+    })
+  })
+
+  it('copies helper reset badge text to clipboard', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(window.navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    })
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Copy Reset Badge' }))
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalled()
+      const payload = String(writeText.mock.calls[writeText.mock.calls.length - 1][0])
+      expect(payload).toContain('last reset=never')
       expect(payload).toContain('resetFormat=absolute')
     })
   })
