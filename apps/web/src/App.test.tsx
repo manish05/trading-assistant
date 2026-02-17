@@ -102,6 +102,9 @@ describe('Dashboard shell', () => {
     expect(
       screen.getByText('resetLock:locked', { selector: '.import-snapshot-badges .import-summary-badge' }),
     ).toHaveClass('helper-reset-lock-badge', 'lock-locked')
+    expect(
+      screen.getByText('lockToggles:0', { selector: '.import-snapshot-badges .import-summary-badge' }),
+    ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Use Verbose Diagnostics' })).toBeInTheDocument()
     expect(
       screen.getByText('enabled:1/2', { selector: '.import-snapshot-badges .import-summary-badge' }),
@@ -567,7 +570,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Lock Reset' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Reset Helper Prefs' })).toBeEnabled()
     expect(screen.getByText('Helper reset lock unlocked via Alt+L.')).toBeInTheDocument()
-    expect(screen.getByText('helper.reset.lock.toggle')).toBeInTheDocument()
+    expect(screen.getByText('helper.reset.lock.toggle.Alt+L')).toBeInTheDocument()
 
     fireEvent.keyDown(input, { key: 'l', altKey: true })
     expect(screen.getByRole('button', { name: 'Unlock Reset' })).toBeInTheDocument()
@@ -721,6 +724,15 @@ describe('Dashboard shell', () => {
     expect(
       screen.getByText('lock:unlocked', { selector: '.import-snapshot-badges .import-summary-badge' }),
     ).toHaveClass('helper-reset-lock-badge', 'lock-unlocked')
+  })
+
+  it('tracks helper reset lock toggle count in snapshot badge', () => {
+    render(<App />)
+    expect(screen.getByText('lockToggles:0')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Unlock Reset' }))
+    expect(screen.getByText('lockToggles:1')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Lock Reset' }))
+    expect(screen.getByText('lockToggles:2')).toBeInTheDocument()
   })
 
   it('initializes helper reset lock from localStorage', () => {

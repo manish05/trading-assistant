@@ -475,11 +475,17 @@ function App() {
     [helperDiagnosticsLastResetAt, helperResetStaleThresholdHours],
   )
 
+  const helperResetLockToggleCount = useMemo(
+    () =>
+      quickActionHistory.filter((entry) => entry.method.startsWith('helper.reset.lock.toggle')).length,
+    [quickActionHistory],
+  )
+
   const toggleHelperResetLock = useCallback((source: 'Alt+L' | 'controls' | 'snapshot') => {
     const now = Date.now()
     const lockEntry: QuickActionHistory = {
       id: `hist_${now}_helper_reset_lock_${source}`,
-      method: 'helper.reset.lock.toggle',
+      method: `helper.reset.lock.toggle.${source}`,
       status: 'ok',
       durationMs: 0,
       timestamp: now,
@@ -2320,6 +2326,9 @@ function App() {
                   }`}
                 >
                   resetLock:{isHelperResetLocked ? 'locked' : 'unlocked'}
+                </span>
+                <span className="import-summary-badge badge-hint-mode">
+                  lockToggles:{helperResetLockToggleCount}
                 </span>
                 <div className="import-snapshot-toggles" aria-label="Import Snapshot Toggles">
                   <span
