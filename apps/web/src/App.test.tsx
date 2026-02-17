@@ -630,6 +630,33 @@ describe('Dashboard shell', () => {
     ).toBeInTheDocument()
   })
 
+  it('omits preset-not-found telemetry when block telemetry is hidden', async () => {
+    render(<App />)
+
+    fireEvent.change(screen.getByLabelText('Preset Name'), {
+      target: { value: 'hidden-volatile-template' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Save Preset' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Hide Block Telemetry' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('option', { name: 'hidden-volatile-template' })).toBeInTheDocument()
+    })
+
+    fireEvent.change(screen.getByLabelText('Saved Presets'), {
+      target: { value: 'hidden-volatile-template' },
+    })
+    window.localStorage.setItem('quick-action-presets-v1', JSON.stringify({}))
+    fireEvent.click(screen.getByRole('button', { name: 'Load Preset' }))
+
+    expect(screen.getByText('Preset not found: hidden-volatile-template.')).toBeInTheDocument()
+    expect(
+      screen.queryByText(
+        'Preset not found: hidden-volatile-template. Lock telemetry: lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0.',
+      ),
+    ).not.toBeInTheDocument()
+  })
+
   it('adds quick-action history entries when requests are sent', async () => {
     render(<App />)
 
