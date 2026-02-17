@@ -3960,6 +3960,11 @@ describe('Dashboard shell', () => {
     const responseCard = screen.getByText('gateway.status response').closest('article')
     expect(responseCard).not.toBeNull()
     expect(within(responseCard as HTMLElement).getByText('SystemStatus')).toBeInTheDocument()
+    expect(
+      within(responseCard as HTMLElement).getByText(
+        'System summary: status:ok · connection:healthy · protocol:n/a',
+      ),
+    ).toBeInTheDocument()
 
     sendSpy.mockRestore()
   })
@@ -4170,6 +4175,76 @@ describe('Dashboard shell', () => {
     sendSpy.mockRestore()
   })
 
+  it('renders trade execution event blocks with typed execution summary', async () => {
+    const sendSpy = vi
+      .spyOn(WebSocket.prototype, 'send')
+      .mockImplementation(function (
+        this: WebSocket,
+        data: string | ArrayBufferLike | Blob | ArrayBufferView<ArrayBufferLike>,
+      ) {
+        if (typeof data !== 'string') {
+          return
+        }
+        const payload = JSON.parse(data) as {
+          type?: string
+          id?: string
+          method?: string
+        }
+        if (payload.type === 'req' && payload.method === 'gateway.status' && payload.id) {
+          queueMicrotask(() => {
+            this.onmessage?.(
+              new MessageEvent('message', {
+                data: JSON.stringify({
+                  type: 'event',
+                  event: 'event.trade.executed',
+                  payload: {
+                    requestId: payload.id,
+                    execution: {
+                      status: 'filled',
+                      orderId: 'ord_demo_1',
+                      symbol: 'ETHUSDm',
+                    },
+                  },
+                }),
+              }),
+            )
+          })
+          queueMicrotask(() => {
+            this.onmessage?.(
+              new MessageEvent('message', {
+                data: JSON.stringify({
+                  type: 'res',
+                  id: payload.id,
+                  ok: true,
+                  payload: {
+                    status: 'ok',
+                  },
+                }),
+              }),
+            )
+          })
+        }
+      })
+
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Status' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('event.trade.executed')).toBeInTheDocument()
+    })
+
+    const executionCard = screen.getByText('event.trade.executed').closest('article')
+    expect(executionCard).not.toBeNull()
+    expect(within(executionCard as HTMLElement).getByText('TradeExecution')).toBeInTheDocument()
+    expect(
+      within(executionCard as HTMLElement).getByText(
+        'Execution summary: status:filled · order:ord_demo_1 · symbol:ETHUSDm',
+      ),
+    ).toBeInTheDocument()
+
+    sendSpy.mockRestore()
+  })
+
   it('includes lock telemetry in risk alert event blocks', async () => {
     const sendSpy = vi
       .spyOn(WebSocket.prototype, 'send')
@@ -4249,6 +4324,14 @@ describe('Dashboard shell', () => {
     expect(
       within(eventCard as HTMLElement).getByText(
         /\[LockTelemetry\] lock toggles: 0, tone: none, reset: never; sources: Alt\+L=0, controls=0, snapshot=0/,
+      ),
+    ).toBeInTheDocument()
+    const proposalCard = screen.getByText('risk.preview response').closest('article')
+    expect(proposalCard).not.toBeNull()
+    expect(within(proposalCard as HTMLElement).getByText('TradeProposal')).toBeInTheDocument()
+    expect(
+      within(proposalCard as HTMLElement).getByText(
+        'Proposal summary: allowed:no · violations:1',
       ),
     ).toBeInTheDocument()
 

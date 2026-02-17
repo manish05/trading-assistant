@@ -5886,6 +5886,89 @@ function App() {
                           text: `trades:${trades ?? 'n/a'} · winRate:${winRateLabel} · curve:${equityCurveCount ?? 'n/a'}`,
                         }
                       })()
+                    : blockKind === 'SystemStatus'
+                      ? (() => {
+                          const status =
+                            structuredPayload &&
+                            'status' in structuredPayload &&
+                            typeof structuredPayload.status === 'string'
+                              ? structuredPayload.status
+                              : 'n/a'
+                          const connection =
+                            structuredPayload &&
+                            'connection' in structuredPayload &&
+                            typeof structuredPayload.connection === 'string'
+                              ? structuredPayload.connection
+                              : 'n/a'
+                          const protocolVersion =
+                            structuredPayload &&
+                            'protocolVersion' in structuredPayload &&
+                            typeof structuredPayload.protocolVersion === 'number'
+                              ? structuredPayload.protocolVersion
+                              : null
+                          return {
+                            label: 'System summary',
+                            text: `status:${status} · connection:${connection} · protocol:${protocolVersion === null ? 'n/a' : protocolVersion}`,
+                          }
+                        })()
+                      : blockKind === 'TradeProposal'
+                        ? (() => {
+                            const decisionPayload =
+                              structuredPayload &&
+                              'decision' in structuredPayload &&
+                              structuredPayload.decision &&
+                              typeof structuredPayload.decision === 'object'
+                                ? (structuredPayload.decision as Record<string, unknown>)
+                                : structuredPayload
+                            const allowedRaw =
+                              decisionPayload &&
+                              'allowed' in decisionPayload &&
+                              typeof decisionPayload.allowed === 'boolean'
+                                ? decisionPayload.allowed
+                                : null
+                            const violationsRaw =
+                              decisionPayload &&
+                              'violations' in decisionPayload &&
+                              Array.isArray(decisionPayload.violations)
+                                ? decisionPayload.violations
+                                : []
+                            return {
+                              label: 'Proposal summary',
+                              text: `allowed:${allowedRaw === null ? 'n/a' : allowedRaw ? 'yes' : 'no'} · violations:${violationsRaw.length}`,
+                            }
+                          })()
+                        : blockKind === 'TradeExecution'
+                          ? (() => {
+                              const executionPayload =
+                                structuredPayload &&
+                                'execution' in structuredPayload &&
+                                structuredPayload.execution &&
+                                typeof structuredPayload.execution === 'object'
+                                  ? (structuredPayload.execution as Record<string, unknown>)
+                                  : structuredPayload
+                              const status =
+                                executionPayload &&
+                                'status' in executionPayload &&
+                                typeof executionPayload.status === 'string'
+                                  ? executionPayload.status
+                                  : 'n/a'
+                              const orderId =
+                                executionPayload &&
+                                'orderId' in executionPayload &&
+                                typeof executionPayload.orderId === 'string'
+                                  ? executionPayload.orderId
+                                  : 'n/a'
+                              const symbol =
+                                executionPayload &&
+                                'symbol' in executionPayload &&
+                                typeof executionPayload.symbol === 'string'
+                                  ? executionPayload.symbol
+                                  : 'n/a'
+                              return {
+                                label: 'Execution summary',
+                                text: `status:${status} · order:${orderId} · symbol:${symbol}`,
+                              }
+                            })()
                     : blockKind === 'RiskAlert'
                       ? (() => {
                           const decision =
