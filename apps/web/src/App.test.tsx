@@ -5,6 +5,7 @@ import App from './App'
 
 describe('Dashboard shell', () => {
   afterEach(() => {
+    window.localStorage.clear()
     cleanup()
   })
 
@@ -33,6 +34,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Refresh Interval (sec)')).toBeInTheDocument()
     expect(screen.getByLabelText('Min Request Gap (ms)')).toBeInTheDocument()
     expect(screen.getByLabelText('Enable Auto Refresh')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Save Preset' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Load Preset' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Delete Preset' })).toBeInTheDocument()
   })
 
   it('sends account and feed management requests', async () => {
@@ -156,5 +160,36 @@ describe('Dashboard shell', () => {
     })
 
     sendSpy.mockRestore()
+  })
+
+  it('saves and loads quick-action presets', async () => {
+    render(<App />)
+
+    fireEvent.change(screen.getByLabelText('Preset Name'), {
+      target: { value: 'swing-template' },
+    })
+    fireEvent.change(screen.getByLabelText('Feed Symbol'), {
+      target: { value: 'SOLUSDm' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Save Preset' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('option', { name: 'swing-template' })).toBeInTheDocument()
+    })
+
+    fireEvent.change(screen.getByLabelText('Feed Symbol'), {
+      target: { value: 'BTCUSDm' },
+    })
+    fireEvent.change(screen.getByLabelText('Saved Presets'), {
+      target: { value: 'swing-template' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Load Preset' }))
+
+    expect(screen.getByLabelText('Feed Symbol')).toHaveValue('SOLUSDm')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Preset' }))
+    await waitFor(() => {
+      expect(screen.queryByRole('option', { name: 'swing-template' })).not.toBeInTheDocument()
+    })
   })
 })

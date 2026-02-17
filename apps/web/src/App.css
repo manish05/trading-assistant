@@ -162,6 +162,40 @@
   font-size: 0.76rem;
 }
 
+.preset-controls {
+  margin-top: 0.6rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+
+.preset-controls label {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.72rem;
+  color: #9fb0cc;
+  gap: 0.2rem;
+}
+
+.preset-controls input,
+.preset-controls select {
+  background: #14223a;
+  border: 1px solid #2d4a7e;
+  color: #e8edf5;
+  border-radius: 6px;
+  padding: 0.25rem 0.35rem;
+  font-size: 0.76rem;
+}
+
+.preset-controls button {
+  background: #1d335a;
+  color: #e8edf5;
+  border: 1px solid #2d4a7e;
+  border-radius: 8px;
+  padding: 0.35rem 0.6rem;
+}
+
 .block-card {
   border-radius: 10px;
   border: 1px solid #2d3d5f;

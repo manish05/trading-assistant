@@ -28,6 +28,41 @@ type FeedLifecycleBadge = {
   subscriptionId?: string
 }
 
+type QuickActionPreset = {
+  managedAccountId: string
+  managedProviderAccountId: string
+  managedAccountLabel: string
+  managedAccountSymbolsInput: string
+  managedDeviceId: string
+  managedDevicePlatform: string
+  managedDeviceLabel: string
+  managedDevicePairPushToken: string
+  managedDeviceRotatePushToken: string
+  feedTopic: string
+  feedSymbol: string
+  feedTimeframe: string
+  refreshSecondsInput: string
+  minRequestGapMsInput: string
+}
+
+const PRESETS_STORAGE_KEY = 'quick-action-presets-v1'
+
+const readPresetStoreFromStorage = (): Record<string, QuickActionPreset> => {
+  if (typeof window === 'undefined') {
+    return {}
+  }
+  try {
+    const raw = window.localStorage.getItem(PRESETS_STORAGE_KEY)
+    if (!raw) {
+      return {}
+    }
+    const parsed = JSON.parse(raw) as Record<string, QuickActionPreset>
+    return typeof parsed === 'object' && parsed !== null ? parsed : {}
+  } catch {
+    return {}
+  }
+}
+
 function App() {
   const wsRef = useRef<WebSocket | null>(null)
   const pendingRequestsRef = useRef<Map<string, (value: GatewayResponse) => void>>(new Map())
@@ -60,6 +95,11 @@ function App() {
   const [autoRefreshEnabled, setAutoRefreshEnabled] = useState<boolean>(false)
   const [refreshSecondsInput, setRefreshSecondsInput] = useState<string>('15')
   const [minRequestGapMsInput, setMinRequestGapMsInput] = useState<string>('400')
+  const [presetNameInput, setPresetNameInput] = useState<string>('default')
+  const [selectedPresetName, setSelectedPresetName] = useState<string>('')
+  const [availablePresetNames, setAvailablePresetNames] = useState<string[]>(() =>
+    Object.keys(readPresetStoreFromStorage()).sort(),
+  )
   const [feedCount, setFeedCount] = useState<number | null>(null)
   const [feedTopic, setFeedTopic] = useState<string>('market.candle.closed')
   const [feedSymbol, setFeedSymbol] = useState<string>('ETHUSDm')
@@ -376,6 +416,126 @@ function App() {
     }
   }, [activeSubscriptionId, appendBlock, sendRequest])
 
+  const collectCurrentPreset = useCallback((): QuickActionPreset => {
+    return {
+      managedAccountId,
+      managedProviderAccountId,
+      managedAccountLabel,
+      managedAccountSymbolsInput,
+      managedDeviceId,
+      managedDevicePlatform,
+      managedDeviceLabel,
+      managedDevicePairPushToken,
+      managedDeviceRotatePushToken,
+      feedTopic,
+      feedSymbol,
+      feedTimeframe,
+      refreshSecondsInput,
+      minRequestGapMsInput,
+    }
+  }, [
+    feedSymbol,
+    feedTimeframe,
+    feedTopic,
+    managedAccountId,
+    managedAccountLabel,
+    managedAccountSymbolsInput,
+    managedDeviceId,
+    managedDeviceLabel,
+    managedDevicePairPushToken,
+    managedDevicePlatform,
+    managedDeviceRotatePushToken,
+    managedProviderAccountId,
+    minRequestGapMsInput,
+    refreshSecondsInput,
+  ])
+
+  const applyPreset = useCallback((preset: QuickActionPreset) => {
+    setManagedAccountId(preset.managedAccountId)
+    setManagedProviderAccountId(preset.managedProviderAccountId)
+    setManagedAccountLabel(preset.managedAccountLabel)
+    setManagedAccountSymbolsInput(preset.managedAccountSymbolsInput)
+    setManagedDeviceId(preset.managedDeviceId)
+    setManagedDevicePlatform(preset.managedDevicePlatform)
+    setManagedDeviceLabel(preset.managedDeviceLabel)
+    setManagedDevicePairPushToken(preset.managedDevicePairPushToken)
+    setManagedDeviceRotatePushToken(preset.managedDeviceRotatePushToken)
+    setFeedTopic(preset.feedTopic)
+    setFeedSymbol(preset.feedSymbol)
+    setFeedTimeframe(preset.feedTimeframe)
+    setRefreshSecondsInput(preset.refreshSecondsInput)
+    setMinRequestGapMsInput(preset.minRequestGapMsInput)
+  }, [])
+
+  const readPresetStore = useCallback((): Record<string, QuickActionPreset> => {
+    return readPresetStoreFromStorage()
+  }, [])
+
+  const writePresetStore = useCallback((store: Record<string, QuickActionPreset>) => {
+    window.localStorage.setItem(PRESETS_STORAGE_KEY, JSON.stringify(store))
+    setAvailablePresetNames(Object.keys(store).sort())
+  }, [])
+
+  const savePreset = useCallback(() => {
+    const normalizedName = presetNameInput.trim()
+    if (!normalizedName) {
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'preset save skipped',
+        content: 'Preset name is required.',
+        severity: 'warn',
+      })
+      return
+    }
+    const store = readPresetStore()
+    store[normalizedName] = collectCurrentPreset()
+    writePresetStore(store)
+    setSelectedPresetName(normalizedName)
+  }, [appendBlock, collectCurrentPreset, presetNameInput, readPresetStore, writePresetStore])
+
+  const loadSelectedPreset = useCallback(() => {
+    if (!selectedPresetName) {
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'preset load skipped',
+        content: 'Select a preset first.',
+        severity: 'warn',
+      })
+      return
+    }
+    const store = readPresetStore()
+    const preset = store[selectedPresetName]
+    if (!preset) {
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'preset load failed',
+        content: `Preset not found: ${selectedPresetName}`,
+        severity: 'error',
+      })
+      return
+    }
+    applyPreset(preset)
+  }, [appendBlock, applyPreset, readPresetStore, selectedPresetName])
+
+  const deleteSelectedPreset = useCallback(() => {
+    if (!selectedPresetName) {
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'preset delete skipped',
+        content: 'Select a preset first.',
+        severity: 'warn',
+      })
+      return
+    }
+    const store = readPresetStore()
+    if (!(selectedPresetName in store)) {
+      return
+    }
+    delete store[selectedPresetName]
+    writePresetStore(store)
+    setSelectedPresetName('')
+  }, [appendBlock, readPresetStore, selectedPresetName, writePresetStore])
+
   useEffect(() => {
     if (!autoRefreshEnabled) {
       return
@@ -650,6 +810,38 @@ function App() {
                 />
                 Enable Auto Refresh
               </label>
+            </div>
+            <div className="preset-controls">
+              <label>
+                Preset Name
+                <input
+                  value={presetNameInput}
+                  onChange={(event) => setPresetNameInput(event.target.value)}
+                />
+              </label>
+              <button type="button" onClick={savePreset}>
+                Save Preset
+              </button>
+              <label>
+                Saved Presets
+                <select
+                  value={selectedPresetName}
+                  onChange={(event) => setSelectedPresetName(event.target.value)}
+                >
+                  <option value="">-- select preset --</option>
+                  {availablePresetNames.map((name) => (
+                    <option key={name} value={name}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button type="button" onClick={loadSelectedPreset}>
+                Load Preset
+              </button>
+              <button type="button" onClick={deleteSelectedPreset}>
+                Delete Preset
+              </button>
             </div>
           </section>
           <div className="block-list">
