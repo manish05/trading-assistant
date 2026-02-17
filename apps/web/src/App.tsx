@@ -32,6 +32,9 @@ function App() {
   >('connecting')
   const [protocolVersion, setProtocolVersion] = useState<number | null>(null)
   const [sessionId, setSessionId] = useState<string | null>(null)
+  const [accountCount, setAccountCount] = useState<number | null>(null)
+  const [feedCount, setFeedCount] = useState<number | null>(null)
+  const [subscriptionCount, setSubscriptionCount] = useState<number | null>(null)
   const [blocks, setBlocks] = useState<BlockItem[]>([])
 
   const websocketUrl = useMemo(() => {
@@ -45,7 +48,7 @@ function App() {
   }, [])
 
   const sendRequest = useCallback(
-    async (method: string, params: Record<string, unknown>) => {
+    async (method: string, params: Record<string, unknown>): Promise<Record<string, unknown> | null> => {
       const socket = wsRef.current
       if (!socket || socket.readyState !== WebSocket.OPEN) {
         appendBlock({
@@ -54,7 +57,7 @@ function App() {
           content: 'Gateway is not connected.',
           severity: 'error',
         })
-        return
+        return null
       }
 
       requestCounter.current += 1
@@ -80,7 +83,7 @@ function App() {
           content: response.error?.message ?? 'Unknown error',
           severity: 'error',
         })
-        return
+        return null
       }
 
       appendBlock({
@@ -89,6 +92,7 @@ function App() {
         content: JSON.stringify(response.payload ?? {}, null, 2),
         severity: 'info',
       })
+      return response.payload ?? {}
     },
     [appendBlock],
   )
@@ -124,6 +128,23 @@ function App() {
         daily_pnl: -20.0,
       },
     })
+  }, [sendRequest])
+
+  const sendAccountsList = useCallback(async () => {
+    const payload = await sendRequest('accounts.list', {})
+    const accountsRaw = payload?.accounts
+    const accounts = Array.isArray(accountsRaw) ? accountsRaw : []
+    setAccountCount(accounts.length)
+  }, [sendRequest])
+
+  const sendFeedsList = useCallback(async () => {
+    const payload = await sendRequest('feeds.list', {})
+    const feedsRaw = payload?.feeds
+    const subscriptionsRaw = payload?.subscriptions
+    const feeds = Array.isArray(feedsRaw) ? feedsRaw : []
+    const subscriptions = Array.isArray(subscriptionsRaw) ? subscriptionsRaw : []
+    setFeedCount(feeds.length)
+    setSubscriptionCount(subscriptions.length)
   }, [sendRequest])
 
   useEffect(() => {
@@ -225,6 +246,12 @@ function App() {
               <button type="button" onClick={sendRiskPreview}>
                 Risk Preview
               </button>
+              <button type="button" onClick={() => void sendAccountsList()}>
+                Accounts
+              </button>
+              <button type="button" onClick={() => void sendFeedsList()}>
+                Feeds
+              </button>
             </div>
           </div>
           <div className="block-list">
@@ -255,6 +282,18 @@ function App() {
             <div>
               <dt>Gateway URL</dt>
               <dd>{websocketUrl}</dd>
+            </div>
+            <div>
+              <dt>Accounts (last fetch)</dt>
+              <dd>{accountCount ?? 'n/a'}</dd>
+            </div>
+            <div>
+              <dt>Feeds (last fetch)</dt>
+              <dd>{feedCount ?? 'n/a'}</dd>
+            </div>
+            <div>
+              <dt>Feed Subscriptions</dt>
+              <dd>{subscriptionCount ?? 'n/a'}</dd>
             </div>
           </dl>
         </section>
