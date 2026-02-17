@@ -2304,7 +2304,12 @@ function App() {
                   resetLock:{isHelperResetLocked ? 'locked' : 'unlocked'}
                 </span>
                 <div className="import-snapshot-toggles" aria-label="Import Snapshot Toggles">
-                  <span className="quick-toggle-lock-summary" aria-label="Quick Toggle Lock Summary">
+                  <span
+                    className={`quick-toggle-lock-summary ${
+                      isHelperResetLocked ? 'quick-lock-locked' : 'quick-lock-unlocked'
+                    }`}
+                    aria-label="Quick Toggle Lock Summary"
+                  >
                     quickLock:{isHelperResetLocked ? 'locked' : 'unlocked'}
                   </span>
                   <button

@@ -623,6 +623,16 @@
   color: #9fb0cc;
 }
 
+.quick-toggle-lock-summary.quick-lock-locked {
+  border-color: #8a2f3e;
+  color: #ffd7df;
+}
+
+.quick-toggle-lock-summary.quick-lock-unlocked {
+  border-color: #20673f;
+  color: #ccf2dc;
+}
+
 .import-snapshot-toggles button {
   background: #1d335a;
   color: #e8edf5;
