@@ -685,6 +685,101 @@ describe('Dashboard shell', () => {
     sendSpy.mockRestore()
   })
 
+  it('tracks close-all emergency trade-control events in status badges', async () => {
+    const sendSpy = vi
+      .spyOn(WebSocket.prototype, 'send')
+      .mockImplementation(function (
+        this: WebSocket,
+        data: string | ArrayBufferLike | Blob | ArrayBufferView<ArrayBufferLike>,
+      ) {
+        if (typeof data !== 'string') {
+          return
+        }
+        const payload = JSON.parse(data) as {
+          type?: string
+          id?: string
+          method?: string
+        }
+        if (payload.type === 'req' && payload.method === 'risk.emergencyStop' && payload.id) {
+          queueMicrotask(() => {
+            this.onmessage?.(
+              new MessageEvent('message', {
+                data: JSON.stringify({
+                  type: 'event',
+                  event: 'event.risk.emergencyStop',
+                  payload: {
+                    requestId: payload.id,
+                    status: {
+                      emergencyStopActive: true,
+                      lastAction: 'close_all',
+                      lastReason: 'close all from dashboard',
+                      updatedAt: '2026-02-17T12:40:00.000Z',
+                      actionCounts: {
+                        pause_trading: 0,
+                        cancel_all: 0,
+                        close_all: 1,
+                        disable_live: 0,
+                      },
+                    },
+                  },
+                }),
+              }),
+            )
+          })
+          queueMicrotask(() => {
+            this.onmessage?.(
+              new MessageEvent('message', {
+                data: JSON.stringify({
+                  type: 'event',
+                  event: 'event.trade.closed',
+                  payload: {
+                    requestId: payload.id,
+                    scope: 'all',
+                    status: 'initiated',
+                  },
+                }),
+              }),
+            )
+          })
+          queueMicrotask(() => {
+            this.onmessage?.(
+              new MessageEvent('message', {
+                data: JSON.stringify({
+                  type: 'res',
+                  id: payload.id,
+                  ok: true,
+                  payload: {
+                    emergencyStopActive: true,
+                    lastAction: 'close_all',
+                    lastReason: 'close all from dashboard',
+                    updatedAt: '2026-02-17T12:40:00.000Z',
+                    actionCounts: {
+                      pause_trading: 0,
+                      cancel_all: 0,
+                      close_all: 1,
+                      disable_live: 0,
+                    },
+                  },
+                }),
+              }),
+            )
+          })
+        }
+      })
+
+    render(<App />)
+    fireEvent.change(screen.getByLabelText('Emergency Action'), {
+      target: { value: 'close_all' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Emergency Stop' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Trade Controls').closest('div')).toHaveTextContent('closed:initiated')
+    })
+
+    sendSpy.mockRestore()
+  })
+
   it('uses default emergency reason when emergency reason input is blank', async () => {
     const sendSpy = vi.spyOn(WebSocket.prototype, 'send')
     render(<App />)
