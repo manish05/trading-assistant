@@ -4240,6 +4240,12 @@ describe('Dashboard shell', () => {
 
     const eventCard = screen.getByText('event.risk.alert').closest('article')
     expect(eventCard).not.toBeNull()
+    expect(within(eventCard as HTMLElement).getByText('RiskAlert')).toBeInTheDocument()
+    expect(
+      within(eventCard as HTMLElement).getByText(
+        'Risk summary: allowed:no · violations:1 · codes:MAX_DAILY_LOSS',
+      ),
+    ).toBeInTheDocument()
     expect(
       within(eventCard as HTMLElement).getByText(
         /\[LockTelemetry\] lock toggles: 0, tone: none, reset: never; sources: Alt\+L=0, controls=0, snapshot=0/,
@@ -4321,6 +4327,12 @@ describe('Dashboard shell', () => {
     const eventCard = screen.getByText('event.risk.alert').closest('article')
     expect(eventCard).not.toBeNull()
     expect(within(eventCard as HTMLElement).getByText(/"MAX_DAILY_LOSS"/)).toBeInTheDocument()
+    expect(within(eventCard as HTMLElement).getByText('RiskAlert')).toBeInTheDocument()
+    expect(
+      within(eventCard as HTMLElement).getByText(
+        'Risk summary: allowed:no · violations:1 · codes:MAX_DAILY_LOSS',
+      ),
+    ).toBeInTheDocument()
     expect(
       within(eventCard as HTMLElement).queryByText(
         /\[LockTelemetry\] lock toggles: 0, tone: none, reset: never; sources: Alt\+L=0, controls=0, snapshot=0/,

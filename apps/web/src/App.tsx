@@ -5881,9 +5881,51 @@ function App() {
                         const equityCurveCount = Array.isArray(equityCurveSource)
                           ? equityCurveSource.length
                           : null
-                        return `trades:${trades ?? 'n/a'} · winRate:${winRateLabel} · curve:${equityCurveCount ?? 'n/a'}`
+                        return {
+                          label: 'Backtest summary',
+                          text: `trades:${trades ?? 'n/a'} · winRate:${winRateLabel} · curve:${equityCurveCount ?? 'n/a'}`,
+                        }
                       })()
-                    : null
+                    : blockKind === 'RiskAlert'
+                      ? (() => {
+                          const decision =
+                            structuredPayload &&
+                            'decision' in structuredPayload &&
+                            structuredPayload.decision &&
+                            typeof structuredPayload.decision === 'object'
+                              ? (structuredPayload.decision as Record<string, unknown>)
+                              : structuredPayload
+                          const allowedRaw =
+                            decision &&
+                            'allowed' in decision &&
+                            typeof decision.allowed === 'boolean'
+                              ? decision.allowed
+                              : null
+                          const violationsRaw =
+                            decision &&
+                            'violations' in decision &&
+                            Array.isArray(decision.violations)
+                              ? decision.violations
+                              : []
+                          const violationCodes = violationsRaw
+                            .map((violation) => {
+                              if (
+                                violation &&
+                                typeof violation === 'object' &&
+                                'code' in violation &&
+                                typeof violation.code === 'string'
+                              ) {
+                                return violation.code
+                              }
+                              return null
+                            })
+                            .filter((code): code is string => code !== null)
+                          return {
+                            label: 'Risk summary',
+                            text: `allowed:${allowedRaw === null ? 'n/a' : allowedRaw ? 'yes' : 'no'} · violations:${violationsRaw.length} · codes:${violationCodes.length > 0 ? violationCodes.join('|') : 'none'}`,
+                          }
+                      })()
+                      : null
                 const rawPayloadViewerContent =
                   blockKind === 'RawPayload'
                     ? (() => {
@@ -5908,7 +5950,9 @@ function App() {
                       <pre>{block.content}</pre>
                     )}
                     {blockRenderSummary ? (
-                      <p className="block-render-summary">Backtest summary: {blockRenderSummary}</p>
+                      <p className="block-render-summary">
+                        {blockRenderSummary.label}: {blockRenderSummary.text}
+                      </p>
                     ) : null}
                     {blockKind === 'RawPayload' ? (
                       <>
