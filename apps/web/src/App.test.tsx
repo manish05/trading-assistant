@@ -121,6 +121,9 @@ describe('Dashboard shell', () => {
     expect(
       screen.getByText('lock:locked', { selector: '.import-snapshot-badges .import-summary-badge' }),
     ).toHaveClass('helper-reset-lock-badge', 'lock-locked')
+    expect(
+      screen.getByText('diagLockToggles:0', { selector: '.import-snapshot-badges .import-summary-badge' }),
+    ).toBeInTheDocument()
     expect(screen.getByLabelText('Reset TS')).toHaveValue('absolute')
     expect(screen.getByLabelText('Stale After')).toHaveValue('24')
     expect(screen.getByRole('button', { name: 'Copy Helper Summary' })).toBeInTheDocument()
@@ -729,10 +732,13 @@ describe('Dashboard shell', () => {
   it('tracks helper reset lock toggle count in snapshot badge', () => {
     render(<App />)
     expect(screen.getByText('lockToggles:0')).toBeInTheDocument()
+    expect(screen.getByText('diagLockToggles:0')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Unlock Reset' }))
     expect(screen.getByText('lockToggles:1')).toBeInTheDocument()
+    expect(screen.getByText('diagLockToggles:1')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Lock Reset' }))
     expect(screen.getByText('lockToggles:2')).toBeInTheDocument()
+    expect(screen.getByText('diagLockToggles:2')).toBeInTheDocument()
   })
 
   it('initializes helper reset lock from localStorage', () => {

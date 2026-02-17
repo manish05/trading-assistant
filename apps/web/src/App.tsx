@@ -2425,6 +2425,9 @@ function App() {
                 >
                   lock:{isHelperResetLocked ? 'locked' : 'unlocked'}
                 </span>
+                <span className="import-summary-badge badge-hint-mode">
+                  diagLockToggles:{helperResetLockToggleCount}
+                </span>
                 {helperDiagnosticsDisplayMode === 'verbose' ? (
                   <>
                     <span className="import-summary-badge badge-hint-mode">
