@@ -940,6 +940,10 @@ describe('Dashboard shell', () => {
       expect(payload).toContain('resetBadgeSection=expanded')
       expect(payload).toContain('resetLock=locked')
       expect(payload).toContain('resetStaleAfterHours=24')
+      expect(payload).toContain('lockToggleTotal=0')
+      expect(payload).toContain('lockToggleAlt+L=0')
+      expect(payload).toContain('lockToggleControls=0')
+      expect(payload).toContain('lockToggleSnapshot=0')
       expect(
         screen.getByText('Copied helper diagnostics summary to clipboard (lock: locked).'),
       ).toBeInTheDocument()
