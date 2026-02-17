@@ -338,6 +338,11 @@
   background: #3b1720;
 }
 
+.import-summary-badge.badge-hint-mode {
+  border-color: #2d4a7e;
+  background: #162744;
+}
+
 .preset-import-report {
   margin-top: 0.45rem;
   border: 1px solid #2d4a7e;

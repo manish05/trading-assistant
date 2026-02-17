@@ -1767,6 +1767,9 @@ function App() {
                     <span className={`import-mode-badge mode-${presetImportReport.mode}`}>
                       {presetImportReport.mode}
                     </span>
+                    <span className="import-summary-badge badge-hint-mode">
+                      hint:{importHintMode}
+                    </span>
                     <span className="import-summary-badge badge-accepted">
                       accepted:{presetImportReport.accepted.length}
                     </span>

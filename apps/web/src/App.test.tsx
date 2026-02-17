@@ -509,6 +509,9 @@ describe('Dashboard shell', () => {
       expect(
         screen.getByText('rejected:1', { selector: '.import-snapshot-badges .import-summary-badge' }),
       ).toBeInTheDocument()
+      expect(
+        screen.getByText('hint:detailed', { selector: '.import-snapshot-badges .import-summary-badge' }),
+      ).toBeInTheDocument()
       expect(screen.getByText(/Last import: .*accepted 1 .*rejected 1/)).toBeInTheDocument()
     })
   })
