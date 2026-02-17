@@ -81,6 +81,7 @@ const PRESET_IMPORT_MODE_STORAGE_KEY = 'quick-action-preset-import-mode-v1'
 const PRESET_IMPORT_REPORT_EXPANDED_STORAGE_KEY = 'quick-action-preset-import-report-expanded-v1'
 const IMPORT_HINT_VISIBILITY_STORAGE_KEY = 'quick-action-import-hint-visibility-v1'
 const IMPORT_HINT_MODE_STORAGE_KEY = 'quick-action-import-hint-mode-v1'
+const IMPORT_HELPER_DIAGNOSTICS_STORAGE_KEY = 'quick-action-import-helper-diagnostics-v1'
 const STATUS_SHORTCUT_LEGEND_STORAGE_KEY = 'quick-action-status-shortcut-legend-v1'
 const STATUS_SHORTCUT_LEGEND_ORDER_STORAGE_KEY = 'quick-action-status-shortcut-legend-order-v1'
 const STATUS_SHORTCUT_LEGEND_DENSITY_STORAGE_KEY = 'quick-action-status-shortcut-legend-density-v1'
@@ -168,6 +169,13 @@ const readImportHintModeFromStorage = (): ImportHintMode => {
   }
   const raw = window.localStorage.getItem(IMPORT_HINT_MODE_STORAGE_KEY)
   return raw === 'compact' ? 'compact' : 'detailed'
+}
+
+const readImportHelperDiagnosticsExpandedFromStorage = (): boolean => {
+  if (typeof window === 'undefined') {
+    return true
+  }
+  return window.localStorage.getItem(IMPORT_HELPER_DIAGNOSTICS_STORAGE_KEY) !== 'collapsed'
 }
 
 const readStatusShortcutLegendFromStorage = (): boolean => {
@@ -318,6 +326,8 @@ function App() {
   const [isImportHintVisible, setIsImportHintVisible] = useState<boolean>(
     readImportHintVisibilityFromStorage,
   )
+  const [isImportHelperDiagnosticsExpanded, setIsImportHelperDiagnosticsExpanded] =
+    useState<boolean>(readImportHelperDiagnosticsExpandedFromStorage)
   const [importHintMode, setImportHintMode] = useState<ImportHintMode>(readImportHintModeFromStorage)
   const [hintModeLiveNote, setHintModeLiveNote] = useState<string>('')
   const [showShortcutLegendInStatus, setShowShortcutLegendInStatus] = useState<boolean>(
@@ -1222,6 +1232,13 @@ function App() {
   }, [isImportHintVisible])
 
   useEffect(() => {
+    window.localStorage.setItem(
+      IMPORT_HELPER_DIAGNOSTICS_STORAGE_KEY,
+      isImportHelperDiagnosticsExpanded ? 'expanded' : 'collapsed',
+    )
+  }, [isImportHelperDiagnosticsExpanded])
+
+  useEffect(() => {
     window.localStorage.setItem(IMPORT_HINT_MODE_STORAGE_KEY, importHintMode)
   }, [importHintMode])
 
@@ -1576,7 +1593,19 @@ function App() {
                 placeholder='{"preset_name": { ... }}'
               />
             </label>
-            {isImportHintVisible ? (
+            <div className="preset-import-helper-controls">
+              <button
+                type="button"
+                onClick={() =>
+                  setIsImportHelperDiagnosticsExpanded((current) => !current)
+                }
+              >
+                {isImportHelperDiagnosticsExpanded
+                  ? 'Collapse Helper Diagnostics'
+                  : 'Expand Helper Diagnostics'}
+              </button>
+            </div>
+            {isImportHelperDiagnosticsExpanded && isImportHintVisible ? (
               <p className="preset-import-hint">
                 {importHintMode === 'compact' ? (
                   <>
@@ -1612,49 +1641,53 @@ function App() {
             <div className="sr-only" aria-live="polite">
               {hintModeLiveNote}
             </div>
-            <div className="preset-import-actions">
-              <button type="button" onClick={() => setIsImportHintVisible((current) => !current)}>
-                {isImportHintVisible ? 'Hide Hints' : 'Show Hints'}
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  setImportHintMode((current) => (current === 'detailed' ? 'compact' : 'detailed'))
-                }
-              >
-                {importHintMode === 'detailed' ? 'Use Compact Hints' : 'Use Detailed Hints'}
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowShortcutLegendInStatus((current) => !current)}
-              >
-                {showShortcutLegendInStatus ? 'Hide Legend in Status' : 'Show Legend in Status'}
-              </button>
-              <label>
-                Legend Order
-                <select
-                  value={shortcutLegendOrder}
-                  onChange={(event) => setShortcutLegendOrder(event.target.value as ShortcutLegendOrder)}
-                >
-                  <option value="import-first">import-first</option>
-                  <option value="clear-first">clear-first</option>
-                </select>
-              </label>
-              <label>
-                Legend Density
-                <select
-                  value={shortcutLegendDensity}
-                  onChange={(event) =>
-                    setShortcutLegendDensity(event.target.value as ShortcutLegendDensity)
+            {isImportHelperDiagnosticsExpanded ? (
+              <div className="preset-import-actions helper-diagnostics-actions">
+                <button type="button" onClick={() => setIsImportHintVisible((current) => !current)}>
+                  {isImportHintVisible ? 'Hide Hints' : 'Show Hints'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setImportHintMode((current) => (current === 'detailed' ? 'compact' : 'detailed'))
                   }
                 >
-                  <option value="chips">chips</option>
-                  <option value="inline">inline</option>
-                </select>
-              </label>
-              <button type="button" onClick={() => void copyImportShortcutCheatSheet()}>
-                Copy Shortcut Cheat Sheet
-              </button>
+                  {importHintMode === 'detailed' ? 'Use Compact Hints' : 'Use Detailed Hints'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowShortcutLegendInStatus((current) => !current)}
+                >
+                  {showShortcutLegendInStatus ? 'Hide Legend in Status' : 'Show Legend in Status'}
+                </button>
+                <label>
+                  Legend Order
+                  <select
+                    value={shortcutLegendOrder}
+                    onChange={(event) => setShortcutLegendOrder(event.target.value as ShortcutLegendOrder)}
+                  >
+                    <option value="import-first">import-first</option>
+                    <option value="clear-first">clear-first</option>
+                  </select>
+                </label>
+                <label>
+                  Legend Density
+                  <select
+                    value={shortcutLegendDensity}
+                    onChange={(event) =>
+                      setShortcutLegendDensity(event.target.value as ShortcutLegendDensity)
+                    }
+                  >
+                    <option value="chips">chips</option>
+                    <option value="inline">inline</option>
+                  </select>
+                </label>
+                <button type="button" onClick={() => void copyImportShortcutCheatSheet()}>
+                  Copy Shortcut Cheat Sheet
+                </button>
+              </div>
+            ) : null}
+            <div className="preset-import-actions">
               <button
                 type="button"
                 onClick={() => setPresetImportInput('')}

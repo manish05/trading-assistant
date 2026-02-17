@@ -54,6 +54,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Expand Report' })).toBeDisabled()
     expect(screen.getByLabelText('Import Mode')).toBeInTheDocument()
     expect(screen.getByLabelText('Import Mode Badge')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Collapse Helper Diagnostics' })).toBeInTheDocument()
     expect(screen.getByText('Ctrl/Cmd+Enter', { selector: '.hotkey-chip' })).toBeInTheDocument()
     expect(screen.getByText('/', { selector: '.hotkey-chip' })).toHaveAttribute(
       'title',
@@ -437,6 +438,25 @@ describe('Dashboard shell', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Show Hints' }))
     expect(screen.getByText(/overwrites conflicting presets\./)).toBeInTheDocument()
     expect(window.localStorage.getItem('quick-action-import-hint-visibility-v1')).toBe('visible')
+  })
+
+  it('toggles helper diagnostics section and persists collapse state', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Collapse Helper Diagnostics' }))
+
+    expect(screen.getByRole('button', { name: 'Expand Helper Diagnostics' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Hide Hints' })).not.toBeInTheDocument()
+    expect(window.localStorage.getItem('quick-action-import-helper-diagnostics-v1')).toBe(
+      'collapsed',
+    )
+  })
+
+  it('initializes helper diagnostics collapse state from localStorage', () => {
+    window.localStorage.setItem('quick-action-import-helper-diagnostics-v1', 'collapsed')
+    render(<App />)
+
+    expect(screen.getByRole('button', { name: 'Expand Helper Diagnostics' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Hide Hints' })).not.toBeInTheDocument()
   })
 
   it('supports compact hint mode toggle', () => {
