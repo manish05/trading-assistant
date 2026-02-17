@@ -1207,6 +1207,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Delta Shortcut Summary')).toHaveTextContent(
       'Delta shortcuts: keys:u/j/f/n/0/+/- · mode:all · matched:2/2 · active:on',
     )
+    expect(screen.getByLabelText('Overlay Marker Mode Shortcut Summary')).toHaveTextContent(
+      'Mode shortcuts: order:o/l=newest-first · scope:g=all-buckets · wrap:w=bounded · selection:s=sticky · delta:u/j/f/n/0/+/-=all · nav:manual',
+    )
     expect(screen.getByLabelText('Delta Filter')).toHaveValue('all')
     const overlayMarkersContainer = screen.getByLabelText('Overlay Markers')
     expect(screen.getByLabelText('Timeline Order')).toHaveValue('newest-first')
@@ -1219,6 +1222,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Timeline Order')).toHaveValue('oldest-first')
     expect(screen.getByLabelText('Overlay Marker Drilldown')).toHaveTextContent(
       'Marker focus: all · window:5 · age:all · scope:all-buckets · order:oldest-first · visible:2 · latest:risk:live_trading_disabled:raised',
+    )
+    expect(screen.getByLabelText('Overlay Marker Mode Shortcut Summary')).toHaveTextContent(
+      'Mode shortcuts: order:o/l=oldest-first · scope:g=all-buckets · wrap:w=bounded · selection:s=sticky · delta:u/j/f/n/0/+/-=all · nav:manual',
     )
     fireEvent.keyDown(
       within(overlayMarkersContainer).getByRole('button', {
@@ -1235,6 +1241,9 @@ describe('Dashboard shell', () => {
       { key: 'g' },
     )
     expect(screen.getByLabelText('Bucket Scope')).toHaveValue('latest-bucket')
+    expect(screen.getByLabelText('Overlay Marker Mode Shortcut Summary')).toHaveTextContent(
+      'Mode shortcuts: order:o/l=newest-first · scope:g=latest-bucket · wrap:w=bounded · selection:s=sticky · delta:u/j/f/n/0/+/-=all · nav:manual',
+    )
     fireEvent.keyDown(
       within(overlayMarkersContainer).getByRole('button', {
         name: 'risk:live_trading_disabled:raised',
@@ -1254,6 +1263,9 @@ describe('Dashboard shell', () => {
       )
     })
     expect(screen.getByLabelText('Delta Filter')).toHaveValue('latest-down')
+    expect(screen.getByLabelText('Overlay Marker Mode Shortcut Summary')).toHaveTextContent(
+      'Mode shortcuts: order:o/l=newest-first · scope:g=all-buckets · wrap:w=bounded · selection:s=sticky · delta:u/j/f/n/0/+/-=latest-down · nav:manual',
+    )
     expect(screen.getByLabelText('Overlay Marker Delta Filter Summary')).toHaveTextContent(
       'Delta filter: mode:latest-down · matched:1/2 · up:0 · down:1 · flat:1 · n/a:0',
     )
@@ -1566,6 +1578,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Behavior')).toHaveTextContent(
       'Marker behavior: wrap:bounded · selection:sticky · nav:manual',
     )
+    expect(screen.getByLabelText('Overlay Marker Mode Shortcut Summary')).toHaveTextContent(
+      'Mode shortcuts: order:o/l=newest-first · scope:g=all-buckets · wrap:w=bounded · selection:s=sticky · delta:u/j/f/n/0/+/-=all · nav:manual',
+    )
     fireEvent.keyDown(screen.getByRole('button', { name: 'risk:live_trading_disabled:raised' }), {
       key: 'w',
     })
@@ -1573,12 +1588,18 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Behavior')).toHaveTextContent(
       'Marker behavior: wrap:wrap · selection:sticky · nav:manual',
     )
+    expect(screen.getByLabelText('Overlay Marker Mode Shortcut Summary')).toHaveTextContent(
+      'Mode shortcuts: order:o/l=newest-first · scope:g=all-buckets · wrap:w=wrap · selection:s=sticky · delta:u/j/f/n/0/+/-=all · nav:manual',
+    )
     fireEvent.keyDown(screen.getByRole('button', { name: 'risk:live_trading_disabled:raised' }), {
       key: 'w',
     })
     expect(screen.getByLabelText('Marker Wrap')).toHaveValue('bounded')
     expect(screen.getByLabelText('Overlay Marker Behavior')).toHaveTextContent(
       'Marker behavior: wrap:bounded · selection:sticky · nav:manual',
+    )
+    expect(screen.getByLabelText('Overlay Marker Mode Shortcut Summary')).toHaveTextContent(
+      'Mode shortcuts: order:o/l=newest-first · scope:g=all-buckets · wrap:w=bounded · selection:s=sticky · delta:u/j/f/n/0/+/-=all · nav:manual',
     )
 
     fireEvent.keyDown(screen.getByRole('button', { name: 'risk:live_trading_disabled:raised' }), {
@@ -1599,6 +1620,9 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Overlay Marker Behavior')).toHaveTextContent(
       'Marker behavior: wrap:bounded · selection:follow-latest · nav:locked',
+    )
+    expect(screen.getByLabelText('Overlay Marker Mode Shortcut Summary')).toHaveTextContent(
+      'Mode shortcuts: order:o/l=newest-first · scope:g=all-buckets · wrap:w=bounded · selection:s=follow-latest · delta:u/j/f/n/0/+/-=all · nav:locked',
     )
     expect(screen.getByLabelText('Overlay Marker Navigation Targets')).toHaveTextContent(
       'Targets: locked',
@@ -1656,6 +1680,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Selection Mode')).toHaveValue('sticky')
     expect(screen.getByLabelText('Overlay Marker Behavior')).toHaveTextContent(
       'Marker behavior: wrap:bounded · selection:sticky · nav:manual',
+    )
+    expect(screen.getByLabelText('Overlay Marker Mode Shortcut Summary')).toHaveTextContent(
+      'Mode shortcuts: order:o/l=newest-first · scope:g=all-buckets · wrap:w=bounded · selection:s=sticky · delta:u/j/f/n/0/+/-=all · nav:manual',
     )
     expect(screen.getByLabelText('Overlay Marker Numeric Jump Summary')).toHaveTextContent(
       'Jump keys: keys:1-3 · selected:3/3',
