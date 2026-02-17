@@ -276,6 +276,12 @@
   cursor: not-allowed;
 }
 
+.preset-import-last-summary {
+  margin-top: 0.25rem;
+  font-size: 0.68rem;
+  color: #9fb0cc;
+}
+
 .preset-import-mini {
   margin-top: 0.35rem;
   display: flex;

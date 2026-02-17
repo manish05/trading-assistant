@@ -54,6 +54,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Import Mode')).toBeInTheDocument()
     expect(screen.getByLabelText('Import Mode Badge')).toBeInTheDocument()
     expect(screen.getByText(/Shortcut: Ctrl\/Cmd\+Enter to import, Esc to clear\./)).toBeInTheDocument()
+    expect(screen.getByText('Last import: none')).toBeInTheDocument()
   })
 
   it('sends account and feed management requests', async () => {
@@ -442,6 +443,7 @@ describe('Dashboard shell', () => {
       expect(
         screen.getByText('rejected:1', { selector: '.import-snapshot-badges .import-summary-badge' }),
       ).toBeInTheDocument()
+      expect(screen.getByText(/Last import: .*accepted 1 .*rejected 1/)).toBeInTheDocument()
     })
   })
 

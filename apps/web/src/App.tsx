@@ -1403,6 +1403,11 @@ function App() {
                 {presetImportReport && isPresetImportReportExpanded ? 'Collapse Report' : 'Expand Report'}
               </button>
             </div>
+            <div className="preset-import-last-summary">
+              {presetImportReport
+                ? `Last import: ${presetImportReport.importedAt} · accepted ${presetImportReport.accepted.length} · rejected ${presetImportReport.rejected.length}`
+                : 'Last import: none'}
+            </div>
             {presetImportReport ? (
               <div className="preset-import-mini" aria-label="Import Report Summary Badges">
                 <span className="import-summary-badge badge-accepted">
