@@ -1244,6 +1244,11 @@ describe('Dashboard shell', () => {
         screen.getByText('hint:detailed', { selector: '.import-snapshot-badges .import-summary-badge' }),
       ).toBeInTheDocument()
       expect(screen.getByText(/Last import: .*accepted 1 .*rejected 1/)).toBeInTheDocument()
+      expect(
+        screen.getByText(
+          'Imported 1 preset entries (overwrite). Created 1, preserved 0, overwritten 0, rejected 1. Lock telemetry: lock toggles: 0, tone: none, reset: never.',
+        ),
+      ).toBeInTheDocument()
     })
   })
 
