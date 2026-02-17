@@ -1121,6 +1121,7 @@ function App() {
   const canSelectNextMarketOverlayMarker =
     marketOverlayActiveTimelineIndex >= 0 &&
     marketOverlayActiveTimelineIndex < marketOverlayTimelineAnnotations.length - 1
+  const canSelectLatestMarketOverlayMarker = canSelectNextMarketOverlayMarker
   const marketOverlayMarkerDrilldown = useMemo(() => {
     const latest = marketOverlayVisibleAnnotations[0]
     return {
@@ -1167,13 +1168,19 @@ function App() {
     const timelineById = new Map(
       marketOverlayTimelineAnnotations.map((annotation) => [annotation.id, annotation] as const),
     )
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
     return marketOverlayVisibleAnnotations.map((annotation) => {
       const timelineAnnotation = timelineById.get(annotation.id)
       const point = timelineAnnotation
         ? marketOverlayChartPoints.find((candidate) => candidate.time === timelineAnnotation.time)
         : null
+      const deltaToLatest = point && latestPoint ? point.value - latestPoint.value : null
+      const deltaToLatestPct =
+        deltaToLatest !== null && latestPoint && latestPoint.value !== 0
+          ? (deltaToLatest / latestPoint.value) * 100
+          : null
       const ageLabel = formatElapsedMs(Date.now() - annotation.timestamp)
-      return `${annotation.kind}:${annotation.label} · t${timelineAnnotation?.time ?? 'n/a'} · close:${point ? point.value.toFixed(2) : 'n/a'} · age:${ageLabel}`
+      return `${annotation.kind}:${annotation.label} · t${timelineAnnotation?.time ?? 'n/a'} · close:${point ? point.value.toFixed(2) : 'n/a'} · Δlatest:${deltaToLatest === null ? 'n/a' : `${deltaToLatest >= 0 ? '+' : ''}${deltaToLatest.toFixed(2)} (${deltaToLatestPct !== null ? `${deltaToLatestPct >= 0 ? '+' : ''}${deltaToLatestPct.toFixed(2)}%` : 'n/a'})`} · age:${ageLabel}`
     })
   }, [marketOverlayChartPoints, marketOverlayTimelineAnnotations, marketOverlayVisibleAnnotations])
   const marketOverlayMarkerBucketSummary = useMemo(() => {
@@ -1271,6 +1278,17 @@ function App() {
     setMarketOverlaySelectedMarkerId(next.id)
   }, [canSelectNextMarketOverlayMarker, marketOverlayActiveTimelineIndex, marketOverlayTimelineAnnotations])
 
+  const selectLatestMarketOverlayMarker = useCallback(() => {
+    if (!canSelectLatestMarketOverlayMarker) {
+      return
+    }
+    const latest = marketOverlayTimelineAnnotations[marketOverlayTimelineAnnotations.length - 1]
+    if (!latest) {
+      return
+    }
+    setMarketOverlaySelectedMarkerId(latest.id)
+  }, [canSelectLatestMarketOverlayMarker, marketOverlayTimelineAnnotations])
+
   const onMarketOverlayMarkerKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLButtonElement>) => {
       if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
@@ -1281,9 +1299,14 @@ function App() {
       if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
         event.preventDefault()
         selectNextMarketOverlayMarker()
+        return
+      }
+      if (event.key === 'End') {
+        event.preventDefault()
+        selectLatestMarketOverlayMarker()
       }
     },
-    [selectNextMarketOverlayMarker, selectPreviousMarketOverlayMarker],
+    [selectLatestMarketOverlayMarker, selectNextMarketOverlayMarker, selectPreviousMarketOverlayMarker],
   )
 
   useEffect(() => {
@@ -3687,6 +3710,13 @@ function App() {
                 disabled={!canSelectNextMarketOverlayMarker}
               >
                 Next Marker
+              </button>
+              <button
+                type="button"
+                onClick={selectLatestMarketOverlayMarker}
+                disabled={!canSelectLatestMarketOverlayMarker}
+              >
+                Latest Marker
               </button>
             </div>
             <div className="market-overlay-timeline-list" aria-label="Overlay Marker Timeline">

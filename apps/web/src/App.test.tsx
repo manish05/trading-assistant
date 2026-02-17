@@ -64,6 +64,7 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByRole('button', { name: 'Previous Marker' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Next Marker' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Latest Marker' })).toBeDisabled()
     expect(screen.getByLabelText('Overlay Marker Timeline')).toHaveTextContent('none')
     expect(screen.getByLabelText('Overlay Markers')).toHaveTextContent('none')
     expect(screen.getByLabelText('Overlay Chart Runtime')).toBeInTheDocument()
@@ -476,6 +477,7 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByRole('button', { name: 'Previous Marker' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Next Marker' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Latest Marker' })).toBeDisabled()
     expect(screen.getByLabelText('Overlay Marker Timeline')).toHaveTextContent('none')
     expect(screen.getByLabelText('Overlay Markers')).toHaveTextContent('none')
     expect(screen.getByLabelText('Overlay Trend')).toHaveTextContent('Trend: neutral')
@@ -532,6 +534,12 @@ describe('Dashboard shell', () => {
       expect(screen.getByLabelText('Overlay Marker Timeline')).toHaveTextContent(
         'trade:closed:queued · t1 · close:1.00',
       )
+      expect(screen.getByLabelText('Overlay Marker Timeline')).toHaveTextContent(
+        'risk:live_trading_disabled:raised · t2 · close:2.00 · Δlatest:+0.00 (+0.00%)',
+      )
+      expect(screen.getByLabelText('Overlay Marker Timeline')).toHaveTextContent(
+        'trade:closed:queued · t1 · close:1.00 · Δlatest:-1.00 (-50.00%)',
+      )
       expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
         'Marker nav: 2/2 · selected:risk:live_trading_disabled:raised',
       )
@@ -545,6 +553,7 @@ describe('Dashboard shell', () => {
       )
       expect(screen.getByRole('button', { name: 'Previous Marker' })).toBeEnabled()
       expect(screen.getByRole('button', { name: 'Next Marker' })).toBeDisabled()
+      expect(screen.getByRole('button', { name: 'Latest Marker' })).toBeDisabled()
       expect(screen.getByLabelText('Overlay Markers')).toHaveTextContent(
         'risk:live_trading_disabled:raised',
       )
@@ -586,6 +595,7 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByRole('button', { name: 'Previous Marker' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Next Marker' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Latest Marker' })).toBeEnabled()
     expect(screen.getByLabelText('Overlay Correlation Hint')).toHaveTextContent(
       'Correlation: trade:closed:queued@1.00(t1)',
     )
@@ -596,14 +606,23 @@ describe('Dashboard shell', () => {
       'tone:positive',
     )
 
-    fireEvent.keyDown(screen.getByRole('button', { name: 'trade:closed:queued' }), {
-      key: 'ArrowRight',
-    })
+    fireEvent.click(screen.getByRole('button', { name: 'Latest Marker' }))
     expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
       'Marker nav: 2/2 · selected:risk:live_trading_disabled:raised',
     )
     expect(screen.getByLabelText('Overlay Correlation Hint')).toHaveTextContent(
       'Correlation: risk:live_trading_disabled:raised@2.00(t2)',
+    )
+    expect(screen.getByRole('button', { name: 'Latest Marker' })).toBeDisabled()
+    fireEvent.keyDown(screen.getByRole('button', { name: 'risk:live_trading_disabled:raised' }), {
+      key: 'ArrowLeft',
+    })
+    expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
+      'Marker nav: 1/2 · selected:trade:closed:queued',
+    )
+    fireEvent.keyDown(screen.getByRole('button', { name: 'trade:closed:queued' }), { key: 'End' })
+    expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
+      'Marker nav: 2/2 · selected:risk:live_trading_disabled:raised',
     )
     fireEvent.keyDown(screen.getByRole('button', { name: 'risk:live_trading_disabled:raised' }), {
       key: 'ArrowLeft',
