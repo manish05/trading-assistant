@@ -1206,6 +1206,39 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Delta Filter')).toHaveValue('all')
     const overlayMarkersContainer = screen.getByLabelText('Overlay Markers')
+    expect(screen.getByLabelText('Timeline Order')).toHaveValue('newest-first')
+    fireEvent.keyDown(
+      within(overlayMarkersContainer).getByRole('button', {
+        name: 'risk:live_trading_disabled:raised',
+      }),
+      { key: 'o' },
+    )
+    expect(screen.getByLabelText('Timeline Order')).toHaveValue('oldest-first')
+    expect(screen.getByLabelText('Overlay Marker Drilldown')).toHaveTextContent(
+      'Marker focus: all · window:5 · age:all · scope:all-buckets · order:oldest-first · visible:2 · latest:risk:live_trading_disabled:raised',
+    )
+    fireEvent.keyDown(
+      within(overlayMarkersContainer).getByRole('button', {
+        name: 'risk:live_trading_disabled:raised',
+      }),
+      { key: 'l' },
+    )
+    expect(screen.getByLabelText('Timeline Order')).toHaveValue('newest-first')
+    expect(screen.getByLabelText('Bucket Scope')).toHaveValue('all-buckets')
+    fireEvent.keyDown(
+      within(overlayMarkersContainer).getByRole('button', {
+        name: 'risk:live_trading_disabled:raised',
+      }),
+      { key: 'g' },
+    )
+    expect(screen.getByLabelText('Bucket Scope')).toHaveValue('latest-bucket')
+    fireEvent.keyDown(
+      within(overlayMarkersContainer).getByRole('button', {
+        name: 'risk:live_trading_disabled:raised',
+      }),
+      { key: 'g' },
+    )
+    expect(screen.getByLabelText('Bucket Scope')).toHaveValue('all-buckets')
     fireEvent.keyDown(
       within(overlayMarkersContainer).getByRole('button', {
         name: 'risk:live_trading_disabled:raised',

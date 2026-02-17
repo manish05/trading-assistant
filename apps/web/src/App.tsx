@@ -2584,6 +2584,23 @@ function App() {
         selectNextBucketMarketOverlayMarker()
         return
       }
+      if (normalizedKey === 'o') {
+        event.preventDefault()
+        setMarketOverlayTimelineOrder('oldest-first')
+        return
+      }
+      if (normalizedKey === 'l') {
+        event.preventDefault()
+        setMarketOverlayTimelineOrder('newest-first')
+        return
+      }
+      if (normalizedKey === 'g') {
+        event.preventDefault()
+        setMarketOverlayBucketScope((current) =>
+          current === 'all-buckets' ? 'latest-bucket' : 'all-buckets',
+        )
+        return
+      }
       if (normalizedKey === 'u') {
         event.preventDefault()
         setMarketOverlayMarkerDeltaFilter('latest-up')
