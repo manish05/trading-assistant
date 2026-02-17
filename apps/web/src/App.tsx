@@ -1354,6 +1354,13 @@ function App() {
             <div className="preset-import-actions">
               <button
                 type="button"
+                onClick={() => setPresetImportInput('')}
+                disabled={presetImportInput.trim().length === 0}
+              >
+                Clear Import JSON
+              </button>
+              <button
+                type="button"
                 onClick={() => void copyPresetImportReport()}
                 disabled={!presetImportReport}
               >

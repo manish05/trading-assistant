@@ -45,6 +45,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Delete Preset' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Export Presets JSON' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Import Presets JSON' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Clear Import JSON' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Copy Import Report' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Clear Import Report' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Copy Full Names' })).toBeDisabled()
@@ -424,6 +425,23 @@ describe('Dashboard shell', () => {
       expect(within(summary).getByText('accepted:1')).toBeInTheDocument()
       expect(within(summary).getByText('rejected:1')).toBeInTheDocument()
     })
+  })
+
+  it('clears import JSON textarea with one click', () => {
+    render(<App />)
+    const importTextarea = screen.getByLabelText('Import Presets JSON')
+    const clearButton = screen.getByRole('button', { name: 'Clear Import JSON' })
+
+    fireEvent.change(importTextarea, {
+      target: {
+        value: '{"temp-template":{"feedSymbol":"ETHUSDm"}}',
+      },
+    })
+
+    expect(clearButton).toBeEnabled()
+    fireEvent.click(clearButton)
+    expect(importTextarea).toHaveValue('')
+    expect(clearButton).toBeDisabled()
   })
 
   it('truncates long import report name lists with overflow counter', async () => {
