@@ -64,7 +64,7 @@ describe('Dashboard shell', () => {
       'Timeline buckets: mode:none · scope:all-buckets · buckets:0 · latest:none · count:0',
     )
     expect(screen.getByLabelText('Overlay Marker Behavior')).toHaveTextContent(
-      'Marker behavior: wrap:bounded · selection:sticky',
+      'Marker behavior: wrap:bounded · selection:sticky · nav:manual',
     )
     expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
       'Marker nav: 0/0 · selected:none',
@@ -588,7 +588,7 @@ describe('Dashboard shell', () => {
         'Marker nav: 2/2 · selected:risk:live_trading_disabled:raised',
       )
       expect(screen.getByLabelText('Overlay Marker Behavior')).toHaveTextContent(
-        'Marker behavior: wrap:bounded · selection:sticky',
+        'Marker behavior: wrap:bounded · selection:sticky · nav:manual',
       )
       expect(screen.getByRole('button', { name: 'risk:live_trading_disabled:raised' })).toHaveAttribute(
         'aria-pressed',
@@ -691,7 +691,7 @@ describe('Dashboard shell', () => {
 
     fireEvent.change(screen.getByLabelText('Marker Wrap'), { target: { value: 'wrap' } })
     expect(screen.getByLabelText('Overlay Marker Behavior')).toHaveTextContent(
-      'Marker behavior: wrap:wrap · selection:sticky',
+      'Marker behavior: wrap:wrap · selection:sticky · nav:manual',
     )
     expect(screen.getByRole('button', { name: 'Previous Marker' })).toBeEnabled()
     expect(screen.getByRole('button', { name: 'Next Marker' })).toBeEnabled()
@@ -718,7 +718,7 @@ describe('Dashboard shell', () => {
 
     fireEvent.change(screen.getByLabelText('Marker Wrap'), { target: { value: 'bounded' } })
     expect(screen.getByLabelText('Overlay Marker Behavior')).toHaveTextContent(
-      'Marker behavior: wrap:bounded · selection:sticky',
+      'Marker behavior: wrap:bounded · selection:sticky · nav:manual',
     )
     fireEvent.change(screen.getByLabelText('Timeline Order'), { target: { value: 'oldest-first' } })
     expect(screen.getByLabelText('Overlay Marker Drilldown')).toHaveTextContent(
@@ -1076,7 +1076,7 @@ describe('Dashboard shell', () => {
       )
     })
     expect(screen.getByLabelText('Overlay Marker Behavior')).toHaveTextContent(
-      'Marker behavior: wrap:bounded · selection:sticky',
+      'Marker behavior: wrap:bounded · selection:sticky · nav:manual',
     )
 
     fireEvent.keyDown(screen.getByRole('button', { name: 'risk:live_trading_disabled:raised' }), {
@@ -1091,8 +1091,14 @@ describe('Dashboard shell', () => {
       'Marker nav: 2/2 · selected:risk:live_trading_disabled:raised',
     )
     expect(screen.getByLabelText('Overlay Marker Behavior')).toHaveTextContent(
-      'Marker behavior: wrap:bounded · selection:follow-latest',
+      'Marker behavior: wrap:bounded · selection:follow-latest · nav:locked',
     )
+    expect(screen.getByRole('button', { name: 'Previous Marker' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Next Marker' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Oldest Marker' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Latest Marker' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'risk:live_trading_disabled:raised' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'trade:closed:queued' })).toBeDisabled()
     fireEvent.click(screen.getByRole('button', { name: 'Refresh Overlay Snapshot' }))
     expect(screen.getByLabelText('Overlay Snapshot Summary')).toHaveTextContent(
       'markerSelection:follow-latest',
@@ -1107,8 +1113,10 @@ describe('Dashboard shell', () => {
 
     fireEvent.change(screen.getByLabelText('Selection Mode'), { target: { value: 'sticky' } })
     expect(screen.getByLabelText('Overlay Marker Behavior')).toHaveTextContent(
-      'Marker behavior: wrap:bounded · selection:sticky',
+      'Marker behavior: wrap:bounded · selection:sticky · nav:manual',
     )
+    expect(screen.getByRole('button', { name: 'Previous Marker' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Oldest Marker' })).toBeEnabled()
     fireEvent.click(screen.getByRole('button', { name: 'Previous Marker' }))
     expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
       'Marker nav: 2/3 · selected:risk:live_trading_disabled:raised',

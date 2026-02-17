@@ -1217,22 +1217,30 @@ function App() {
     marketOverlayScopedTimelineAnnotations.length,
   ])
   const marketOverlayMarkerBehaviorLabel = useMemo(
-    () => `wrap:${marketOverlayMarkerWrap} · selection:${marketOverlaySelectionMode}`,
+    () =>
+      `wrap:${marketOverlayMarkerWrap} · selection:${marketOverlaySelectionMode} · nav:${marketOverlaySelectionMode === 'follow-latest' ? 'locked' : 'manual'}`,
     [marketOverlayMarkerWrap, marketOverlaySelectionMode],
   )
   const marketOverlayTimelineCount = marketOverlayScopedTimelineAnnotations.length
   const hasMultipleMarketOverlayMarkers = marketOverlayTimelineCount > 1
+  const isMarketOverlayNavigationLocked = marketOverlaySelectionMode === 'follow-latest'
   const canSelectPreviousMarketOverlayMarker =
-    marketOverlayMarkerWrap === 'wrap'
+    isMarketOverlayNavigationLocked
+      ? false
+      : marketOverlayMarkerWrap === 'wrap'
       ? marketOverlayActiveTimelineIndex >= 0 && hasMultipleMarketOverlayMarkers
       : marketOverlayActiveTimelineIndex > 0
   const canSelectNextMarketOverlayMarker =
-    marketOverlayMarkerWrap === 'wrap'
+    isMarketOverlayNavigationLocked
+      ? false
+      : marketOverlayMarkerWrap === 'wrap'
       ? marketOverlayActiveTimelineIndex >= 0 && hasMultipleMarketOverlayMarkers
       : marketOverlayActiveTimelineIndex >= 0 &&
         marketOverlayActiveTimelineIndex < marketOverlayTimelineCount - 1
-  const canSelectOldestMarketOverlayMarker = marketOverlayActiveTimelineIndex > 0
+  const canSelectOldestMarketOverlayMarker =
+    !isMarketOverlayNavigationLocked && marketOverlayActiveTimelineIndex > 0
   const canSelectLatestMarketOverlayMarker =
+    !isMarketOverlayNavigationLocked &&
     marketOverlayActiveTimelineIndex >= 0 &&
     marketOverlayActiveTimelineIndex < marketOverlayTimelineCount - 1
   const marketOverlayMarkerDrilldown = useMemo(() => {
@@ -3958,6 +3966,7 @@ function App() {
                     onClick={() => setMarketOverlaySelectedMarkerId(annotation.id)}
                     onKeyDown={onMarketOverlayMarkerKeyDown}
                     aria-pressed={marketOverlaySelectedMarkerId === annotation.id}
+                    disabled={isMarketOverlayNavigationLocked}
                   >
                     {annotation.kind}:{annotation.label}
                   </button>
@@ -4011,6 +4020,7 @@ function App() {
                     onClick={() => setMarketOverlaySelectedMarkerId(row.id)}
                     onKeyDown={onMarketOverlayMarkerKeyDown}
                     aria-pressed={row.isSelected}
+                    disabled={isMarketOverlayNavigationLocked}
                   >
                     {row.text}
                   </button>
