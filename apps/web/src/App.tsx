@@ -1997,18 +1997,26 @@ function App() {
     return `visible:t${tradeCount}/r${riskCount}/f${feedCount} · selectedKind:${selectedKind}`
   }, [marketOverlayActiveTimelineAnnotation, marketOverlayScopedVisibleAnnotations])
   const marketOverlayMarkerFilterPipelineSummary = useMemo(() => {
+    const rawCount = marketOverlayAnnotations.length
+    const focusCount = marketOverlayFilteredAnnotations.length
+    const ageCount = marketOverlayAgeFilteredAnnotations.length
+    const windowCount = marketOverlayVisibleAnnotations.length
     const baseCount = marketOverlayTimelineAnnotations.length
     const bucketCount = marketOverlayBucketScopedTimelineAnnotations.length
     const agreementCount = marketOverlayAgreementScopedTimelineAnnotations.length
     const deltaCount = marketOverlayScopedTimelineAnnotations.length
     const visibleCount = marketOverlayScopedVisibleAnnotations.length
-    return `base:${baseCount} · bucket:${bucketCount}/${baseCount} · agreement:${agreementCount}/${bucketCount} · delta:${deltaCount}/${agreementCount} · visible:${visibleCount}/${deltaCount}`
+    return `raw:${rawCount} · focus:${focusCount}/${rawCount} · age:${ageCount}/${focusCount} · window:${windowCount}/${ageCount} · timeline:${baseCount}/${windowCount} · bucket:${bucketCount}/${baseCount} · agreement:${agreementCount}/${bucketCount} · delta:${deltaCount}/${agreementCount} · visible:${visibleCount}/${deltaCount}`
   }, [
+    marketOverlayAgeFilteredAnnotations.length,
+    marketOverlayAnnotations.length,
     marketOverlayAgreementScopedTimelineAnnotations.length,
     marketOverlayBucketScopedTimelineAnnotations.length,
+    marketOverlayFilteredAnnotations.length,
     marketOverlayScopedTimelineAnnotations.length,
     marketOverlayScopedVisibleAnnotations.length,
     marketOverlayTimelineAnnotations.length,
+    marketOverlayVisibleAnnotations.length,
   ])
   const marketOverlayMarkerDeltaSummary = useMemo(() => {
     if (marketOverlayScopedVisibleAnnotations.length === 0 || marketOverlayChartPoints.length === 0) {

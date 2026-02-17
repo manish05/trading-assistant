@@ -80,7 +80,7 @@ describe('Dashboard shell', () => {
       'Scope: visible:t0/r0/f0 · selectedKind:none',
     )
     expect(screen.getByLabelText('Overlay Marker Pipeline Summary')).toHaveTextContent(
-      'Pipeline: base:0 · bucket:0/0 · agreement:0/0 · delta:0/0 · visible:0/0',
+      'Pipeline: raw:0 · focus:0/0 · age:0/0 · window:0/0 · timeline:0/0 · bucket:0/0 · agreement:0/0 · delta:0/0 · visible:0/0',
     )
     expect(screen.getByLabelText('Overlay Marker Basis Agreement Summary')).toHaveTextContent(
       'Basis agreement: mode:all · matched:0/0 · agree:0 · diverge:0',
@@ -486,7 +486,7 @@ describe('Dashboard shell', () => {
       'Basis agreement kinds: mode:diverge · scoped:t0/r0/f0 · agree:t0/r0/f0 · diverge:t0/r0/f0',
     )
     expect(screen.getByLabelText('Overlay Marker Pipeline Summary')).toHaveTextContent(
-      'Pipeline: base:0 · bucket:0/0 · agreement:0/0 · delta:0/0 · visible:0/0',
+      'Pipeline: raw:0 · focus:0/0 · age:0/0 · window:0/0 · timeline:0/0 · bucket:0/0 · agreement:0/0 · delta:0/0 · visible:0/0',
     )
     expect(screen.getByLabelText('Overlay Marker Delta Filter Summary')).toHaveTextContent(
       'Delta filter: basis:average · mode:all · matched:0/0 · up:0 · down:0 · flat:0 · n/a:0',
@@ -1304,7 +1304,7 @@ describe('Dashboard shell', () => {
       'Basis agreement kinds: mode:all · scoped:t1/r1/f0 · agree:t1/r0/f0 · diverge:t0/r1/f0',
     )
     expect(screen.getByLabelText('Overlay Marker Pipeline Summary')).toHaveTextContent(
-      'Pipeline: base:2 · bucket:2/2 · agreement:2/2 · delta:2/2 · visible:2/2',
+      'Pipeline: raw:2 · focus:2/2 · age:2/2 · window:2/2 · timeline:2/2 · bucket:2/2 · agreement:2/2 · delta:2/2 · visible:2/2',
     )
     expect(screen.getByLabelText('Overlay Marker Mode Shortcut Summary')).toHaveTextContent(
       'Mode shortcuts: focus:a/t/r/d=all · age:y=all · window:v=5 · bucket:b=none · order:o/l=newest-first · scope:g=all-buckets · wrap:w=bounded · selection:s=sticky · agreement:q/e/x=all · basis:k=latest · delta:u/j/f/n/0/+/-=all · nav:manual',
@@ -1330,7 +1330,7 @@ describe('Dashboard shell', () => {
       'Basis agreement kinds: mode:diverge · scoped:t0/r1/f0 · agree:t1/r0/f0 · diverge:t0/r1/f0',
     )
     expect(screen.getByLabelText('Overlay Marker Pipeline Summary')).toHaveTextContent(
-      'Pipeline: base:2 · bucket:2/2 · agreement:1/2 · delta:1/1 · visible:1/1',
+      'Pipeline: raw:2 · focus:2/2 · age:2/2 · window:2/2 · timeline:2/2 · bucket:2/2 · agreement:1/2 · delta:1/1 · visible:1/1',
     )
     expect(screen.getByLabelText('Overlay Marker Mode Shortcut Summary')).toHaveTextContent(
       'Mode shortcuts: focus:a/t/r/d=all · age:y=all · window:v=5 · bucket:b=none · order:o/l=newest-first · scope:g=all-buckets · wrap:w=bounded · selection:s=sticky · agreement:q/e/x=diverge · basis:k=latest · delta:u/j/f/n/0/+/-=all · nav:manual',
@@ -1362,7 +1362,7 @@ describe('Dashboard shell', () => {
       'Basis agreement kinds: mode:agree · scoped:t1/r0/f0 · agree:t1/r0/f0 · diverge:t0/r1/f0',
     )
     expect(screen.getByLabelText('Overlay Marker Pipeline Summary')).toHaveTextContent(
-      'Pipeline: base:2 · bucket:2/2 · agreement:1/2 · delta:1/1 · visible:1/1',
+      'Pipeline: raw:2 · focus:2/2 · age:2/2 · window:2/2 · timeline:2/2 · bucket:2/2 · agreement:1/2 · delta:1/1 · visible:1/1',
     )
     expect(screen.getByLabelText('Overlay Marker Delta Filter Summary')).toHaveTextContent(
       'Delta filter: basis:latest · mode:all · matched:1/1 · up:0 · down:1 · flat:0 · n/a:0',
@@ -1388,7 +1388,7 @@ describe('Dashboard shell', () => {
       'Basis agreement kinds: mode:all · scoped:t1/r1/f0 · agree:t1/r0/f0 · diverge:t0/r1/f0',
     )
     expect(screen.getByLabelText('Overlay Marker Pipeline Summary')).toHaveTextContent(
-      'Pipeline: base:2 · bucket:2/2 · agreement:2/2 · delta:2/2 · visible:2/2',
+      'Pipeline: raw:2 · focus:2/2 · age:2/2 · window:2/2 · timeline:2/2 · bucket:2/2 · agreement:2/2 · delta:2/2 · visible:2/2',
     )
     expect(screen.getByLabelText('Overlay Marker Delta Filter Summary')).toHaveTextContent(
       'Delta filter: basis:latest · mode:all · matched:2/2 · up:0 · down:1 · flat:1 · n/a:0',
