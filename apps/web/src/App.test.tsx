@@ -412,6 +412,31 @@ describe('Dashboard shell', () => {
     })
   })
 
+  it('shows lock telemetry when history copy fails', async () => {
+    const writeText = vi.fn().mockRejectedValue(new Error('denied'))
+    Object.defineProperty(window.navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    })
+
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Accounts' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Copy History' })).toBeEnabled()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy History' }))
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalled()
+      expect(
+        screen.getByText(
+          'Clipboard access failed or is unavailable. Lock telemetry: lock toggles: 0, tone: none, reset: never.',
+        ),
+      ).toBeInTheDocument()
+    })
+  })
+
   it('exports presets as JSON to clipboard', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined)
     Object.defineProperty(window.navigator, 'clipboard', {
@@ -642,6 +667,26 @@ describe('Dashboard shell', () => {
       expect(
         screen.getByText(
           'Copied status shortcut legend to clipboard (lock: locked, toggles: 0, tone: none, reset: never).',
+        ),
+      ).toBeInTheDocument()
+    })
+  })
+
+  it('shows lock telemetry when status legend copy fails', async () => {
+    const writeText = vi.fn().mockRejectedValue(new Error('denied'))
+    Object.defineProperty(window.navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    })
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Show Legend in Status' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Copy Status Legend' }))
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalled()
+      expect(
+        screen.getByText(
+          'Clipboard access failed or is unavailable. Lock telemetry: lock toggles: 0, tone: none, reset: never.',
         ),
       ).toBeInTheDocument()
     })
