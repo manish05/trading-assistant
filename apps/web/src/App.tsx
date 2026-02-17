@@ -1705,6 +1705,75 @@ function App() {
     })
     return `aligned:+${alignedPositiveCount}/-${alignedNegativeCount} · mixed:${mixedCount} · flat:${flatCount} · n/a:${unavailableCount}`
   }, [marketOverlayAverageClose, marketOverlayChartPoints, marketOverlayScopedTimelineAnnotations])
+  const marketOverlayMarkerDeltaByKindSummary = useMemo(() => {
+    if (marketOverlayScopedTimelineAnnotations.length === 0 || marketOverlayChartPoints.length === 0) {
+      return 'none'
+    }
+    type MarkerKindDeltaStats = {
+      visibleCount: number
+      deltaLatestSum: number
+      deltaLatestCount: number
+      deltaAverageSum: number
+      deltaAverageCount: number
+      deltaPreviousSum: number
+      deltaPreviousCount: number
+    }
+    const makeStats = (): MarkerKindDeltaStats => ({
+      visibleCount: 0,
+      deltaLatestSum: 0,
+      deltaLatestCount: 0,
+      deltaAverageSum: 0,
+      deltaAverageCount: 0,
+      deltaPreviousSum: 0,
+      deltaPreviousCount: 0,
+    })
+    const statsByKind: Record<MarketOverlayTimelineAnnotation['kind'], MarkerKindDeltaStats> = {
+      trade: makeStats(),
+      risk: makeStats(),
+      feed: makeStats(),
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const pointIndexByTime = new Map(
+      marketOverlayChartPoints.map((point, index) => [point.time, index] as const),
+    )
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1]
+    const baseline = marketOverlayAverageClose
+    marketOverlayScopedTimelineAnnotations.forEach((annotation) => {
+      const stats = statsByKind[annotation.kind]
+      stats.visibleCount += 1
+      const point = pointByTime.get(annotation.time)
+      if (!point) {
+        return
+      }
+      stats.deltaLatestSum += point.value - latestPoint.value
+      stats.deltaLatestCount += 1
+      if (baseline !== null) {
+        stats.deltaAverageSum += point.value - baseline
+        stats.deltaAverageCount += 1
+      }
+      const pointIndex = pointIndexByTime.get(annotation.time) ?? -1
+      if (pointIndex > 0) {
+        const previousPoint = marketOverlayChartPoints[pointIndex - 1]
+        stats.deltaPreviousSum += point.value - previousPoint.value
+        stats.deltaPreviousCount += 1
+      }
+    })
+    const formatMean = (sum: number, count: number) => {
+      if (count === 0) {
+        return 'n/a'
+      }
+      const mean = sum / count
+      return `${mean >= 0 ? '+' : ''}${mean.toFixed(2)}`
+    }
+    const formatKindSummary = (
+      kind: MarketOverlayTimelineAnnotation['kind'],
+      shortLabel: 't' | 'r' | 'f',
+    ) => {
+      const stats = statsByKind[kind]
+      return `${shortLabel}:n${stats.visibleCount} · Δl:${formatMean(stats.deltaLatestSum, stats.deltaLatestCount)} · Δa:${formatMean(stats.deltaAverageSum, stats.deltaAverageCount)} · Δp:${formatMean(stats.deltaPreviousSum, stats.deltaPreviousCount)}`
+    }
+    return `${formatKindSummary('trade', 't')} · ${formatKindSummary('risk', 'r')} · ${formatKindSummary('feed', 'f')}`
+  }, [marketOverlayAverageClose, marketOverlayChartPoints, marketOverlayScopedTimelineAnnotations])
   const marketOverlayMarkerDeltaExtremes = useMemo(() => {
     if (marketOverlayScopedTimelineAnnotations.length === 0 || marketOverlayChartPoints.length === 0) {
       return 'none'
@@ -4717,6 +4786,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Delta Alignment Summary">
               Delta alignment: {marketOverlayMarkerDeltaAlignmentSummary}
+            </p>
+            <p aria-label="Overlay Marker Delta By Kind Summary">
+              Delta by kind: {marketOverlayMarkerDeltaByKindSummary}
             </p>
             <p aria-label="Overlay Marker Delta Extremes">
               Delta extremes: {marketOverlayMarkerDeltaExtremes}

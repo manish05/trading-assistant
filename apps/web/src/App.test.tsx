@@ -5,6 +5,7 @@ import App from './App'
 
 describe('Dashboard shell', () => {
   afterEach(() => {
+    vi.restoreAllMocks()
     window.localStorage.clear()
     cleanup()
   })
@@ -80,6 +81,9 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Overlay Marker Delta Alignment Summary')).toHaveTextContent(
       'Delta alignment: none',
+    )
+    expect(screen.getByLabelText('Overlay Marker Delta By Kind Summary')).toHaveTextContent(
+      'Delta by kind: none',
     )
     expect(screen.getByLabelText('Overlay Marker Delta Extremes')).toHaveTextContent(
       'Delta extremes: none',
@@ -562,6 +566,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Delta Alignment Summary')).toHaveTextContent(
       'Delta alignment: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Delta By Kind Summary')).toHaveTextContent(
+      'Delta by kind: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Delta Extremes')).toHaveTextContent(
       'Delta extremes: none',
     )
@@ -667,6 +674,9 @@ describe('Dashboard shell', () => {
       expect(screen.getByLabelText('Overlay Marker Delta Alignment Summary')).toHaveTextContent(
         'Delta alignment: aligned:+0/-1 · mixed:0 · flat:1 · n/a:0',
       )
+      expect(screen.getByLabelText('Overlay Marker Delta By Kind Summary')).toHaveTextContent(
+        'Delta by kind: t:n1 · Δl:-1.00 · Δa:-0.50 · Δp:n/a · r:n1 · Δl:+0.00 · Δa:+0.50 · Δp:+1.00 · f:n0 · Δl:n/a · Δa:n/a · Δp:n/a',
+      )
       expect(screen.getByLabelText('Overlay Marker Delta Extremes')).toHaveTextContent(
         'Delta extremes: rise:risk:live_trading_disabled:raised:+0.00 (+0.00%) · drop:trade:closed:queued:-1.00 (-50.00%) · spread:1.00',
       )
@@ -769,6 +779,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Delta Alignment Summary')).toHaveTextContent(
       'Delta alignment: aligned:+0/-0 · mixed:0 · flat:1 · n/a:0',
     )
+    expect(screen.getByLabelText('Overlay Marker Delta By Kind Summary')).toHaveTextContent(
+      'Delta by kind: t:n0 · Δl:n/a · Δa:n/a · Δp:n/a · r:n1 · Δl:+0.00 · Δa:+0.50 · Δp:+1.00 · f:n0 · Δl:n/a · Δa:n/a · Δp:n/a',
+    )
     expect(screen.getByLabelText('Overlay Marker Delta Extremes')).toHaveTextContent(
       'Delta extremes: rise:risk:live_trading_disabled:raised:+0.00 (+0.00%) · drop:risk:live_trading_disabled:raised:+0.00 (+0.00%) · spread:0.00',
     )
@@ -781,9 +794,11 @@ describe('Dashboard shell', () => {
     fireEvent.keyDown(screen.getByRole('button', { name: 'risk:live_trading_disabled:raised' }), {
       key: 'ArrowLeft',
     })
-    expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
-      'Marker nav: 1/2 · selected:trade:closed:queued',
-    )
+    await waitFor(() => {
+      expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
+        'Marker nav: 1/2 · selected:trade:closed:queued',
+      )
+    })
     expect(screen.getByLabelText('Overlay Marker Navigation Targets')).toHaveTextContent(
       'Targets: prev:none · next:risk:live_trading_disabled:raised · skipBack:none · skipForward:none · prevKind:none · nextKind:none · prevBucket:none · nextBucket:none',
     )
