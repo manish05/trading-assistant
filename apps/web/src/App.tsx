@@ -1635,14 +1635,14 @@ function App() {
     appendBlock({
       id: `blk_${Date.now()}`,
       title: 'helper diagnostics reset',
-      content: `Reset helper diagnostics preferences to defaults (${lockTelemetryToastDetailsWithLabelAndSources}).`,
+      content: `Reset helper diagnostics preferences to defaults${lockTelemetrySuccessParenthetical}.`,
       severity: 'info',
     })
   }, [
     appendBlock,
     isHelperResetLocked,
     lockTelemetryFailureSuffix,
-    lockTelemetryToastDetailsWithLabelAndSources,
+    lockTelemetrySuccessParenthetical,
   ])
 
   const clearPresetImportReport = useCallback(() => {

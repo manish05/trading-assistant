@@ -2315,7 +2315,19 @@ describe('Dashboard shell', () => {
     expect(window.localStorage.getItem('quick-action-block-telemetry-visibility-v1')).toBe('visible')
     expect(
       screen.getByText(
-          'Reset helper diagnostics preferences to defaults (lock toggles: 1, tone: active, reset: never; sources: Alt+L=0, controls=1, snapshot=0).',
+          'Reset helper diagnostics preferences to defaults.',
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it('includes reset-helper success telemetry when block telemetry is visible', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Unlock Reset' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Reset Helper Prefs' }))
+
+    expect(
+      screen.getByText(
+        'Reset helper diagnostics preferences to defaults (lock toggles: 1, tone: active, reset: never; sources: Alt+L=0, controls=1, snapshot=0).',
       ),
     ).toBeInTheDocument()
   })
