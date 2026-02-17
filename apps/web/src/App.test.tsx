@@ -34,6 +34,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Accounts' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Agents' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Create Agent' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Run Onboarding Flow' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Connect Account' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Disconnect Account' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Feeds' })).toBeInTheDocument()
@@ -190,6 +191,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByText('Risk Alerts').closest('div')).toHaveTextContent('none')
     expect(screen.getByText('Agents (last fetch)').closest('div')).toHaveTextContent('n/a')
     expect(screen.getByText('Managed Agent').closest('div')).toHaveTextContent('agent_eth_5m')
+    expect(screen.getByText('Onboarding Checklist').closest('div')).toHaveTextContent(
+      'completed 0/3',
+    )
     expect(screen.getByText('Marketplace Signals (last fetch)').closest('div')).toHaveTextContent(
       'n/a',
     )
@@ -633,6 +637,93 @@ describe('Dashboard shell', () => {
       const managedAgentRow = screen.getByText('Managed Agent').closest('div')
       expect(managedAgentRow).not.toBeNull()
       expect(within(managedAgentRow as HTMLElement).getByText('agent_custom_9')).toBeInTheDocument()
+    })
+
+    sendSpy.mockRestore()
+  })
+
+  it('runs onboarding flow and marks all onboarding steps complete', async () => {
+    const sendSpy = vi
+      .spyOn(WebSocket.prototype, 'send')
+      .mockImplementation(function (
+        this: WebSocket,
+        data: string | ArrayBufferLike | Blob | ArrayBufferView<ArrayBufferLike>,
+      ) {
+        if (typeof data !== 'string') {
+          return
+        }
+        const payload = JSON.parse(data) as {
+          type?: string
+          id?: string
+          method?: string
+        }
+        if (payload.type === 'req' && payload.method === 'accounts.connect' && payload.id) {
+          queueMicrotask(() => {
+            this.onmessage?.(
+              new MessageEvent('message', {
+                data: JSON.stringify({
+                  type: 'res',
+                  id: payload.id,
+                  ok: true,
+                  payload: {
+                    account: { accountId: 'acct_demo_1', status: 'connected' },
+                  },
+                }),
+              }),
+            )
+          })
+          return
+        }
+        if (payload.type === 'req' && payload.method === 'agents.create' && payload.id) {
+          queueMicrotask(() => {
+            this.onmessage?.(
+              new MessageEvent('message', {
+                data: JSON.stringify({
+                  type: 'res',
+                  id: payload.id,
+                  ok: true,
+                  payload: {
+                    agent: { agentId: 'agent_eth_5m', label: 'ETH Momentum Agent', status: 'ready' },
+                  },
+                }),
+              }),
+            )
+          })
+          return
+        }
+        if (payload.type === 'req' && payload.method === 'feeds.subscribe' && payload.id) {
+          queueMicrotask(() => {
+            this.onmessage?.(
+              new MessageEvent('message', {
+                data: JSON.stringify({
+                  type: 'res',
+                  id: payload.id,
+                  ok: true,
+                  payload: {
+                    subscription: { subscriptionId: 'sub_onboarding_1' },
+                    subscriptionCount: 1,
+                  },
+                }),
+              }),
+            )
+          })
+        }
+      })
+
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Run Onboarding Flow' }))
+
+    await waitFor(() => {
+      const payloads = sendSpy.mock.calls.map(([serialized]) =>
+        JSON.parse(String(serialized)),
+      ) as Array<{ method?: string }>
+      const methods = payloads.map((payload) => payload.method)
+      expect(methods).toContain('accounts.connect')
+      expect(methods).toContain('agents.create')
+      expect(methods).toContain('feeds.subscribe')
+      expect(screen.getByText('Onboarding Checklist').closest('div')).toHaveTextContent(
+        'completed 3/3',
+      )
     })
 
     sendSpy.mockRestore()

@@ -442,6 +442,15 @@ function App() {
   )
   const [managedAgentId, setManagedAgentId] = useState<string>(DEFAULT_AGENT_ID)
   const [managedAgentLabel, setManagedAgentLabel] = useState<string>(DEFAULT_AGENT_LABEL)
+  const [onboardingChecklist, setOnboardingChecklist] = useState<{
+    account: boolean
+    agent: boolean
+    feed: boolean
+  }>({
+    account: false,
+    agent: false,
+    feed: false,
+  })
   const [managedProviderAccountId, setManagedProviderAccountId] = useState<string>(
     DEFAULT_PRESET_TEMPLATE.managedProviderAccountId,
   )
@@ -571,6 +580,14 @@ function App() {
   const [lastSuccessByMethod, setLastSuccessByMethod] = useState<Record<string, string>>({})
   const [lastErrorByMethod, setLastErrorByMethod] = useState<Record<string, string>>({})
   const [blocks, setBlocks] = useState<BlockItem[]>([])
+
+  const onboardingCompletedCount = useMemo(
+    () =>
+      Number(onboardingChecklist.account) +
+      Number(onboardingChecklist.agent) +
+      Number(onboardingChecklist.feed),
+    [onboardingChecklist],
+  )
 
   const websocketUrl = useMemo(() => {
     const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws'
@@ -1046,6 +1063,10 @@ function App() {
     const agentsRaw = payload?.agents
     const agents = Array.isArray(agentsRaw) ? agentsRaw : []
     setAgentCount(agents.length)
+    setOnboardingChecklist((current) => ({
+      ...current,
+      agent: agents.length > 0,
+    }))
   }, [sendRequest])
 
   const sendAgentCreate = useCallback(async () => {
@@ -1063,6 +1084,10 @@ function App() {
       if ('label' in agent && typeof agent.label === 'string') {
         setManagedAgentLabel(agent.label)
       }
+      setOnboardingChecklist((current) => ({
+        ...current,
+        agent: true,
+      }))
     }
   }, [managedAgentId, managedAgentLabel, sendRequest])
 
@@ -1071,6 +1096,16 @@ function App() {
     const accountsRaw = payload?.accounts
     const accounts = Array.isArray(accountsRaw) ? accountsRaw : []
     setAccountCount(accounts.length)
+    const hasConnectedAccount = accounts.some((account) => {
+      if (!account || typeof account !== 'object' || !('status' in account)) {
+        return false
+      }
+      return account.status === 'connected'
+    })
+    setOnboardingChecklist((current) => ({
+      ...current,
+      account: hasConnectedAccount,
+    }))
   }, [sendRequest])
 
   const sendAccountConnect = useCallback(async () => {
@@ -1093,6 +1128,10 @@ function App() {
       }
       if ('status' in account && typeof account.status === 'string') {
         setAccountConnectionStatus(account.status)
+        setOnboardingChecklist((current) => ({
+          ...current,
+          account: account.status === 'connected',
+        }))
       }
     }
   }, [
@@ -1118,6 +1157,10 @@ function App() {
     if (account && typeof account === 'object' && 'status' in account) {
       if (typeof account.status === 'string') {
         setAccountConnectionStatus(account.status)
+        setOnboardingChecklist((current) => ({
+          ...current,
+          account: account.status === 'connected',
+        }))
       }
     }
   }, [appendBlock, lockTelemetryFailureSuffix, managedAccountId, sendRequest])
@@ -1130,6 +1173,10 @@ function App() {
     const subscriptions = Array.isArray(subscriptionsRaw) ? subscriptionsRaw : []
     setFeedCount(feeds.length)
     setSubscriptionCount(subscriptions.length)
+    setOnboardingChecklist((current) => ({
+      ...current,
+      feed: subscriptions.length > 0,
+    }))
     const nextActiveId = subscriptions
       .map((item) => {
         if (item && typeof item === 'object' && 'subscriptionId' in item) {
@@ -1258,6 +1305,10 @@ function App() {
       const subscriptionId = subscription.subscriptionId
       if (typeof subscriptionId === 'string') {
         setActiveSubscriptionId(subscriptionId)
+        setOnboardingChecklist((current) => ({
+          ...current,
+          feed: true,
+        }))
       }
     }
   }, [feedSymbol, feedTimeframe, feedTopic, sendRequest])
@@ -1286,6 +1337,10 @@ function App() {
     }
     if (payload.status === 'removed') {
       setActiveSubscriptionId(null)
+      setOnboardingChecklist((current) => ({
+        ...current,
+        feed: false,
+      }))
     }
   }, [activeSubscriptionId, appendBlock, lockTelemetryFailureSuffix, sendRequest])
 
@@ -1355,6 +1410,12 @@ function App() {
     }
     setCopytradePreviewSummary('allowed')
   }, [feedSymbol, feedTimeframe, managedAccountId, sendRequest])
+
+  const runOnboardingFlow = useCallback(async () => {
+    await sendAccountConnect()
+    await sendAgentCreate()
+    await sendFeedSubscribe()
+  }, [sendAccountConnect, sendAgentCreate, sendFeedSubscribe])
 
   const collectCurrentPreset = useCallback((): QuickActionPreset => {
     return {
@@ -2071,6 +2132,22 @@ function App() {
       }
 
       if (parsed.type === 'event') {
+        if (parsed.event === 'event.account.status') {
+          const payload = parsed.payload ?? {}
+          const account = payload.account
+          if (account && typeof account === 'object') {
+            if ('accountId' in account && typeof account.accountId === 'string') {
+              setManagedAccountId(account.accountId)
+            }
+            if ('status' in account && typeof account.status === 'string') {
+              setAccountConnectionStatus(account.status)
+              setOnboardingChecklist((current) => ({
+                ...current,
+                account: account.status === 'connected',
+              }))
+            }
+          }
+        }
         if (parsed.event === 'event.risk.emergencyStop') {
           const payload = parsed.payload ?? {}
           const statusPayload = (
@@ -2137,6 +2214,10 @@ function App() {
             if ('label' in agent && typeof agent.label === 'string') {
               setManagedAgentLabel(agent.label)
             }
+            setOnboardingChecklist((current) => ({
+              ...current,
+              agent: true,
+            }))
           }
         }
         if (parsed.event === 'event.feed.event') {
@@ -2509,6 +2590,9 @@ function App() {
               </button>
               <button type="button" onClick={() => void sendAgentCreate()}>
                 Create Agent
+              </button>
+              <button type="button" onClick={() => void runOnboardingFlow()}>
+                Run Onboarding Flow
               </button>
               <button type="button" onClick={() => void sendAccountConnect()}>
                 Connect Account
@@ -3057,6 +3141,15 @@ function App() {
             <div>
               <dt>Managed Agent</dt>
               <dd>{managedAgentId}</dd>
+            </div>
+            <div>
+              <dt>Onboarding Checklist</dt>
+              <dd>
+                completed {onboardingCompletedCount}/3 · account:
+                {onboardingChecklist.account ? 'done' : 'pending'} · agent:
+                {onboardingChecklist.agent ? 'done' : 'pending'} · feed:
+                {onboardingChecklist.feed ? 'done' : 'pending'}
+              </dd>
             </div>
             <div>
               <dt>Managed Account</dt>
