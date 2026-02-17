@@ -80,7 +80,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Close Position' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Marketplace Signals' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Copytrade Preview' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Unsubscribe Feed' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Unsubscribe Feed' })).toBeEnabled()
     expect(screen.getByLabelText('Refresh Interval (sec)')).toBeInTheDocument()
     expect(screen.getByLabelText('Min Request Gap (ms)')).toBeInTheDocument()
     expect(screen.getByLabelText('Enable Auto Refresh')).toBeInTheDocument()
@@ -2231,6 +2231,32 @@ describe('Dashboard shell', () => {
     expect(screen.getByText('No helper reset lock toggle history to clear.')).toBeInTheDocument()
 
     expect(screen.queryByText(/Lock telemetry:/)).not.toBeInTheDocument()
+  })
+
+  it('shows telemetry when feed unsubscribe is skipped without active subscription', () => {
+    render(<App />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Unsubscribe Feed' }))
+
+    expect(
+      screen.getByText(
+        'No active feed subscription id available. Lock telemetry: lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0.',
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it('omits feed unsubscribe skip telemetry when block telemetry is hidden', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Hide Block Telemetry' }))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Unsubscribe Feed' }))
+
+    expect(screen.getByText('No active feed subscription id available.')).toBeInTheDocument()
+    expect(
+      screen.queryByText(
+        'No active feed subscription id available. Lock telemetry: lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0.',
+      ),
+    ).not.toBeInTheDocument()
   })
 
   it('shows telemetry for device guard warnings when block telemetry is visible', () => {

@@ -2904,7 +2904,6 @@ function App() {
               <button
                 type="button"
                 onClick={() => void sendFeedUnsubscribe()}
-                disabled={!activeSubscriptionId}
               >
                 Unsubscribe Feed
               </button>
