@@ -421,6 +421,23 @@ describe('Dashboard shell', () => {
     })
   })
 
+  it('truncates long import report name lists with overflow counter', async () => {
+    render(<App />)
+    const manyPresets = Object.fromEntries(
+      Array.from({ length: 8 }, (_, idx) => [`bulk-template-${idx}`, { feedSymbol: 'ETHUSDm' }]),
+    )
+    fireEvent.change(screen.getByLabelText('Import Presets JSON'), {
+      target: {
+        value: JSON.stringify(manyPresets),
+      },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Import Presets JSON' }))
+
+    await waitFor(() => {
+      expect(screen.getByText(/\(\+2 more\)/)).toBeInTheDocument()
+    })
+  })
+
   it('copies preset import report summary to clipboard', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined)
     Object.defineProperty(window.navigator, 'clipboard', {

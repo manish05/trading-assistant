@@ -70,6 +70,7 @@ const PRESETS_STORAGE_KEY = 'quick-action-presets-v1'
 const HISTORY_FILTER_STORAGE_KEY = 'quick-action-history-filter-v1'
 const TIMESTAMP_FORMAT_STORAGE_KEY = 'quick-action-timestamp-format-v1'
 const PRESET_IMPORT_MODE_STORAGE_KEY = 'quick-action-preset-import-mode-v1'
+const MAX_IMPORT_REPORT_NAMES = 6
 const DEFAULT_PRESET_TEMPLATE: QuickActionPreset = {
   managedAccountId: 'acct_demo_1',
   managedProviderAccountId: 'provider_demo_1',
@@ -158,6 +159,17 @@ const sanitizePreset = (value: unknown): QuickActionPreset | null => {
     refreshSecondsInput: pick('refreshSecondsInput'),
     minRequestGapMsInput: pick('minRequestGapMsInput'),
   }
+}
+
+const summarizeNames = (names: string[], maxNames = MAX_IMPORT_REPORT_NAMES): string => {
+  if (names.length === 0) {
+    return 'none'
+  }
+  if (names.length <= maxNames) {
+    return names.join(', ')
+  }
+  const visible = names.slice(0, maxNames).join(', ')
+  return `${visible} (+${names.length - maxNames} more)`
 }
 
 const formatTimestamp = (ts: string, format: TimestampFormat): string => {
@@ -855,8 +867,8 @@ function App() {
     const summaryLines = [
       `mode=${presetImportReport.mode}`,
       `importedAt=${presetImportReport.importedAt}`,
-      `accepted=${presetImportReport.accepted.join(', ') || 'none'}`,
-      `rejected=${presetImportReport.rejected.join(', ') || 'none'}`,
+      `accepted=${summarizeNames(presetImportReport.accepted)}`,
+      `rejected=${summarizeNames(presetImportReport.rejected)}`,
       `created=${presetImportReport.createdCount}`,
       `preserved=${presetImportReport.preservedCount}`,
       `overwritten=${presetImportReport.overwrittenCount}`,
@@ -1311,11 +1323,11 @@ function App() {
                 </div>
                 <div>
                   <strong>Accepted</strong>
-                  <span>{presetImportReport.accepted.join(', ') || 'none'}</span>
+                  <span>{summarizeNames(presetImportReport.accepted)}</span>
                 </div>
                 <div>
                   <strong>Rejected</strong>
-                  <span>{presetImportReport.rejected.join(', ') || 'none'}</span>
+                  <span>{summarizeNames(presetImportReport.rejected)}</span>
                 </div>
                 <div>
                   <strong>Created</strong>
