@@ -581,6 +581,16 @@ function App() {
     [helperResetLockSourceCounts],
   )
 
+  const lockTelemetryToastDetailsWithSources = useMemo(
+    () => `${lockTelemetryToastDetails}; ${lockTelemetrySourceToastDetails}`,
+    [lockTelemetrySourceToastDetails, lockTelemetryToastDetails],
+  )
+
+  const lockTelemetryToastDetailsWithLabelAndSources = useMemo(
+    () => `lock ${lockTelemetryToastDetailsWithSources}`,
+    [lockTelemetryToastDetailsWithSources],
+  )
+
   const lockTelemetryFailureSuffix = useMemo(
     () => ` Lock telemetry: ${lockTelemetryToastDetailsWithLabel}.`,
     [lockTelemetryToastDetailsWithLabel],
@@ -1249,7 +1259,7 @@ function App() {
       appendBlock({
         id: `blk_${Date.now()}`,
         title: 'import report copied',
-        content: `Preset import report copied to clipboard (${lockTelemetryToastDetailsWithLabel}).`,
+        content: `Preset import report copied to clipboard (${lockTelemetryToastDetailsWithLabelAndSources}).`,
         severity: 'info',
       })
     } catch {
@@ -1263,7 +1273,7 @@ function App() {
   }, [
     appendBlock,
     lockTelemetryFailureSuffix,
-    lockTelemetryToastDetailsWithLabel,
+    lockTelemetryToastDetailsWithLabelAndSources,
     presetImportReport,
     withLockTelemetrySection,
   ])
@@ -1298,7 +1308,7 @@ function App() {
       appendBlock({
         id: `blk_${Date.now()}`,
         title: 'import names copied',
-        content: `Copied full accepted/rejected import names to clipboard (${lockTelemetryToastDetailsWithLabel}).`,
+        content: `Copied full accepted/rejected import names to clipboard (${lockTelemetryToastDetailsWithLabelAndSources}).`,
         severity: 'info',
       })
     } catch {
@@ -1312,7 +1322,7 @@ function App() {
   }, [
     appendBlock,
     lockTelemetryFailureSuffix,
-    lockTelemetryToastDetailsWithLabel,
+    lockTelemetryToastDetailsWithLabelAndSources,
     presetImportReport,
     withLockTelemetrySection,
   ])
@@ -1337,7 +1347,7 @@ function App() {
       appendBlock({
         id: `blk_${Date.now()}`,
         title: 'last summary copied',
-        content: `Copied last import summary to clipboard (${lockTelemetryToastDetailsWithLabel}).`,
+        content: `Copied last import summary to clipboard (${lockTelemetryToastDetailsWithLabelAndSources}).`,
         severity: 'info',
       })
     } catch {
@@ -1352,7 +1362,7 @@ function App() {
     appendBlock,
     lastImportSummaryText,
     lockTelemetryFailureSuffix,
-    lockTelemetryToastDetailsWithLabel,
+    lockTelemetryToastDetailsWithLabelAndSources,
     presetImportReport,
     withLockTelemetrySection,
   ])
@@ -1387,7 +1397,7 @@ function App() {
         title: 'shortcut cheat-sheet copied',
         content: `Copied import shortcut cheat-sheet to clipboard (lock: ${
           isHelperResetLocked ? 'locked' : 'unlocked'
-        }, ${lockTelemetryToastDetails}).`,
+        }, ${lockTelemetryToastDetailsWithSources}).`,
         severity: 'info',
       })
     } catch {
@@ -1408,7 +1418,7 @@ function App() {
     helperResetTimestampFormat,
     isHelperResetLocked,
     lockTelemetryFailureSuffix,
-    lockTelemetryToastDetails,
+    lockTelemetryToastDetailsWithSources,
     presetImportMode,
   ])
 
@@ -1491,7 +1501,7 @@ function App() {
         title: 'helper reset badge copied',
         content: `Copied helper reset badge text to clipboard (lock: ${
           isHelperResetLocked ? 'locked' : 'unlocked'
-        }, ${lockTelemetryToastDetails}).`,
+        }, ${lockTelemetryToastDetailsWithSources}).`,
         severity: 'info',
       })
     } catch {
@@ -1508,7 +1518,7 @@ function App() {
     isHelperResetBadgeSectionExpanded,
     isHelperResetBadgeVisible,
     isHelperResetLocked,
-    lockTelemetryToastDetails,
+    lockTelemetryToastDetailsWithSources,
     lockTelemetryFailureSuffix,
     helperResetStaleThresholdHours,
     helperResetTimestampFormat,
@@ -1912,7 +1922,7 @@ function App() {
       appendBlock({
         id: `blk_${Date.now()}`,
         title: 'history copied',
-        content: `Copied ${Math.min(filteredHistory.length, 10)} history entries (${lockTelemetryToastDetailsWithLabel}).`,
+        content: `Copied ${Math.min(filteredHistory.length, 10)} history entries (${lockTelemetryToastDetailsWithLabelAndSources}).`,
         severity: 'info',
       })
     } catch {
@@ -1928,7 +1938,7 @@ function App() {
     filteredHistory,
     lockTelemetryFailureSuffix,
     historyFilter,
-    lockTelemetryToastDetailsWithLabel,
+    lockTelemetryToastDetailsWithLabelAndSources,
     withLockTelemetrySection,
   ])
 

@@ -406,7 +406,7 @@ describe('Dashboard shell', () => {
       expect(payload).toContain('accounts.list')
       expect(
         screen.getByText(
-          'Copied 1 history entries (lock toggles: 0, tone: none, reset: never).',
+          'Copied 1 history entries (lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0).',
         ),
       ).toBeInTheDocument()
     })
@@ -640,7 +640,7 @@ describe('Dashboard shell', () => {
       expect(payload).toContain('Helper lock toggle snapshot: 0')
       expect(
         screen.getByText(
-          'Copied import shortcut cheat-sheet to clipboard (lock: locked, toggles: 0, tone: none, reset: never).',
+          'Copied import shortcut cheat-sheet to clipboard (lock: locked, toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0).',
         ),
       ).toBeInTheDocument()
     })
@@ -1202,7 +1202,7 @@ describe('Dashboard shell', () => {
       expect(payload).toContain('lockCounterResetAt=never')
       expect(
         screen.getByText(
-          'Copied helper reset badge text to clipboard (lock: locked, toggles: 0, tone: none, reset: never).',
+          'Copied helper reset badge text to clipboard (lock: locked, toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0).',
         ),
       ).toBeInTheDocument()
     })
@@ -1400,7 +1400,7 @@ describe('Dashboard shell', () => {
       expect(payload).toContain('lockToggleSnapshot=0')
       expect(
         screen.getByText(
-          'Preset import report copied to clipboard (lock toggles: 0, tone: none, reset: never).',
+          'Preset import report copied to clipboard (lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0).',
         ),
       ).toBeInTheDocument()
     })
@@ -1437,7 +1437,7 @@ describe('Dashboard shell', () => {
       expect(payload).toContain('lockToggleTone=none')
       expect(
         screen.getByText(
-          'Copied last import summary to clipboard (lock toggles: 0, tone: none, reset: never).',
+          'Copied last import summary to clipboard (lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0).',
         ),
       ).toBeInTheDocument()
     })
@@ -1548,7 +1548,7 @@ describe('Dashboard shell', () => {
       expect(payload).toContain('lockToggleTone=none')
       expect(
         screen.getByText(
-          'Copied full accepted/rejected import names to clipboard (lock toggles: 0, tone: none, reset: never).',
+          'Copied full accepted/rejected import names to clipboard (lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0).',
         ),
       ).toBeInTheDocument()
     })
