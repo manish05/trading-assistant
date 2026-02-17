@@ -1996,6 +1996,20 @@ function App() {
     const selectedKind = marketOverlayActiveTimelineAnnotation?.kind ?? 'none'
     return `visible:t${tradeCount}/r${riskCount}/f${feedCount} · selectedKind:${selectedKind}`
   }, [marketOverlayActiveTimelineAnnotation, marketOverlayScopedVisibleAnnotations])
+  const marketOverlayMarkerFilterPipelineSummary = useMemo(() => {
+    const baseCount = marketOverlayTimelineAnnotations.length
+    const bucketCount = marketOverlayBucketScopedTimelineAnnotations.length
+    const agreementCount = marketOverlayAgreementScopedTimelineAnnotations.length
+    const deltaCount = marketOverlayScopedTimelineAnnotations.length
+    const visibleCount = marketOverlayScopedVisibleAnnotations.length
+    return `base:${baseCount} · bucket:${bucketCount}/${baseCount} · agreement:${agreementCount}/${bucketCount} · delta:${deltaCount}/${agreementCount} · visible:${visibleCount}/${deltaCount}`
+  }, [
+    marketOverlayAgreementScopedTimelineAnnotations.length,
+    marketOverlayBucketScopedTimelineAnnotations.length,
+    marketOverlayScopedTimelineAnnotations.length,
+    marketOverlayScopedVisibleAnnotations.length,
+    marketOverlayTimelineAnnotations.length,
+  ])
   const marketOverlayMarkerDeltaSummary = useMemo(() => {
     if (marketOverlayScopedVisibleAnnotations.length === 0 || marketOverlayChartPoints.length === 0) {
       return 'none'
@@ -5793,6 +5807,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Scope Summary">
               Scope: {marketOverlayMarkerScopeSummary}
+            </p>
+            <p aria-label="Overlay Marker Pipeline Summary">
+              Pipeline: {marketOverlayMarkerFilterPipelineSummary}
             </p>
             <p aria-label="Overlay Marker Basis Agreement Summary">
               Basis agreement: {marketOverlayMarkerBasisAgreementSummary}
