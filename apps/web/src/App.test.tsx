@@ -56,6 +56,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Import Mode Badge')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Collapse Helper Diagnostics' })).toBeInTheDocument()
     expect(screen.getByLabelText('Helper Reset Badge')).toHaveTextContent('last reset: never')
+    expect(screen.getByLabelText('Helper Reset Badge')).toHaveClass('tone-none')
     expect(screen.getByRole('button', { name: 'Copy Reset Badge' })).toBeInTheDocument()
     expect(screen.getByText('Ctrl/Cmd+Enter', { selector: '.hotkey-chip' })).toBeInTheDocument()
     expect(screen.getByText('/', { selector: '.hotkey-chip' })).toHaveAttribute(
@@ -612,6 +613,12 @@ describe('Dashboard shell', () => {
     ).toBeInTheDocument()
   })
 
+  it('marks helper reset badge as stale for old timestamps', () => {
+    window.localStorage.setItem('quick-action-helper-diagnostics-reset-at-v1', '2020-01-01T00:00:00.000Z')
+    render(<App />)
+    expect(screen.getByLabelText('Helper Reset Badge')).toHaveClass('tone-stale')
+  })
+
   it('persists helper reset timestamp format selection', () => {
     render(<App />)
     fireEvent.change(screen.getByLabelText('Reset TS'), {
@@ -736,6 +743,7 @@ describe('Dashboard shell', () => {
     expect(screen.queryByText('resetAge:never')).not.toBeInTheDocument()
     expect(screen.getByText(/resetAge:/)).toBeInTheDocument()
     expect(screen.getByLabelText('Helper Reset Badge')).not.toHaveTextContent('last reset: never')
+    expect(screen.getByLabelText('Helper Reset Badge')).toHaveClass('tone-fresh')
   })
 
   it('reports accepted and rejected preset names after import', async () => {

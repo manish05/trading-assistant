@@ -301,6 +301,18 @@ const formatTimestamp = (ts: string, format: TimestampFormat): string => {
   return `${diffDays}d ago`
 }
 
+const resolveHelperResetTone = (ts: string | null): 'tone-none' | 'tone-fresh' | 'tone-stale' => {
+  if (!ts) {
+    return 'tone-none'
+  }
+  const millis = Date.parse(ts)
+  if (Number.isNaN(millis)) {
+    return 'tone-stale'
+  }
+  const ageMs = Math.max(Date.now() - millis, 0)
+  return ageMs >= 24 * 60 * 60 * 1000 ? 'tone-stale' : 'tone-fresh'
+}
+
 function App() {
   const wsRef = useRef<WebSocket | null>(null)
   const pendingRequestsRef = useRef<Map<string, (value: GatewayResponse) => void>>(new Map())
@@ -410,6 +422,11 @@ function App() {
     const host = window.location.host || 'localhost:8000'
     return `${protocol}://${host}/ws`
   }, [])
+
+  const helperResetToneClass = useMemo(
+    () => resolveHelperResetTone(helperDiagnosticsLastResetAt),
+    [helperDiagnosticsLastResetAt],
+  )
 
   const appendBlock = useCallback((item: BlockItem) => {
     setBlocks((current) => [item, ...current].slice(0, 25))
@@ -1763,7 +1780,10 @@ function App() {
                   ? 'Collapse Helper Diagnostics'
                   : 'Expand Helper Diagnostics'}
               </button>
-              <span className="helper-reset-badge" aria-label="Helper Reset Badge">
+              <span
+                className={`helper-reset-badge ${helperResetToneClass}`}
+                aria-label="Helper Reset Badge"
+              >
                 last reset:{' '}
                 {helperDiagnosticsLastResetAt
                   ? formatTimestamp(helperDiagnosticsLastResetAt, helperResetTimestampFormat)

@@ -257,6 +257,10 @@
 
 .preset-import-helper-controls {
   margin-top: 0.3rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
 }
 
 .preset-import-helper-controls button {
@@ -269,9 +273,31 @@
 }
 
 .helper-reset-badge {
-  margin-left: 0.4rem;
-  color: #9fb0cc;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #2d4a7e;
+  border-radius: 999px;
+  padding: 0.08rem 0.35rem;
+  color: #c5d3ea;
   font-size: 0.68rem;
+  background: #162744;
+}
+
+.helper-reset-badge.tone-none {
+  border-color: #2d4a7e;
+  background: #162744;
+}
+
+.helper-reset-badge.tone-fresh {
+  border-color: #20673f;
+  background: #123822;
+  color: #ccf2dc;
+}
+
+.helper-reset-badge.tone-stale {
+  border-color: #8a6d1f;
+  background: #3a2f11;
+  color: #ffe4a8;
 }
 
 .hotkey-chip {
