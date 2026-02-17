@@ -28,6 +28,12 @@ type FeedLifecycleBadge = {
   subscriptionId?: string
 }
 
+type TradeControlBadge = {
+  id: string
+  action: 'canceled' | 'closed'
+  status?: string
+}
+
 type QuickActionHistory = {
   id: string
   method: string
@@ -524,6 +530,7 @@ function App() {
   const [subscriptionCount, setSubscriptionCount] = useState<number | null>(null)
   const [activeSubscriptionId, setActiveSubscriptionId] = useState<string | null>(null)
   const [feedLifecycle, setFeedLifecycle] = useState<FeedLifecycleBadge[]>([])
+  const [tradeControlEvents, setTradeControlEvents] = useState<TradeControlBadge[]>([])
   const [riskEmergencyStopActive, setRiskEmergencyStopActive] = useState<boolean | null>(null)
   const [riskLastEmergencyAction, setRiskLastEmergencyAction] = useState<string | null>(null)
   const [riskLastEmergencyReason, setRiskLastEmergencyReason] = useState<string | null>(null)
@@ -1923,6 +1930,22 @@ function App() {
           )
           applyRiskStatusPayload(statusPayload)
         }
+        if (parsed.event === 'event.trade.canceled' || parsed.event === 'event.trade.closed') {
+          const payload = parsed.payload ?? {}
+          const status = typeof payload.status === 'string' ? payload.status : undefined
+          const action: TradeControlBadge['action'] =
+            parsed.event === 'event.trade.canceled' ? 'canceled' : 'closed'
+          setTradeControlEvents((current) =>
+            [
+              {
+                id: `trade_ctrl_${Date.now()}`,
+                action,
+                status,
+              },
+              ...current,
+            ].slice(0, 6),
+          )
+        }
         if (parsed.event === 'event.feed.event') {
           const payload = parsed.payload ?? {}
           const action =
@@ -2879,6 +2902,21 @@ function App() {
                     <span key={item.id} className="lifecycle-badge">
                       {item.action}
                       {item.subscriptionId ? `:${item.subscriptionId}` : ''}
+                    </span>
+                  ))
+                )}
+              </dd>
+            </div>
+            <div>
+              <dt>Trade Controls</dt>
+              <dd className="badge-row">
+                {tradeControlEvents.length === 0 ? (
+                  <span className="lifecycle-badge">none</span>
+                ) : (
+                  tradeControlEvents.map((item) => (
+                    <span key={item.id} className="lifecycle-badge">
+                      {item.action}
+                      {item.status ? `:${item.status}` : ''}
                     </span>
                   ))
                 )}

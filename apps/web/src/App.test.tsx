@@ -16,6 +16,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByText('Agent Feed')).toBeInTheDocument()
     expect(screen.getByText('Account Status')).toBeInTheDocument()
     expect(screen.getByText('Feed Lifecycle')).toBeInTheDocument()
+    expect(screen.getByText('Trade Controls')).toBeInTheDocument()
     expect(screen.getByText('Quick Action History')).toBeInTheDocument()
     expect(screen.getByText('Preset Import Snapshot')).toBeInTheDocument()
     expect(screen.getByText('Quick Action Timestamps')).toBeInTheDocument()
@@ -178,6 +179,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByText('Risk Action Counts').closest('div')).toHaveTextContent(
       'pause:0, cancel:0, close:0, disable:0',
     )
+    expect(screen.getByText('Trade Controls').closest('div')).toHaveTextContent('none')
   })
 
   it('sends account and feed management requests', async () => {
@@ -583,6 +585,101 @@ describe('Dashboard shell', () => {
       expect(screen.getByText('Risk Last Updated').closest('div')).toHaveTextContent(
         '2026-02-17T12:05:00.000Z',
       )
+    })
+
+    sendSpy.mockRestore()
+  })
+
+  it('tracks emergency trade-control events in status badges', async () => {
+    const sendSpy = vi
+      .spyOn(WebSocket.prototype, 'send')
+      .mockImplementation(function (
+        this: WebSocket,
+        data: string | ArrayBufferLike | Blob | ArrayBufferView<ArrayBufferLike>,
+      ) {
+        if (typeof data !== 'string') {
+          return
+        }
+        const payload = JSON.parse(data) as {
+          type?: string
+          id?: string
+          method?: string
+        }
+        if (payload.type === 'req' && payload.method === 'risk.emergencyStop' && payload.id) {
+          queueMicrotask(() => {
+            this.onmessage?.(
+              new MessageEvent('message', {
+                data: JSON.stringify({
+                  type: 'event',
+                  event: 'event.risk.emergencyStop',
+                  payload: {
+                    requestId: payload.id,
+                    status: {
+                      emergencyStopActive: true,
+                      lastAction: 'cancel_all',
+                      lastReason: 'cancel all from dashboard',
+                      updatedAt: '2026-02-17T12:30:00.000Z',
+                      actionCounts: {
+                        pause_trading: 0,
+                        cancel_all: 1,
+                        close_all: 0,
+                        disable_live: 0,
+                      },
+                    },
+                  },
+                }),
+              }),
+            )
+          })
+          queueMicrotask(() => {
+            this.onmessage?.(
+              new MessageEvent('message', {
+                data: JSON.stringify({
+                  type: 'event',
+                  event: 'event.trade.canceled',
+                  payload: {
+                    requestId: payload.id,
+                    scope: 'all',
+                    status: 'initiated',
+                  },
+                }),
+              }),
+            )
+          })
+          queueMicrotask(() => {
+            this.onmessage?.(
+              new MessageEvent('message', {
+                data: JSON.stringify({
+                  type: 'res',
+                  id: payload.id,
+                  ok: true,
+                  payload: {
+                    emergencyStopActive: true,
+                    lastAction: 'cancel_all',
+                    lastReason: 'cancel all from dashboard',
+                    updatedAt: '2026-02-17T12:30:00.000Z',
+                    actionCounts: {
+                      pause_trading: 0,
+                      cancel_all: 1,
+                      close_all: 0,
+                      disable_live: 0,
+                    },
+                  },
+                }),
+              }),
+            )
+          })
+        }
+      })
+
+    render(<App />)
+    fireEvent.change(screen.getByLabelText('Emergency Action'), {
+      target: { value: 'cancel_all' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Emergency Stop' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Trade Controls').closest('div')).toHaveTextContent('canceled:initiated')
     })
 
     sendSpy.mockRestore()
