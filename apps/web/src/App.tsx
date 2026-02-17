@@ -286,6 +286,7 @@ function App() {
     readImportHintVisibilityFromStorage,
   )
   const [importHintMode, setImportHintMode] = useState<ImportHintMode>(readImportHintModeFromStorage)
+  const [hintModeLiveNote, setHintModeLiveNote] = useState<string>('')
   const [availablePresetNames, setAvailablePresetNames] = useState<string[]>(() =>
     Object.keys(readPresetStoreFromStorage()).sort(),
   )
@@ -1458,7 +1459,11 @@ function App() {
                     presetImportInput.trim().length === 0
                   ) {
                     event.preventDefault()
-                    setImportHintMode((current) => (current === 'detailed' ? 'compact' : 'detailed'))
+                    setImportHintMode((current) => {
+                      const next = current === 'detailed' ? 'compact' : 'detailed'
+                      setHintModeLiveNote(`Hint mode set to ${next} via slash shortcut.`)
+                      return next
+                    })
                     return
                   }
                   if (event.key === 'Escape') {
@@ -1507,6 +1512,9 @@ function App() {
                 )}
               </p>
             ) : null}
+            <div className="sr-only" aria-live="polite">
+              {hintModeLiveNote}
+            </div>
             <div className="preset-import-actions">
               <button type="button" onClick={() => setIsImportHintVisible((current) => !current)}>
                 {isImportHintVisible ? 'Hide Hints' : 'Show Hints'}

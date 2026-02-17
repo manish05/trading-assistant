@@ -557,6 +557,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByText(/Shortcuts:/)).toBeInTheDocument()
     expect(screen.queryByText(/overwrites conflicting presets\./)).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Use Detailed Hints' })).toBeInTheDocument()
+    expect(screen.getByText('Hint mode set to compact via slash shortcut.')).toBeInTheDocument()
   })
 
   it('truncates long import report name lists with overflow counter', async () => {
