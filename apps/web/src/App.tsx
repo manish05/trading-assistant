@@ -501,6 +501,18 @@ function App() {
   const [subscriptionCount, setSubscriptionCount] = useState<number | null>(null)
   const [activeSubscriptionId, setActiveSubscriptionId] = useState<string | null>(null)
   const [feedLifecycle, setFeedLifecycle] = useState<FeedLifecycleBadge[]>([])
+  const [riskEmergencyStopActive, setRiskEmergencyStopActive] = useState<boolean | null>(null)
+  const [riskLastEmergencyAction, setRiskLastEmergencyAction] = useState<string | null>(null)
+  const [riskLastEmergencyReason, setRiskLastEmergencyReason] = useState<string | null>(null)
+  const [riskLastEmergencyUpdatedAt, setRiskLastEmergencyUpdatedAt] = useState<string | null>(null)
+  const [riskEmergencyActionCounts, setRiskEmergencyActionCounts] = useState<
+    Record<'pause_trading' | 'cancel_all' | 'close_all' | 'disable_live', number>
+  >({
+    pause_trading: 0,
+    cancel_all: 0,
+    close_all: 0,
+    disable_live: 0,
+  })
   const [quickActionHistory, setQuickActionHistory] = useState<QuickActionHistory[]>([])
   const [historyFilter, setHistoryFilter] = useState<HistoryFilter>(readHistoryFilterFromStorage)
   const [timestampFormat, setTimestampFormat] = useState<TimestampFormat>(
@@ -879,6 +891,47 @@ function App() {
       },
     })
   }, [sendRequest])
+
+  const applyRiskStatusPayload = useCallback((payload: Record<string, unknown> | null) => {
+    if (!payload) {
+      return
+    }
+    if ('emergencyStopActive' in payload && typeof payload.emergencyStopActive === 'boolean') {
+      setRiskEmergencyStopActive(payload.emergencyStopActive)
+    }
+    if ('lastAction' in payload) {
+      setRiskLastEmergencyAction(typeof payload.lastAction === 'string' ? payload.lastAction : null)
+    }
+    if ('lastReason' in payload) {
+      setRiskLastEmergencyReason(typeof payload.lastReason === 'string' ? payload.lastReason : null)
+    }
+    if ('updatedAt' in payload) {
+      setRiskLastEmergencyUpdatedAt(typeof payload.updatedAt === 'string' ? payload.updatedAt : null)
+    }
+    if ('actionCounts' in payload && typeof payload.actionCounts === 'object' && payload.actionCounts) {
+      const actionCounts = payload.actionCounts as Record<string, unknown>
+      setRiskEmergencyActionCounts({
+        pause_trading:
+          typeof actionCounts.pause_trading === 'number' ? actionCounts.pause_trading : 0,
+        cancel_all: typeof actionCounts.cancel_all === 'number' ? actionCounts.cancel_all : 0,
+        close_all: typeof actionCounts.close_all === 'number' ? actionCounts.close_all : 0,
+        disable_live: typeof actionCounts.disable_live === 'number' ? actionCounts.disable_live : 0,
+      })
+    }
+  }, [])
+
+  const sendRiskStatus = useCallback(async () => {
+    const payload = await sendRequest('risk.status', {})
+    applyRiskStatusPayload(payload)
+  }, [applyRiskStatusPayload, sendRequest])
+
+  const sendRiskEmergencyStop = useCallback(async () => {
+    const payload = await sendRequest('risk.emergencyStop', {
+      action: 'pause_trading',
+      reason: 'dashboard emergency stop trigger',
+    })
+    applyRiskStatusPayload(payload)
+  }, [applyRiskStatusPayload, sendRequest])
 
   const sendAccountsList = useCallback(async () => {
     const payload = await sendRequest('accounts.list', {})
@@ -1774,6 +1827,15 @@ function App() {
       }
 
       if (parsed.type === 'event') {
+        if (parsed.event === 'event.risk.emergencyStop') {
+          const payload = parsed.payload ?? {}
+          const statusPayload = (
+            'status' in payload && payload.status && typeof payload.status === 'object'
+              ? (payload.status as Record<string, unknown>)
+              : null
+          )
+          applyRiskStatusPayload(statusPayload)
+        }
         if (parsed.event === 'event.feed.event') {
           const payload = parsed.payload ?? {}
           const action =
@@ -1812,7 +1874,7 @@ function App() {
       wsRef.current = null
       pendingMap.clear()
     }
-  }, [appendBlock, websocketUrl])
+  }, [appendBlock, applyRiskStatusPayload, websocketUrl])
 
   useEffect(() => {
     window.localStorage.setItem(HISTORY_FILTER_STORAGE_KEY, historyFilter)
@@ -2114,6 +2176,12 @@ function App() {
               </button>
               <button type="button" onClick={sendRiskPreview}>
                 Risk Preview
+              </button>
+              <button type="button" onClick={() => void sendRiskStatus()}>
+                Risk Status
+              </button>
+              <button type="button" onClick={() => void sendRiskEmergencyStop()}>
+                Emergency Stop
               </button>
               <button type="button" onClick={() => void sendAccountsList()}>
                 Accounts
@@ -2624,6 +2692,35 @@ function App() {
             <div>
               <dt>Account Connection</dt>
               <dd>{accountConnectionStatus}</dd>
+            </div>
+            <div>
+              <dt>Risk Emergency</dt>
+              <dd>
+                {riskEmergencyStopActive === null
+                  ? 'n/a'
+                  : riskEmergencyStopActive
+                    ? 'active'
+                    : 'inactive'}
+              </dd>
+            </div>
+            <div>
+              <dt>Risk Last Action</dt>
+              <dd>{riskLastEmergencyAction ?? 'none'}</dd>
+            </div>
+            <div>
+              <dt>Risk Last Reason</dt>
+              <dd>{riskLastEmergencyReason ?? 'none'}</dd>
+            </div>
+            <div>
+              <dt>Risk Last Updated</dt>
+              <dd>{riskLastEmergencyUpdatedAt ?? 'never'}</dd>
+            </div>
+            <div>
+              <dt>Risk Action Counts</dt>
+              <dd>
+                pause:{riskEmergencyActionCounts.pause_trading}, cancel:{riskEmergencyActionCounts.cancel_all},
+                close:{riskEmergencyActionCounts.close_all}, disable:{riskEmergencyActionCounts.disable_live}
+              </dd>
             </div>
             <div>
               <dt>Feeds (last fetch)</dt>

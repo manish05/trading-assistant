@@ -41,6 +41,8 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Device Notify Message')).toHaveValue('Dashboard test notification')
     expect(screen.getByRole('button', { name: 'Subscribe Feed' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Get Candles' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Risk Status' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Emergency Stop' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Unsubscribe Feed' })).toBeDisabled()
     expect(screen.getByLabelText('Refresh Interval (sec)')).toBeInTheDocument()
     expect(screen.getByLabelText('Min Request Gap (ms)')).toBeInTheDocument()
@@ -162,6 +164,13 @@ describe('Dashboard shell', () => {
     expect(screen.getByText('Alt+L:0')).toBeInTheDocument()
     expect(screen.getByText('controls:0')).toBeInTheDocument()
     expect(screen.getByText('snapshot:0')).toBeInTheDocument()
+    expect(screen.getByText('Risk Emergency').closest('div')).toHaveTextContent('n/a')
+    expect(screen.getByText('Risk Last Action').closest('div')).toHaveTextContent('none')
+    expect(screen.getByText('Risk Last Reason').closest('div')).toHaveTextContent('none')
+    expect(screen.getByText('Risk Last Updated').closest('div')).toHaveTextContent('never')
+    expect(screen.getByText('Risk Action Counts').closest('div')).toHaveTextContent(
+      'pause:0, cancel:0, close:0, disable:0',
+    )
   })
 
   it('sends account and feed management requests', async () => {
@@ -209,6 +218,8 @@ describe('Dashboard shell', () => {
     })
 
     fireEvent.click(screen.getByRole('button', { name: 'Accounts' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Risk Status' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Emergency Stop' }))
     fireEvent.click(screen.getByRole('button', { name: 'Connect Account' }))
     fireEvent.click(screen.getByRole('button', { name: 'Disconnect Account' }))
     fireEvent.click(screen.getByRole('button', { name: 'Feeds' }))
@@ -227,6 +238,8 @@ describe('Dashboard shell', () => {
       const methods = payloads.map((payload) => payload.method)
 
       expect(methods).toContain('accounts.list')
+      expect(methods).toContain('risk.status')
+      expect(methods).toContain('risk.emergencyStop')
       expect(methods).toContain('accounts.connect')
       expect(methods).toContain('accounts.disconnect')
       expect(methods).toContain('feeds.list')
@@ -266,6 +279,12 @@ describe('Dashboard shell', () => {
       expect(deviceNotifyTest?.params).toMatchObject({
         deviceId: 'dev_custom_9',
         message: 'custom-notify-message',
+      })
+
+      const riskEmergencyStop = payloads.find((payload) => payload.method === 'risk.emergencyStop')
+      expect(riskEmergencyStop?.params).toMatchObject({
+        action: 'pause_trading',
+        reason: 'dashboard emergency stop trigger',
       })
 
       const feedSubscribe = payloads.find((payload) => payload.method === 'feeds.subscribe')
@@ -328,6 +347,124 @@ describe('Dashboard shell', () => {
       const candlesRow = screen.getByText('Candles (last fetch)').closest('div')
       expect(candlesRow).not.toBeNull()
       expect(within(candlesRow as HTMLElement).getByText('3')).toBeInTheDocument()
+    })
+
+    sendSpy.mockRestore()
+  })
+
+  it('updates risk emergency status from risk status and emergency-stop responses', async () => {
+    const sendSpy = vi
+      .spyOn(WebSocket.prototype, 'send')
+      .mockImplementation(function (
+        this: WebSocket,
+        data: string | ArrayBufferLike | Blob | ArrayBufferView<ArrayBufferLike>,
+      ) {
+        if (typeof data !== 'string') {
+          return
+        }
+        const payload = JSON.parse(data) as {
+          type?: string
+          id?: string
+          method?: string
+        }
+
+        if (payload.type === 'req' && payload.method === 'risk.status' && payload.id) {
+          queueMicrotask(() => {
+            this.onmessage?.(
+              new MessageEvent('message', {
+                data: JSON.stringify({
+                  type: 'res',
+                  id: payload.id,
+                  ok: true,
+                  payload: {
+                    emergencyStopActive: false,
+                    lastAction: null,
+                    lastReason: null,
+                    updatedAt: null,
+                    actionCounts: {
+                      pause_trading: 0,
+                      cancel_all: 0,
+                      close_all: 0,
+                      disable_live: 0,
+                    },
+                  },
+                }),
+              }),
+            )
+          })
+          return
+        }
+
+        if (payload.type === 'req' && payload.method === 'risk.emergencyStop' && payload.id) {
+          queueMicrotask(() => {
+            this.onmessage?.(
+              new MessageEvent('message', {
+                data: JSON.stringify({
+                  type: 'event',
+                  event: 'event.risk.emergencyStop',
+                  payload: {
+                    requestId: payload.id,
+                    status: {
+                      emergencyStopActive: true,
+                      lastAction: 'pause_trading',
+                      lastReason: 'manual risk stop',
+                      updatedAt: '2026-02-17T12:00:00.000Z',
+                      actionCounts: {
+                        pause_trading: 1,
+                        cancel_all: 0,
+                        close_all: 0,
+                        disable_live: 0,
+                      },
+                    },
+                  },
+                }),
+              }),
+            )
+          })
+          queueMicrotask(() => {
+            this.onmessage?.(
+              new MessageEvent('message', {
+                data: JSON.stringify({
+                  type: 'res',
+                  id: payload.id,
+                  ok: true,
+                  payload: {
+                    emergencyStopActive: true,
+                    lastAction: 'pause_trading',
+                    lastReason: 'manual risk stop',
+                    updatedAt: '2026-02-17T12:00:00.000Z',
+                    actionCounts: {
+                      pause_trading: 1,
+                      cancel_all: 0,
+                      close_all: 0,
+                      disable_live: 0,
+                    },
+                  },
+                }),
+              }),
+            )
+          })
+        }
+      })
+
+    render(<App />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Risk Status' }))
+    await waitFor(() => {
+      expect(screen.getByText('Risk Emergency').closest('div')).toHaveTextContent('inactive')
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Emergency Stop' }))
+    await waitFor(() => {
+      expect(screen.getByText('Risk Emergency').closest('div')).toHaveTextContent('active')
+      expect(screen.getByText('Risk Last Action').closest('div')).toHaveTextContent('pause_trading')
+      expect(screen.getByText('Risk Last Reason').closest('div')).toHaveTextContent('manual risk stop')
+      expect(screen.getByText('Risk Last Updated').closest('div')).toHaveTextContent(
+        '2026-02-17T12:00:00.000Z',
+      )
+      expect(screen.getByText('Risk Action Counts').closest('div')).toHaveTextContent(
+        'pause:1, cancel:0, close:0, disable:0',
+      )
     })
 
     sendSpy.mockRestore()
