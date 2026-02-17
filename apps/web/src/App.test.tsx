@@ -225,7 +225,9 @@ describe('Dashboard shell', () => {
       target: { value: 'debounced' },
     })
 
-    expect(screen.getByText('debounced', { selector: '.history-status' })).toBeInTheDocument()
+    expect(screen.getByText('debounced', { selector: '.history-status' })).toHaveClass(
+      'status-debounced',
+    )
     expect(screen.queryByText('sent', { selector: '.history-status' })).not.toBeInTheDocument()
   })
 })

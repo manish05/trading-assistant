@@ -1015,7 +1015,7 @@ function App() {
                     {filteredHistory.slice(0, 8).map((entry) => (
                       <li key={entry.id}>
                         <span className="history-method">{entry.method}</span>
-                        <span className="history-status">{entry.status}</span>
+                        <span className={`history-status status-${entry.status}`}>{entry.status}</span>
                         <span className="history-duration">{entry.durationMs ?? 0}ms</span>
                       </li>
                     ))}

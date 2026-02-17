@@ -305,6 +305,31 @@
   background: #162744;
 }
 
+.history-status.status-ok {
+  border-color: #20673f;
+  background: #123822;
+}
+
+.history-status.status-error {
+  border-color: #8a2f3e;
+  background: #3b1720;
+}
+
+.history-status.status-debounced {
+  border-color: #8a6d1f;
+  background: #3f3315;
+}
+
+.history-status.status-skipped {
+  border-color: #5e6473;
+  background: #222734;
+}
+
+.history-status.status-sent {
+  border-color: #2d4a7e;
+  background: #162744;
+}
+
 .history-duration {
   color: #9fb0cc;
 }
