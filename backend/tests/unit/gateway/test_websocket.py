@@ -507,12 +507,57 @@ def test_gateway_config_and_plugin_status_methods(tmp_path) -> None:
         )
         plugins_response = websocket.receive_json()
 
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_config_schema_1",
+                "method": "config.schema",
+                "params": {},
+            }
+        )
+        schema_response = websocket.receive_json()
+
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_config_patch_1",
+                "method": "config.patch",
+                "params": {
+                    "patch": {
+                        "gateway": {
+                            "port": 19001,
+                        }
+                    }
+                },
+            }
+        )
+        patch_response = websocket.receive_json()
+
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_config_get_2",
+                "method": "config.get",
+                "params": {},
+            }
+        )
+        config_response_after_patch = websocket.receive_json()
+
     assert config_response["ok"] is True
     assert "gateway" in config_response["payload"]
     assert "plugins" in config_response["payload"]
 
     assert plugins_response["ok"] is True
     assert "enabledPlugins" in plugins_response["payload"]
+
+    assert schema_response["ok"] is True
+    assert "properties" in schema_response["payload"]["schema"]
+
+    assert patch_response["ok"] is True
+    assert patch_response["payload"]["config"]["gateway"]["port"] == 19001
+
+    assert config_response_after_patch["ok"] is True
+    assert config_response_after_patch["payload"]["gateway"]["port"] == 19001
 
 
 def test_gateway_trades_place_blocks_when_risk_rejects(tmp_path) -> None:

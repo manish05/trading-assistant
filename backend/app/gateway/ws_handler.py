@@ -197,6 +197,12 @@ class FeedGetCandlesParams(BaseModel):
     limit: int = Field(default=200, ge=1, le=500)
 
 
+class ConfigPatchParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    patch: dict[str, Any] = Field(default_factory=dict)
+
+
 def _error_response(
     request_id: str,
     *,
@@ -233,6 +239,17 @@ def _event_frame(event_name: str, payload: dict[str, Any]) -> dict:
         "event": event_name,
         "payload": payload,
     }
+
+
+def _deep_merge(base: dict[str, Any], patch: dict[str, Any]) -> dict[str, Any]:
+    merged = dict(base)
+    for key, value in patch.items():
+        current = merged.get(key)
+        if isinstance(current, dict) and isinstance(value, dict):
+            merged[key] = _deep_merge(current, value)
+        else:
+            merged[key] = value
+    return merged
 
 
 def _get_or_create_queue(agent_id: str, queues: dict[str, AgentQueue]) -> tuple[AgentQueue, bool]:
@@ -375,6 +392,56 @@ async def handle_gateway_websocket(
                 _ok_response(
                     frame.id,
                     payload=app_config.model_dump(mode="json"),
+                )
+            )
+            continue
+
+        if frame.method == "config.schema":
+            await websocket.send_json(
+                _ok_response(
+                    frame.id,
+                    payload={"schema": AppConfig.model_json_schema()},
+                )
+            )
+            continue
+
+        if frame.method == "config.patch":
+            try:
+                params = ConfigPatchParams.model_validate(frame.params)
+            except ValidationError:
+                await websocket.send_json(
+                    _error_response(
+                        frame.id,
+                        code="INVALID_PARAMS",
+                        message="invalid config.patch params",
+                    )
+                )
+                continue
+
+            merged_payload = _deep_merge(app_config.model_dump(mode="json"), params.patch)
+            try:
+                app_config = AppConfig.model_validate(merged_payload)
+            except ValidationError as exc:
+                await websocket.send_json(
+                    _error_response(
+                        frame.id,
+                        code="INVALID_PARAMS",
+                        message="invalid config patch payload",
+                        details={"errors": exc.errors()},
+                    )
+                )
+                continue
+
+            audit_store.append(
+                actor="user",
+                action="config.patch",
+                trace_id=frame.id,
+                data={"patchKeys": sorted(params.patch.keys())},
+            )
+            await websocket.send_json(
+                _ok_response(
+                    frame.id,
+                    payload={"config": app_config.model_dump(mode="json")},
                 )
             )
             continue
