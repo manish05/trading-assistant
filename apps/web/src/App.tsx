@@ -1222,6 +1222,12 @@ function App() {
       `wrap:${marketOverlayMarkerWrap} · selection:${marketOverlaySelectionMode} · nav:${marketOverlaySelectionMode === 'follow-latest' ? 'locked' : 'manual'}`,
     [marketOverlayMarkerWrap, marketOverlaySelectionMode],
   )
+  const marketOverlayBucketSizeMs =
+    marketOverlayMarkerBucket === 'none'
+      ? null
+      : marketOverlayMarkerBucket === '30s'
+        ? 30_000
+        : 60_000
   const marketOverlayTimelineCount = marketOverlayScopedTimelineAnnotations.length
   const hasMultipleMarketOverlayMarkers = marketOverlayTimelineCount > 1
   const isMarketOverlayNavigationLocked = marketOverlaySelectionMode === 'follow-latest'
@@ -1244,6 +1250,74 @@ function App() {
     !isMarketOverlayNavigationLocked &&
     marketOverlayActiveTimelineIndex >= 0 &&
     marketOverlayActiveTimelineIndex < marketOverlayTimelineCount - 1
+  const {
+    previousBucketIndex: marketOverlayPreviousBucketIndex,
+    nextBucketIndex: marketOverlayNextBucketIndex,
+  } = useMemo(() => {
+    if (
+      isMarketOverlayNavigationLocked ||
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayBucketSizeMs === null
+    ) {
+      return { previousBucketIndex: -1, nextBucketIndex: -1 }
+    }
+    const toBucketStart = (timestamp: number) =>
+      Math.floor(timestamp / marketOverlayBucketSizeMs) * marketOverlayBucketSizeMs
+    const activeBucketStart = toBucketStart(marketOverlayActiveTimelineAnnotation.timestamp)
+    let previousBucketIndex = -1
+    let nextBucketIndex = -1
+    for (let index = marketOverlayActiveTimelineIndex - 1; index >= 0; index -= 1) {
+      const candidate = marketOverlayScopedTimelineAnnotations[index]
+      if (candidate && toBucketStart(candidate.timestamp) !== activeBucketStart) {
+        previousBucketIndex = index
+        break
+      }
+    }
+    for (let index = marketOverlayActiveTimelineIndex + 1; index < marketOverlayTimelineCount; index += 1) {
+      const candidate = marketOverlayScopedTimelineAnnotations[index]
+      if (candidate && toBucketStart(candidate.timestamp) !== activeBucketStart) {
+        nextBucketIndex = index
+        break
+      }
+    }
+    if (marketOverlayMarkerWrap === 'wrap' && marketOverlayTimelineCount > 1) {
+      const uniqueBucketCount = new Set(
+        marketOverlayScopedTimelineAnnotations.map((annotation) => toBucketStart(annotation.timestamp)),
+      ).size
+      if (uniqueBucketCount > 1) {
+        if (previousBucketIndex < 0) {
+          for (let index = marketOverlayTimelineCount - 1; index > marketOverlayActiveTimelineIndex; index -= 1) {
+            const candidate = marketOverlayScopedTimelineAnnotations[index]
+            if (candidate && toBucketStart(candidate.timestamp) !== activeBucketStart) {
+              previousBucketIndex = index
+              break
+            }
+          }
+        }
+        if (nextBucketIndex < 0) {
+          for (let index = 0; index < marketOverlayActiveTimelineIndex; index += 1) {
+            const candidate = marketOverlayScopedTimelineAnnotations[index]
+            if (candidate && toBucketStart(candidate.timestamp) !== activeBucketStart) {
+              nextBucketIndex = index
+              break
+            }
+          }
+        }
+      }
+    }
+    return { previousBucketIndex, nextBucketIndex }
+  }, [
+    isMarketOverlayNavigationLocked,
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayBucketSizeMs,
+    marketOverlayMarkerWrap,
+    marketOverlayScopedTimelineAnnotations,
+    marketOverlayTimelineCount,
+  ])
+  const canSelectPreviousBucketMarketOverlayMarker = marketOverlayPreviousBucketIndex >= 0
+  const canSelectNextBucketMarketOverlayMarker = marketOverlayNextBucketIndex >= 0
   const { previousSameKindIndex: marketOverlayPreviousSameKindIndex, nextSameKindIndex: marketOverlayNextSameKindIndex } =
     useMemo(() => {
       if (
@@ -1630,6 +1704,36 @@ function App() {
     selectRelativeMarketOverlayMarker(1)
   }, [canSelectNextMarketOverlayMarker, selectRelativeMarketOverlayMarker])
 
+  const selectPreviousBucketMarketOverlayMarker = useCallback(() => {
+    if (!canSelectPreviousBucketMarketOverlayMarker) {
+      return
+    }
+    const previousBucketMarker = marketOverlayScopedTimelineAnnotations[marketOverlayPreviousBucketIndex]
+    if (!previousBucketMarker) {
+      return
+    }
+    setMarketOverlaySelectedMarkerId(previousBucketMarker.id)
+  }, [
+    canSelectPreviousBucketMarketOverlayMarker,
+    marketOverlayPreviousBucketIndex,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+
+  const selectNextBucketMarketOverlayMarker = useCallback(() => {
+    if (!canSelectNextBucketMarketOverlayMarker) {
+      return
+    }
+    const nextBucketMarker = marketOverlayScopedTimelineAnnotations[marketOverlayNextBucketIndex]
+    if (!nextBucketMarker) {
+      return
+    }
+    setMarketOverlaySelectedMarkerId(nextBucketMarker.id)
+  }, [
+    canSelectNextBucketMarketOverlayMarker,
+    marketOverlayNextBucketIndex,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+
   const selectPreviousSameKindMarketOverlayMarker = useCallback(() => {
     if (!canSelectPreviousSameKindMarketOverlayMarker) {
       return
@@ -1729,6 +1833,16 @@ function App() {
         selectSkipForwardMarketOverlayMarker()
         return
       }
+      if (event.key === ',' || event.key === '<') {
+        event.preventDefault()
+        selectPreviousBucketMarketOverlayMarker()
+        return
+      }
+      if (event.key === '.' || event.key === '>') {
+        event.preventDefault()
+        selectNextBucketMarketOverlayMarker()
+        return
+      }
       if (event.key === '[') {
         event.preventDefault()
         selectPreviousSameKindMarketOverlayMarker()
@@ -1751,9 +1865,11 @@ function App() {
     },
     [
       selectLatestMarketOverlayMarker,
+      selectNextBucketMarketOverlayMarker,
       selectNextSameKindMarketOverlayMarker,
       selectNextMarketOverlayMarker,
       selectOldestMarketOverlayMarker,
+      selectPreviousBucketMarketOverlayMarker,
       selectPreviousSameKindMarketOverlayMarker,
       selectPreviousMarketOverlayMarker,
       selectSkipBackwardMarketOverlayMarker,
@@ -4238,6 +4354,13 @@ function App() {
               </button>
               <button
                 type="button"
+                onClick={selectPreviousBucketMarketOverlayMarker}
+                disabled={!canSelectPreviousBucketMarketOverlayMarker}
+              >
+                Previous Bucket
+              </button>
+              <button
+                type="button"
                 onClick={selectSkipBackwardMarketOverlayMarker}
                 disabled={!canSelectSkipBackwardMarketOverlayMarker}
               >
@@ -4277,6 +4400,13 @@ function App() {
                 disabled={!canSelectSkipForwardMarketOverlayMarker}
               >
                 Skip Forward 2
+              </button>
+              <button
+                type="button"
+                onClick={selectNextBucketMarketOverlayMarker}
+                disabled={!canSelectNextBucketMarketOverlayMarker}
+              >
+                Next Bucket
               </button>
               <button
                 type="button"
