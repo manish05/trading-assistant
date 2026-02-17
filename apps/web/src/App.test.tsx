@@ -379,6 +379,23 @@ describe('Dashboard shell', () => {
     ).toBeInTheDocument()
   })
 
+  it('omits warning telemetry suffix when block telemetry is hidden', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Hide Block Telemetry' }))
+
+    fireEvent.change(screen.getByLabelText('Preset Name'), {
+      target: { value: '   ' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Save Preset' }))
+
+    expect(screen.getByText('Preset name is required.')).toBeInTheDocument()
+    expect(
+      screen.queryByText(
+        'Preset name is required. Lock telemetry: lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0.',
+      ),
+    ).not.toBeInTheDocument()
+  })
+
   it('shows lock telemetry when selected preset no longer exists', async () => {
     render(<App />)
 

@@ -599,8 +599,11 @@ function App() {
   )
 
   const lockTelemetryFailureSuffix = useMemo(
-    () => ` Lock telemetry: ${lockTelemetryToastDetailsWithLabelAndSources}.`,
-    [lockTelemetryToastDetailsWithLabelAndSources],
+    () =>
+      isBlockTelemetryVisible
+        ? ` Lock telemetry: ${lockTelemetryToastDetailsWithLabelAndSources}.`
+        : '',
+    [isBlockTelemetryVisible, lockTelemetryToastDetailsWithLabelAndSources],
   )
 
   const eventBlockLockTelemetryRef = useRef(lockTelemetryToastDetailsWithLabelAndSources)
