@@ -1209,7 +1209,7 @@ function App() {
       appendBlock({
         id: `blk_${Date.now()}`,
         title: 'import report copy skipped',
-        content: 'No preset import report available yet.',
+        content: `No preset import report available yet.${lockTelemetryFailureSuffix}`,
         severity: 'warn',
       })
       return
@@ -1262,7 +1262,7 @@ function App() {
       appendBlock({
         id: `blk_${Date.now()}`,
         title: 'import names copy skipped',
-        content: 'No preset import report available yet.',
+        content: `No preset import report available yet.${lockTelemetryFailureSuffix}`,
         severity: 'warn',
       })
       return
@@ -1304,7 +1304,7 @@ function App() {
       appendBlock({
         id: `blk_${Date.now()}`,
         title: 'last summary copy skipped',
-        content: 'No preset import report available yet.',
+        content: `No preset import report available yet.${lockTelemetryFailureSuffix}`,
         severity: 'warn',
       })
       return
@@ -1870,7 +1870,7 @@ function App() {
       appendBlock({
         id: `blk_${Date.now()}`,
         title: 'history copy skipped',
-        content: 'No quick-action history entries available for current filter.',
+        content: `No quick-action history entries available for current filter.${lockTelemetryFailureSuffix}`,
         severity: 'warn',
       })
       return
