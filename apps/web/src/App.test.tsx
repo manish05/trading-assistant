@@ -536,6 +536,7 @@ describe('Dashboard shell', () => {
       expect(payload).toContain('Active mode: overwrite')
       expect(payload).toContain('Helper reset format: absolute')
       expect(payload).toContain('Helper reset stale-after hours: 24')
+      expect(payload).toContain('Helper reset lock: locked')
     })
   })
 

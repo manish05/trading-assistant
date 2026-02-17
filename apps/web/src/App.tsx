@@ -1185,6 +1185,7 @@ function App() {
       `- Active mode: ${presetImportMode}`,
       `- Helper reset format: ${helperResetTimestampFormat}`,
       `- Helper reset stale-after hours: ${helperResetStaleThresholdHours}`,
+      `- Helper reset lock: ${isHelperResetLocked ? 'locked' : 'unlocked'}`,
     ].join('\n')
     try {
       if (!navigator.clipboard?.writeText) {
@@ -1205,7 +1206,13 @@ function App() {
         severity: 'warn',
       })
     }
-  }, [appendBlock, helperResetStaleThresholdHours, helperResetTimestampFormat, presetImportMode])
+  }, [
+    appendBlock,
+    helperResetStaleThresholdHours,
+    helperResetTimestampFormat,
+    isHelperResetLocked,
+    presetImportMode,
+  ])
 
   const copyHelperDiagnosticsSummary = useCallback(async () => {
     const summary = [
