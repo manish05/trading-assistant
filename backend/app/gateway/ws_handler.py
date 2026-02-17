@@ -107,6 +107,42 @@ class TradesPlaceParams(BaseModel):
     snapshot: AccountRiskSnapshot
 
 
+class TradesModifyParams(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+
+    account_id: str = Field(alias="accountId", min_length=1)
+    order_id: str = Field(alias="orderId", min_length=1)
+    open_price: float = Field(alias="openPrice")
+    stop_loss: float | None = Field(default=None, alias="stopLoss")
+    take_profit: float | None = Field(default=None, alias="takeProfit")
+
+
+class TradesCancelParams(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+
+    account_id: str = Field(alias="accountId", min_length=1)
+    order_id: str = Field(alias="orderId", min_length=1)
+
+
+class TradesClosePositionParams(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+
+    account_id: str = Field(alias="accountId", min_length=1)
+    position_id: str = Field(alias="positionId", min_length=1)
+
+
 def _error_response(
     request_id: str,
     *,
@@ -631,6 +667,114 @@ async def handle_gateway_websocket(
                         "riskDecision": risk_decision.model_dump(mode="json"),
                     },
                 )
+            )
+            continue
+
+        if frame.method == "trades.modify":
+            try:
+                params = TradesModifyParams.model_validate(frame.params)
+            except ValidationError:
+                await websocket.send_json(
+                    _error_response(
+                        frame.id,
+                        code="INVALID_PARAMS",
+                        message="invalid trades.modify params",
+                    )
+                )
+                continue
+
+            execution = trade_execution_service.modify(
+                account_id=params.account_id,
+                order_id=params.order_id,
+                open_price=params.open_price,
+                stop_loss=params.stop_loss,
+                take_profit=params.take_profit,
+            )
+            execution_payload = trade_execution_service.as_payload(execution)
+            audit_store.append(
+                actor="user",
+                action="trades.modify",
+                trace_id=frame.id,
+                data={"execution": execution_payload},
+            )
+            await websocket.send_json(
+                _event_frame(
+                    "event.trade.modified",
+                    {"requestId": frame.id, "execution": execution_payload},
+                )
+            )
+            await websocket.send_json(
+                _ok_response(frame.id, payload={"execution": execution_payload})
+            )
+            continue
+
+        if frame.method == "trades.cancel":
+            try:
+                params = TradesCancelParams.model_validate(frame.params)
+            except ValidationError:
+                await websocket.send_json(
+                    _error_response(
+                        frame.id,
+                        code="INVALID_PARAMS",
+                        message="invalid trades.cancel params",
+                    )
+                )
+                continue
+
+            execution = trade_execution_service.cancel(
+                account_id=params.account_id,
+                order_id=params.order_id,
+            )
+            execution_payload = trade_execution_service.as_payload(execution)
+            audit_store.append(
+                actor="user",
+                action="trades.cancel",
+                trace_id=frame.id,
+                data={"execution": execution_payload},
+            )
+            await websocket.send_json(
+                _event_frame(
+                    "event.trade.canceled",
+                    {"requestId": frame.id, "execution": execution_payload},
+                )
+            )
+            await websocket.send_json(
+                _ok_response(frame.id, payload={"execution": execution_payload})
+            )
+            continue
+
+        if frame.method == "trades.closePosition":
+            try:
+                params = TradesClosePositionParams.model_validate(frame.params)
+            except ValidationError:
+                await websocket.send_json(
+                    _error_response(
+                        frame.id,
+                        code="INVALID_PARAMS",
+                        message="invalid trades.closePosition params",
+                    )
+                )
+                continue
+
+            execution = trade_execution_service.close_position(
+                account_id=params.account_id,
+                position_id=params.position_id,
+            )
+            execution_payload = trade_execution_service.as_payload(execution)
+            audit_store.append(
+                actor="user",
+                action="trades.closePosition",
+                trace_id=frame.id,
+                data={"execution": execution_payload},
+            )
+            await websocket.send_json(
+                _event_frame(
+                    "event.trade.closed",
+                    {"requestId": frame.id, "execution": execution_payload},
+                )
+            )
+            await websocket.send_json(
+                _ok_response(frame.id, payload={"execution": execution_payload})
             )
             continue
 

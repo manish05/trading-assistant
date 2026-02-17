@@ -507,3 +507,62 @@ def test_gateway_trades_place_executes_with_connector(tmp_path) -> None:
     assert event["event"] == "event.trade.executed"
     assert response["ok"] is True
     assert response["payload"]["execution"]["status"] == "executed"
+
+
+def test_gateway_trade_lifecycle_methods(tmp_path) -> None:
+    client = TestClient(create_app(data_dir=tmp_path))
+
+    with client.websocket_connect("/ws") as websocket:
+        websocket.send_json(_connect_payload())
+        _ = websocket.receive_json()
+
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_trade_modify_1",
+                "method": "trades.modify",
+                "params": {
+                    "accountId": "acct_demo_1",
+                    "orderId": "order_1",
+                    "openPrice": 2500.0,
+                    "stopLoss": 2450.0,
+                    "takeProfit": 2600.0,
+                },
+            }
+        )
+        modify_event, modify_response = _read_event_then_response(websocket)
+
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_trade_cancel_1",
+                "method": "trades.cancel",
+                "params": {"accountId": "acct_demo_1", "orderId": "order_1"},
+            }
+        )
+        cancel_event, cancel_response = _read_event_then_response(websocket)
+
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_trade_close_1",
+                "method": "trades.closePosition",
+                "params": {"accountId": "acct_demo_1", "positionId": "pos_1"},
+            }
+        )
+        close_event, close_response = _read_event_then_response(websocket)
+
+    assert modify_event is not None
+    assert modify_event["event"] == "event.trade.modified"
+    assert modify_response["ok"] is True
+    assert modify_response["payload"]["execution"]["status"] == "modified"
+
+    assert cancel_event is not None
+    assert cancel_event["event"] == "event.trade.canceled"
+    assert cancel_response["ok"] is True
+    assert cancel_response["payload"]["execution"]["status"] == "canceled"
+
+    assert close_event is not None
+    assert close_event["event"] == "event.trade.closed"
+    assert close_response["ok"] is True
+    assert close_response["payload"]["execution"]["status"] == "closed"
