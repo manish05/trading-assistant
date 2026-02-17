@@ -83,6 +83,10 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Quick Unlock Reset' })).toBeInTheDocument()
     expect(screen.getByLabelText('Quick Toggle Lock Summary')).toHaveTextContent('quickLock:locked')
     expect(screen.getByLabelText('Quick Toggle Lock Summary')).toHaveClass('quick-lock-locked')
+    expect(screen.getByLabelText('Quick Toggle Lock Summary')).toHaveAttribute(
+      'title',
+      'Quick lock summary: reset lock is locked.',
+    )
     expect(screen.getByText('Preset Import Snapshot', { selector: 'dt' })).toHaveTextContent(
       'Preset Import Snapshot (lock:locked)',
     )
@@ -653,6 +657,10 @@ describe('Dashboard shell', () => {
     expect(screen.getByText('Helper reset lock unlocked via snapshot.')).toBeInTheDocument()
     expect(screen.getByLabelText('Quick Toggle Lock Summary')).toHaveTextContent('quickLock:unlocked')
     expect(screen.getByLabelText('Quick Toggle Lock Summary')).toHaveClass('quick-lock-unlocked')
+    expect(screen.getByLabelText('Quick Toggle Lock Summary')).toHaveAttribute(
+      'title',
+      'Quick lock summary: reset lock is unlocked.',
+    )
     expect(screen.getByText('(lock:unlocked)', { selector: '.quick-toggle-lock-state' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Hide Quick Toggles' })).toHaveAttribute(
       'title',

@@ -2316,6 +2316,9 @@ function App() {
                       isHelperResetLocked ? 'quick-lock-locked' : 'quick-lock-unlocked'
                     }`}
                     aria-label="Quick Toggle Lock Summary"
+                    title={`Quick lock summary: reset lock is ${
+                      isHelperResetLocked ? 'locked' : 'unlocked'
+                    }.`}
                   >
                     quickLock:{isHelperResetLocked ? 'locked' : 'unlocked'}
                   </span>
