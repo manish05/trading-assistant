@@ -42,6 +42,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Marker Window')).toHaveValue('5')
     expect(screen.getByLabelText('Marker Focus')).toHaveValue('all')
     expect(screen.getByLabelText('Marker Age')).toHaveValue('all')
+    expect(screen.getByLabelText('Delta Basis')).toHaveValue('latest')
     expect(screen.getByLabelText('Delta Filter')).toHaveValue('all')
     expect(screen.getByLabelText('Marker Bucket')).toHaveValue('none')
     expect(screen.getByLabelText('Bucket Scope')).toHaveValue('all-buckets')
@@ -75,10 +76,10 @@ describe('Dashboard shell', () => {
       'Scope: visible:t0/r0/f0 · selectedKind:none',
     )
     expect(screen.getByLabelText('Overlay Marker Delta Filter Summary')).toHaveTextContent(
-      'Delta filter: mode:all · matched:0/0 · up:0 · down:0 · flat:0 · n/a:0',
+      'Delta filter: basis:latest · mode:all · matched:0/0 · up:0 · down:0 · flat:0 · n/a:0',
     )
     expect(screen.getByLabelText('Overlay Marker Delta Shortcut Summary')).toHaveTextContent(
-      'Delta shortcuts: keys:u/j/f/n/0/+/- · mode:all · matched:0/0 · active:off',
+      'Delta shortcuts: keys:k/u/j/f/n/0/+/- · basis:latest · mode:all · matched:0/0 · active:off',
     )
     expect(screen.getByLabelText('Overlay Marker Mode Shortcut Summary')).toHaveTextContent(
       'Mode shortcuts: focus:a/t/r/d=all · age:y=all · window:v=5 · bucket:b=none · order:o/l=newest-first · scope:g=all-buckets · wrap:w=bounded · selection:s=sticky · delta:u/j/f/n/0/+/-=all · nav:manual',
@@ -441,7 +442,7 @@ describe('Dashboard shell', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Refresh Overlay Snapshot' }))
     expect(screen.getByLabelText('Overlay Snapshot Summary')).toHaveTextContent(
-      'Summary: candles:0 · chartPoints:0 · chartLens:price-only · markerFocus:all · markerWindow:5 · markerAge:all · markerDelta:all · markerDeltaMatched:0/0 · markerBucket:none · bucketScope:all-buckets · timelineOrder:newest-first · markerWrap:bounded · markerSelection:sticky · markerNav:0/0|selected:none · markers:t0/r0/f0 · corr:none · trend:neutral · vol:n/a · pulse:quiet(0) · regime:observe',
+      'Summary: candles:0 · chartPoints:0 · chartLens:price-only · markerFocus:all · markerWindow:5 · markerAge:all · markerDelta:all · markerDeltaBasis:latest · markerDeltaMatched:0/0 · markerBucket:none · bucketScope:all-buckets · timelineOrder:newest-first · markerWrap:bounded · markerSelection:sticky · markerNav:0/0|selected:none · markers:t0/r0/f0 · corr:none · trend:neutral · vol:n/a · pulse:quiet(0) · regime:observe',
     )
     expect(screen.getByLabelText('Overlay Snapshot Time')).not.toHaveTextContent('Snapshot: never')
 
@@ -450,7 +451,7 @@ describe('Dashboard shell', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: 'Refresh Overlay Snapshot' }))
     expect(screen.getByLabelText('Overlay Snapshot Summary')).toHaveTextContent(
-      'Summary: candles:0 · tradeEvents:0 · chartPoints:0 · chartLens:price-only · markerFocus:all · markerWindow:5 · markerAge:all · markerDelta:all · markerDeltaMatched:0/0 · markerBucket:none · bucketScope:all-buckets · timelineOrder:newest-first · markerWrap:bounded · markerSelection:sticky · markerNav:0/0|selected:none · markers:t0/r0/f0 · corr:none · trend:neutral · vol:n/a · pulse:quiet(0) · regime:observe',
+      'Summary: candles:0 · tradeEvents:0 · chartPoints:0 · chartLens:price-only · markerFocus:all · markerWindow:5 · markerAge:all · markerDelta:all · markerDeltaBasis:latest · markerDeltaMatched:0/0 · markerBucket:none · bucketScope:all-buckets · timelineOrder:newest-first · markerWrap:bounded · markerSelection:sticky · markerNav:0/0|selected:none · markers:t0/r0/f0 · corr:none · trend:neutral · vol:n/a · pulse:quiet(0) · regime:observe',
     )
 
     fireEvent.change(screen.getByLabelText('Overlay Mode'), {
@@ -458,7 +459,7 @@ describe('Dashboard shell', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: 'Refresh Overlay Snapshot' }))
     expect(screen.getByLabelText('Overlay Snapshot Summary')).toHaveTextContent(
-      'Summary: candles:0 · tradeEvents:0 · riskAlerts:0 · chartPoints:0 · chartLens:price-only · markerFocus:all · markerWindow:5 · markerAge:all · markerDelta:all · markerDeltaMatched:0/0 · markerBucket:none · bucketScope:all-buckets · timelineOrder:newest-first · markerWrap:bounded · markerSelection:sticky · markerNav:0/0|selected:none · markers:t0/r0/f0 · corr:none · trend:neutral · vol:n/a · pulse:quiet(0) · regime:observe',
+      'Summary: candles:0 · tradeEvents:0 · riskAlerts:0 · chartPoints:0 · chartLens:price-only · markerFocus:all · markerWindow:5 · markerAge:all · markerDelta:all · markerDeltaBasis:latest · markerDeltaMatched:0/0 · markerBucket:none · bucketScope:all-buckets · timelineOrder:newest-first · markerWrap:bounded · markerSelection:sticky · markerNav:0/0|selected:none · markers:t0/r0/f0 · corr:none · trend:neutral · vol:n/a · pulse:quiet(0) · regime:observe',
     )
   })
 
@@ -1074,7 +1075,7 @@ describe('Dashboard shell', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Refresh Overlay Snapshot' }))
     expect(screen.getByLabelText('Overlay Snapshot Summary')).toHaveTextContent(
-      'Summary: candles:2 · tradeEvents:1 · riskAlerts:1 · chartPoints:2 · chartLens:diagnostics · markerFocus:all · markerWindow:5 · markerAge:all · markerDelta:all · markerDeltaMatched:2/2 · markerBucket:none · bucketScope:all-buckets · timelineOrder:oldest-first · markerWrap:bounded · markerSelection:sticky · markerNav:2/2|selected:risk:live_trading_disabled:raised · markers:t1/r1/f0 · corr:risk:live_trading_disabled:raised@2.00(t2) · trend:up (+1.00) · vol:1.00 · pulse:intense(5) · regime:risk_on',
+      'Summary: candles:2 · tradeEvents:1 · riskAlerts:1 · chartPoints:2 · chartLens:diagnostics · markerFocus:all · markerWindow:5 · markerAge:all · markerDelta:all · markerDeltaBasis:latest · markerDeltaMatched:2/2 · markerBucket:none · bucketScope:all-buckets · timelineOrder:oldest-first · markerWrap:bounded · markerSelection:sticky · markerNav:2/2|selected:risk:live_trading_disabled:raised · markers:t1/r1/f0 · corr:risk:live_trading_disabled:raised@2.00(t2) · trend:up (+1.00) · vol:1.00 · pulse:intense(5) · regime:risk_on',
     )
 
     sendSpy.mockRestore()
@@ -1202,14 +1203,15 @@ describe('Dashboard shell', () => {
       'Timeline buckets: mode:none · scope:all-buckets · buckets:2 · latest:t2 · count:2',
     )
     expect(screen.getByLabelText('Overlay Marker Delta Filter Summary')).toHaveTextContent(
-      'Delta filter: mode:all · matched:2/2 · up:0 · down:1 · flat:1 · n/a:0',
+      'Delta filter: basis:latest · mode:all · matched:2/2 · up:0 · down:1 · flat:1 · n/a:0',
     )
     expect(screen.getByLabelText('Overlay Marker Delta Shortcut Summary')).toHaveTextContent(
-      'Delta shortcuts: keys:u/j/f/n/0/+/- · mode:all · matched:2/2 · active:on',
+      'Delta shortcuts: keys:k/u/j/f/n/0/+/- · basis:latest · mode:all · matched:2/2 · active:on',
     )
     expect(screen.getByLabelText('Overlay Marker Mode Shortcut Summary')).toHaveTextContent(
       'Mode shortcuts: focus:a/t/r/d=all · age:y=all · window:v=5 · bucket:b=none · order:o/l=newest-first · scope:g=all-buckets · wrap:w=bounded · selection:s=sticky · delta:u/j/f/n/0/+/-=all · nav:manual',
     )
+    expect(screen.getByLabelText('Delta Basis')).toHaveValue('latest')
     expect(screen.getByLabelText('Delta Filter')).toHaveValue('all')
     const overlayMarkersContainer = screen.getByLabelText('Overlay Markers')
     expect(screen.getByLabelText('Marker Focus')).toHaveValue('all')
@@ -1351,6 +1353,32 @@ describe('Dashboard shell', () => {
       within(overlayMarkersContainer).getByRole('button', {
         name: 'risk:live_trading_disabled:raised',
       }),
+      { key: 'k' },
+    )
+    expect(screen.getByLabelText('Delta Basis')).toHaveValue('average')
+    expect(screen.getByLabelText('Overlay Marker Delta Filter Summary')).toHaveTextContent(
+      'Delta filter: basis:average · mode:all · matched:2/2 · up:1 · down:1 · flat:0 · n/a:0',
+    )
+    expect(screen.getByLabelText('Overlay Marker Delta Shortcut Summary')).toHaveTextContent(
+      'Delta shortcuts: keys:k/u/j/f/n/0/+/- · basis:average · mode:all · matched:2/2 · active:on',
+    )
+    fireEvent.keyDown(
+      within(overlayMarkersContainer).getByRole('button', {
+        name: 'risk:live_trading_disabled:raised',
+      }),
+      { key: 'k' },
+    )
+    expect(screen.getByLabelText('Delta Basis')).toHaveValue('latest')
+    expect(screen.getByLabelText('Overlay Marker Delta Filter Summary')).toHaveTextContent(
+      'Delta filter: basis:latest · mode:all · matched:2/2 · up:0 · down:1 · flat:1 · n/a:0',
+    )
+    expect(screen.getByLabelText('Overlay Marker Delta Shortcut Summary')).toHaveTextContent(
+      'Delta shortcuts: keys:k/u/j/f/n/0/+/- · basis:latest · mode:all · matched:2/2 · active:on',
+    )
+    fireEvent.keyDown(
+      within(overlayMarkersContainer).getByRole('button', {
+        name: 'risk:live_trading_disabled:raised',
+      }),
       { key: 'j' },
     )
     await waitFor(() => {
@@ -1363,10 +1391,10 @@ describe('Dashboard shell', () => {
       'Mode shortcuts: focus:a/t/r/d=all · age:y=all · window:v=5 · bucket:b=none · order:o/l=newest-first · scope:g=all-buckets · wrap:w=bounded · selection:s=sticky · delta:u/j/f/n/0/+/-=latest-down · nav:manual',
     )
     expect(screen.getByLabelText('Overlay Marker Delta Filter Summary')).toHaveTextContent(
-      'Delta filter: mode:latest-down · matched:1/2 · up:0 · down:1 · flat:1 · n/a:0',
+      'Delta filter: basis:latest · mode:latest-down · matched:1/2 · up:0 · down:1 · flat:1 · n/a:0',
     )
     expect(screen.getByLabelText('Overlay Marker Delta Shortcut Summary')).toHaveTextContent(
-      'Delta shortcuts: keys:u/j/f/n/0/+/- · mode:latest-down · matched:1/2 · active:on',
+      'Delta shortcuts: keys:k/u/j/f/n/0/+/- · basis:latest · mode:latest-down · matched:1/2 · active:on',
     )
     expect(screen.getByLabelText('Overlay Markers')).toHaveTextContent('trade:closed:queued')
     expect(screen.getByLabelText('Overlay Markers')).not.toHaveTextContent(
@@ -1414,7 +1442,7 @@ describe('Dashboard shell', () => {
     })
     expect(screen.getByLabelText('Delta Filter')).toHaveValue('all')
     expect(screen.getByLabelText('Overlay Marker Delta Shortcut Summary')).toHaveTextContent(
-      'Delta shortcuts: keys:u/j/f/n/0/+/- · mode:all · matched:2/2 · active:on',
+      'Delta shortcuts: keys:k/u/j/f/n/0/+/- · basis:latest · mode:all · matched:2/2 · active:on',
     )
     fireEvent.change(screen.getByLabelText('Marker Bucket'), { target: { value: '60s' } })
     const expectedBucket = new Date(Math.floor(fakeNow / 60_000) * 60_000).toISOString()
