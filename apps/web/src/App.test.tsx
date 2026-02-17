@@ -404,6 +404,11 @@ describe('Dashboard shell', () => {
       expect(payload).toContain('lockToggleSnapshot=0')
       expect(payload).toContain('[Entries]')
       expect(payload).toContain('accounts.list')
+      expect(
+        screen.getByText(
+          'Copied 1 history entries (lock toggles: 0, tone: none, reset: never).',
+        ),
+      ).toBeInTheDocument()
     })
   })
 
@@ -1090,7 +1095,9 @@ describe('Dashboard shell', () => {
       expect(payload).toContain('[LockTelemetry]')
       expect(payload).toContain('lockCounterResetAt=never')
       expect(
-        screen.getByText('Copied helper reset badge text to clipboard (lock: locked).'),
+        screen.getByText(
+          'Copied helper reset badge text to clipboard (lock: locked, toggles: 0, tone: none, reset: never).',
+        ),
       ).toBeInTheDocument()
     })
   })

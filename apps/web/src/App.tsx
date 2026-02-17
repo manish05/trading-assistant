@@ -1507,7 +1507,10 @@ function App() {
         title: 'helper reset badge copied',
         content: `Copied helper reset badge text to clipboard (lock: ${
           isHelperResetLocked ? 'locked' : 'unlocked'
-        }).`,
+        }, toggles: ${helperResetLockToggleCount}, tone: ${helperResetLockToggleToneClass.replace(
+          'counter-tone-',
+          '',
+        )}, reset: ${helperLockCountersLastResetAt ?? 'never'}).`,
         severity: 'info',
       })
     } catch {
@@ -1942,7 +1945,13 @@ function App() {
       appendBlock({
         id: `blk_${Date.now()}`,
         title: 'history copied',
-        content: `Copied ${Math.min(filteredHistory.length, 10)} history entries.`,
+        content: `Copied ${Math.min(
+          filteredHistory.length,
+          10,
+        )} history entries (lock toggles: ${helperResetLockToggleCount}, tone: ${helperResetLockToggleToneClass.replace(
+          'counter-tone-',
+          '',
+        )}, reset: ${helperLockCountersLastResetAt ?? 'never'}).`,
         severity: 'info',
       })
     } catch {
@@ -1959,6 +1968,7 @@ function App() {
     helperLockCountersLastResetAt,
     helperResetLockSourceCounts,
     helperResetLockToggleCount,
+    helperResetLockToggleToneClass,
     historyFilter,
   ])
 
