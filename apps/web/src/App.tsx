@@ -190,6 +190,12 @@ const MARKET_OVERLAY_BUCKET_SCOPE_STORAGE_KEY = 'quick-action-market-overlay-buc
 const MARKET_OVERLAY_TIMELINE_ORDER_STORAGE_KEY = 'quick-action-market-overlay-timeline-order-v1'
 const MARKET_OVERLAY_MARKER_WRAP_STORAGE_KEY = 'quick-action-market-overlay-marker-wrap-v1'
 const MARKET_OVERLAY_SELECTION_MODE_STORAGE_KEY = 'quick-action-market-overlay-selection-mode-v1'
+const MARKET_OVERLAY_MARKER_FOCUS_SHORTCUTS = 'a/t/r/d'
+const MARKET_OVERLAY_MARKER_AGE_FILTER_ORDER: MarketOverlayMarkerAgeFilter[] = [
+  'all',
+  'last-60s',
+  'last-300s',
+]
 const MARKET_OVERLAY_MARKER_DELTA_FILTER_ORDER: MarketOverlayMarkerDeltaFilter[] = [
   'all',
   'latest-up',
@@ -1305,11 +1311,13 @@ function App() {
   const marketOverlayMarkerModeShortcutSummary = useMemo(
     () => {
       const isLocked = marketOverlaySelectionMode === 'follow-latest'
-      return `order:o/l=${marketOverlayTimelineOrder} · scope:g=${marketOverlayBucketScope} · wrap:w=${marketOverlayMarkerWrap} · selection:s=${marketOverlaySelectionMode} · delta:u/j/f/n/0/+/-=${marketOverlayMarkerDeltaFilter} · nav:${isLocked ? 'locked' : 'manual'}`
+      return `focus:${MARKET_OVERLAY_MARKER_FOCUS_SHORTCUTS}=${marketOverlayMarkerFocus} · age:y=${marketOverlayMarkerAgeFilter} · order:o/l=${marketOverlayTimelineOrder} · scope:g=${marketOverlayBucketScope} · wrap:w=${marketOverlayMarkerWrap} · selection:s=${marketOverlaySelectionMode} · delta:u/j/f/n/0/+/-=${marketOverlayMarkerDeltaFilter} · nav:${isLocked ? 'locked' : 'manual'}`
     },
     [
+      marketOverlayMarkerAgeFilter,
       marketOverlayBucketScope,
       marketOverlayMarkerDeltaFilter,
+      marketOverlayMarkerFocus,
       marketOverlayMarkerWrap,
       marketOverlaySelectionMode,
       marketOverlayTimelineOrder,
@@ -2624,6 +2632,39 @@ function App() {
         setMarketOverlaySelectionMode((current) =>
           current === 'sticky' ? 'follow-latest' : 'sticky',
         )
+        return
+      }
+      if (normalizedKey === 'a') {
+        event.preventDefault()
+        setMarketOverlayMarkerFocus('all')
+        return
+      }
+      if (normalizedKey === 't') {
+        event.preventDefault()
+        setMarketOverlayMarkerFocus('trade')
+        return
+      }
+      if (normalizedKey === 'r') {
+        event.preventDefault()
+        setMarketOverlayMarkerFocus('risk')
+        return
+      }
+      if (normalizedKey === 'd') {
+        event.preventDefault()
+        setMarketOverlayMarkerFocus('feed')
+        return
+      }
+      if (normalizedKey === 'y') {
+        event.preventDefault()
+        setMarketOverlayMarkerAgeFilter((current) => {
+          const currentIndex = MARKET_OVERLAY_MARKER_AGE_FILTER_ORDER.indexOf(current)
+          if (currentIndex < 0) {
+            return 'all'
+          }
+          return MARKET_OVERLAY_MARKER_AGE_FILTER_ORDER[
+            (currentIndex + 1) % MARKET_OVERLAY_MARKER_AGE_FILTER_ORDER.length
+          ]
+        })
         return
       }
       if (normalizedKey === 'u') {
