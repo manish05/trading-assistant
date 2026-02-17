@@ -74,6 +74,7 @@ describe('Dashboard shell', () => {
     expect(
       screen.getByText('enabled:1/2', { selector: '.import-snapshot-badges .import-summary-badge' }),
     ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Copy Helper Summary' })).toBeInTheDocument()
     expect(screen.getByText('Last import: none')).toBeInTheDocument()
   })
 
@@ -601,6 +602,24 @@ describe('Dashboard shell', () => {
     expect(
       screen.getByText('enabled:1/2', { selector: '.import-snapshot-badges .import-summary-badge' }),
     ).toBeInTheDocument()
+  })
+
+  it('copies helper diagnostics summary to clipboard', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(window.navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    })
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Copy Helper Summary' }))
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalled()
+      const payload = String(writeText.mock.calls[writeText.mock.calls.length - 1][0])
+      expect(payload).toContain('expanded=yes')
+      expect(payload).toContain('enabled=1/2')
+      expect(payload).toContain('density=chips')
+    })
   })
 
   it('reports accepted and rejected preset names after import', async () => {

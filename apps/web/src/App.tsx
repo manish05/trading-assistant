@@ -1096,6 +1096,43 @@ function App() {
     }
   }, [appendBlock, presetImportMode])
 
+  const copyHelperDiagnosticsSummary = useCallback(async () => {
+    const summary = [
+      `expanded=${isImportHelperDiagnosticsExpanded ? 'yes' : 'no'}`,
+      `enabled=${Number(isImportHintVisible) + Number(showShortcutLegendInStatus)}/2`,
+      `density=${shortcutLegendDensity}`,
+      `hintVisible=${isImportHintVisible ? 'yes' : 'no'}`,
+      `legendVisible=${showShortcutLegendInStatus ? 'yes' : 'no'}`,
+      `legendOrder=${shortcutLegendOrder}`,
+    ].join('\n')
+    try {
+      if (!navigator.clipboard?.writeText) {
+        throw new Error('Clipboard API unavailable')
+      }
+      await navigator.clipboard.writeText(summary)
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'helper summary copied',
+        content: 'Copied helper diagnostics summary to clipboard.',
+        severity: 'info',
+      })
+    } catch {
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'helper summary copy failed',
+        content: 'Clipboard access failed or is unavailable.',
+        severity: 'warn',
+      })
+    }
+  }, [
+    appendBlock,
+    isImportHelperDiagnosticsExpanded,
+    isImportHintVisible,
+    shortcutLegendDensity,
+    shortcutLegendOrder,
+    showShortcutLegendInStatus,
+  ])
+
   const clearPresetImportReport = useCallback(() => {
     if (!presetImportReport) {
       return
@@ -1987,6 +2024,13 @@ function App() {
                 <span className="import-summary-badge badge-hint-mode">
                   density:{shortcutLegendDensity}
                 </span>
+                <button
+                  type="button"
+                  className="summary-copy-button"
+                  onClick={() => void copyHelperDiagnosticsSummary()}
+                >
+                  Copy Helper Summary
+                </button>
               </dd>
             </div>
             {showShortcutLegendInStatus ? (

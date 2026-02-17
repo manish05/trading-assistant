@@ -578,6 +578,15 @@
   font-size: 0.67rem;
 }
 
+.summary-copy-button {
+  background: #1d335a;
+  color: #e8edf5;
+  border: 1px solid #2d4a7e;
+  border-radius: 6px;
+  padding: 0.14rem 0.35rem;
+  font-size: 0.67rem;
+}
+
 .timestamp-grid {
   display: grid;
   grid-template-columns: 1fr;
