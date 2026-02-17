@@ -66,6 +66,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Scope Summary')).toHaveTextContent(
       'Scope: visible:t0/r0/f0 · selectedKind:none',
     )
+    expect(screen.getByLabelText('Overlay Marker Delta Summary')).toHaveTextContent(
+      'Delta summary: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Behavior')).toHaveTextContent(
       'Marker behavior: wrap:bounded · selection:sticky · nav:manual',
     )
@@ -508,6 +511,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Scope Summary')).toHaveTextContent(
       'Scope: visible:t0/r0/f0 · selectedKind:none',
     )
+    expect(screen.getByLabelText('Overlay Marker Delta Summary')).toHaveTextContent(
+      'Delta summary: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
       'Marker nav: 0/0 · selected:none',
     )
@@ -574,6 +580,9 @@ describe('Dashboard shell', () => {
       expect(screen.getByLabelText('Overlay Marker Scope Summary')).toHaveTextContent(
         'Scope: visible:t1/r1/f0 · selectedKind:risk',
       )
+      expect(screen.getByLabelText('Overlay Marker Delta Summary')).toHaveTextContent(
+        'Delta summary: Δlatest:-0.50 (n:2) · Δavg:+0.00 (n:2) · Δprev:+1.00 (n:1)',
+      )
       expect(screen.getByLabelText('Overlay Marker Timeline')).toHaveTextContent(
         'risk:live_trading_disabled:raised · t2 · close:2.00',
       )
@@ -639,6 +648,9 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Overlay Marker Scope Summary')).toHaveTextContent(
       'Scope: visible:t0/r1/f0 · selectedKind:risk',
+    )
+    expect(screen.getByLabelText('Overlay Marker Delta Summary')).toHaveTextContent(
+      'Delta summary: Δlatest:+0.00 (n:1) · Δavg:+0.50 (n:1) · Δprev:+1.00 (n:1)',
     )
     expect(screen.getByLabelText('Overlay Markers')).toHaveTextContent(
       'risk:live_trading_disabled:raised',

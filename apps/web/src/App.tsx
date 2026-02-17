@@ -1271,6 +1271,61 @@ function App() {
     const selectedKind = marketOverlayActiveTimelineAnnotation?.kind ?? 'none'
     return `visible:t${tradeCount}/r${riskCount}/f${feedCount} · selectedKind:${selectedKind}`
   }, [marketOverlayActiveTimelineAnnotation, marketOverlayScopedVisibleAnnotations])
+  const marketOverlayMarkerDeltaSummary = useMemo(() => {
+    if (marketOverlayScopedVisibleAnnotations.length === 0 || marketOverlayChartPoints.length === 0) {
+      return 'none'
+    }
+    const timelineById = new Map(
+      marketOverlayScopedTimelineAnnotations.map((annotation) => [annotation.id, annotation] as const),
+    )
+    const chartPointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const chartPointIndexByTime = new Map(
+      marketOverlayChartPoints.map((point, index) => [point.time, index] as const),
+    )
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1]
+    const baseline = marketOverlayAverageClose
+    let deltaLatestSum = 0
+    let deltaLatestCount = 0
+    let deltaAverageSum = 0
+    let deltaAverageCount = 0
+    let deltaPreviousSum = 0
+    let deltaPreviousCount = 0
+    marketOverlayScopedVisibleAnnotations.forEach((annotation) => {
+      const timelineAnnotation = timelineById.get(annotation.id)
+      if (!timelineAnnotation) {
+        return
+      }
+      const point = chartPointByTime.get(timelineAnnotation.time)
+      if (!point) {
+        return
+      }
+      deltaLatestSum += point.value - latestPoint.value
+      deltaLatestCount += 1
+      if (baseline !== null) {
+        deltaAverageSum += point.value - baseline
+        deltaAverageCount += 1
+      }
+      const pointIndex = chartPointIndexByTime.get(point.time) ?? -1
+      if (pointIndex > 0) {
+        const previousPoint = marketOverlayChartPoints[pointIndex - 1]
+        deltaPreviousSum += point.value - previousPoint.value
+        deltaPreviousCount += 1
+      }
+    })
+    const formatAverageDelta = (sum: number, count: number) => {
+      if (count === 0) {
+        return 'n/a'
+      }
+      const mean = sum / count
+      return `${mean >= 0 ? '+' : ''}${mean.toFixed(2)} (n:${count})`
+    }
+    return `Δlatest:${formatAverageDelta(deltaLatestSum, deltaLatestCount)} · Δavg:${formatAverageDelta(deltaAverageSum, deltaAverageCount)} · Δprev:${formatAverageDelta(deltaPreviousSum, deltaPreviousCount)}`
+  }, [
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayScopedTimelineAnnotations,
+    marketOverlayScopedVisibleAnnotations,
+  ])
   const marketOverlayCorrelationHint = useMemo(() => {
     if (!marketOverlayActiveTimelineAnnotation || marketOverlayChartPoints.length === 0) {
       return 'none'
@@ -4013,6 +4068,7 @@ function App() {
             <p aria-label="Overlay Marker Scope Summary">
               Scope: {marketOverlayMarkerScopeSummary}
             </p>
+            <p aria-label="Overlay Marker Delta Summary">Delta summary: {marketOverlayMarkerDeltaSummary}</p>
             <p aria-label="Overlay Marker Behavior">Marker behavior: {marketOverlayMarkerBehaviorLabel}</p>
             <p aria-label="Overlay Marker Navigation">Marker nav: {marketOverlayMarkerNavigationLabel}</p>
             <div className="market-overlay-marker-navigation">
