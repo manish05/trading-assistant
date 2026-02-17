@@ -1090,6 +1090,63 @@ def test_gateway_trade_lifecycle_methods(tmp_path) -> None:
     assert close_response["payload"]["execution"]["status"] == "closed"
 
 
+def test_gateway_agents_namespace_methods(tmp_path) -> None:
+    client = TestClient(create_app(data_dir=tmp_path))
+
+    with client.websocket_connect("/ws") as websocket:
+        websocket.send_json(_connect_payload())
+        _ = websocket.receive_json()
+
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_agents_create_1",
+                "method": "agents.create",
+                "params": {
+                    "agentId": "agent_eth_5m",
+                    "label": "ETH Scalper",
+                    "soulTemplate": "# SOUL\nConcise and risk-first.",
+                    "manualTemplate": "# TRADING MANUAL\nAlways require stop loss.",
+                },
+            }
+        )
+        create_event, create_response = _read_event_then_response(websocket)
+
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_agents_list_1",
+                "method": "agents.list",
+                "params": {},
+            }
+        )
+        list_response = websocket.receive_json()
+
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_agents_get_1",
+                "method": "agents.get",
+                "params": {"agentId": "agent_eth_5m"},
+            }
+        )
+        get_response = websocket.receive_json()
+
+    assert create_event is not None
+    assert create_event["event"] == "event.agent.status"
+    assert create_response["ok"] is True
+    assert create_response["payload"]["agent"]["agentId"] == "agent_eth_5m"
+    assert create_response["payload"]["agent"]["status"] == "ready"
+
+    assert list_response["ok"] is True
+    assert len(list_response["payload"]["agents"]) == 1
+    assert list_response["payload"]["agents"][0]["label"] == "ETH Scalper"
+
+    assert get_response["ok"] is True
+    assert get_response["payload"]["agent"]["agentId"] == "agent_eth_5m"
+    assert get_response["payload"]["agent"]["workspacePath"].endswith("/agent_eth_5m")
+
+
 def test_gateway_accounts_namespace_methods(tmp_path) -> None:
     client = TestClient(create_app(data_dir=tmp_path))
 

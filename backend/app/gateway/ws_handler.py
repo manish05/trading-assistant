@@ -9,6 +9,7 @@ from pydantic.alias_generators import to_camel
 from starlette.websockets import WebSocketDisconnect
 
 from app.accounts.registry import AccountRegistry
+from app.agents.registry import AgentRegistry
 from app.audit.store import AuditStore
 from app.backtesting.simulator import BacktestCandle, BacktestSimulator, TradeSignal
 from app.config.loader import AppConfig
@@ -239,6 +240,29 @@ class ConfigPatchParams(BaseModel):
     patch: dict[str, Any] = Field(default_factory=dict)
 
 
+class AgentsCreateParams(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+
+    agent_id: str = Field(alias="agentId", min_length=1)
+    label: str = Field(min_length=1)
+    soul_template: str = Field(alias="soulTemplate", min_length=1)
+    manual_template: str = Field(alias="manualTemplate", min_length=1)
+
+
+class AgentsGetParams(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+
+    agent_id: str = Field(alias="agentId", min_length=1)
+
+
 class CopytradeSignalParams(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -351,6 +375,7 @@ async def handle_gateway_websocket(
     agent_queues: dict[str, AgentQueue],
     queue_snapshot_store: QueueSnapshotStore,
     audit_store: AuditStore,
+    agent_registry: AgentRegistry,
     account_registry: AccountRegistry,
     app_config: AppConfig,
     device_registry: DeviceRegistry,
@@ -540,6 +565,83 @@ async def handle_gateway_websocket(
                         "activeSlots": resolved_plugins.active_slots,
                         "diagnostics": resolved_plugins.diagnostics,
                     },
+                )
+            )
+            continue
+
+        if frame.method == "agents.create":
+            try:
+                params = AgentsCreateParams.model_validate(frame.params)
+            except ValidationError:
+                await websocket.send_json(
+                    _error_response(
+                        frame.id,
+                        code="INVALID_PARAMS",
+                        message="invalid agents.create params",
+                    )
+                )
+                continue
+
+            agent = agent_registry.create(
+                agent_id=params.agent_id,
+                label=params.label,
+                soul_template=params.soul_template,
+                manual_template=params.manual_template,
+            )
+            payload = {"agent": agent_registry.as_public_payload(agent)}
+            audit_store.append(
+                actor="user",
+                action="agents.create",
+                trace_id=frame.id,
+                data={"agentId": params.agent_id, "label": params.label},
+            )
+            await websocket.send_json(
+                _event_frame(
+                    "event.agent.status",
+                    {"requestId": frame.id, "agent": payload["agent"]},
+                )
+            )
+            await websocket.send_json(_ok_response(frame.id, payload=payload))
+            continue
+
+        if frame.method == "agents.list":
+            payload = {
+                "agents": [
+                    agent_registry.as_public_payload(agent)
+                    for agent in agent_registry.list()
+                ]
+            }
+            await websocket.send_json(_ok_response(frame.id, payload=payload))
+            continue
+
+        if frame.method == "agents.get":
+            try:
+                params = AgentsGetParams.model_validate(frame.params)
+            except ValidationError:
+                await websocket.send_json(
+                    _error_response(
+                        frame.id,
+                        code="INVALID_PARAMS",
+                        message="invalid agents.get params",
+                    )
+                )
+                continue
+
+            agent = agent_registry.get(agent_id=params.agent_id)
+            if agent is None:
+                await websocket.send_json(
+                    _error_response(
+                        frame.id,
+                        code="NOT_FOUND",
+                        message=f"agent not found: {params.agent_id}",
+                    )
+                )
+                continue
+
+            await websocket.send_json(
+                _ok_response(
+                    frame.id,
+                    payload={"agent": agent_registry.as_public_payload(agent)},
                 )
             )
             continue
