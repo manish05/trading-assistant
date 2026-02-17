@@ -1198,12 +1198,20 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Delta Filter Summary')).toHaveTextContent(
       'Delta filter: mode:all · matched:2/2 · up:0 · down:1 · flat:1 · n/a:0',
     )
-    fireEvent.change(screen.getByLabelText('Delta Filter'), { target: { value: 'latest-down' } })
+    expect(screen.getByLabelText('Delta Filter')).toHaveValue('all')
+    const overlayMarkersContainer = screen.getByLabelText('Overlay Markers')
+    fireEvent.keyDown(
+      within(overlayMarkersContainer).getByRole('button', {
+        name: 'risk:live_trading_disabled:raised',
+      }),
+      { key: 'j' },
+    )
     await waitFor(() => {
       expect(screen.getByLabelText('Overlay Marker Drilldown')).toHaveTextContent(
         'Marker focus: all · window:5 · age:all · scope:all-buckets · order:newest-first · visible:1 · latest:trade:closed:queued',
       )
     })
+    expect(screen.getByLabelText('Delta Filter')).toHaveValue('latest-down')
     expect(screen.getByLabelText('Overlay Marker Delta Filter Summary')).toHaveTextContent(
       'Delta filter: mode:latest-down · matched:1/2 · up:0 · down:1 · flat:1 · n/a:0',
     )
@@ -1211,12 +1219,18 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Markers')).not.toHaveTextContent(
       'risk:live_trading_disabled:raised',
     )
-    fireEvent.change(screen.getByLabelText('Delta Filter'), { target: { value: 'all' } })
+    fireEvent.keyDown(
+      within(screen.getByLabelText('Overlay Markers')).getByRole('button', {
+        name: 'trade:closed:queued',
+      }),
+      { key: '0' },
+    )
     await waitFor(() => {
       expect(screen.getByLabelText('Overlay Marker Drilldown')).toHaveTextContent(
         'Marker focus: all · window:5 · age:all · scope:all-buckets · order:newest-first · visible:2 · latest:risk:live_trading_disabled:raised',
       )
     })
+    expect(screen.getByLabelText('Delta Filter')).toHaveValue('all')
     fireEvent.change(screen.getByLabelText('Marker Bucket'), { target: { value: '60s' } })
     const expectedBucket = new Date(Math.floor(fakeNow / 60_000) * 60_000).toISOString()
     expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(

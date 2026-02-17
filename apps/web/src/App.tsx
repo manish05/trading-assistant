@@ -2527,6 +2527,7 @@ function App() {
 
   const onMarketOverlayMarkerKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLButtonElement>) => {
+      const normalizedKey = event.key.toLowerCase()
       if ((event.key === 'ArrowLeft' || event.key === 'ArrowUp') && event.shiftKey) {
         event.preventDefault()
         selectSkipBackwardMarketOverlayMarker()
@@ -2565,6 +2566,31 @@ function App() {
       if (event.key === '.' || event.key === '>') {
         event.preventDefault()
         selectNextBucketMarketOverlayMarker()
+        return
+      }
+      if (normalizedKey === 'u') {
+        event.preventDefault()
+        setMarketOverlayMarkerDeltaFilter('latest-up')
+        return
+      }
+      if (normalizedKey === 'j') {
+        event.preventDefault()
+        setMarketOverlayMarkerDeltaFilter('latest-down')
+        return
+      }
+      if (normalizedKey === 'f') {
+        event.preventDefault()
+        setMarketOverlayMarkerDeltaFilter('latest-flat')
+        return
+      }
+      if (normalizedKey === 'n') {
+        event.preventDefault()
+        setMarketOverlayMarkerDeltaFilter('latest-unavailable')
+        return
+      }
+      if (event.key === '0') {
+        event.preventDefault()
+        setMarketOverlayMarkerDeltaFilter('all')
         return
       }
       if (/^[1-9]$/.test(event.key)) {
