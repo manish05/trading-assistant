@@ -28,6 +28,14 @@ type FeedLifecycleBadge = {
   subscriptionId?: string
 }
 
+type QuickActionHistory = {
+  id: string
+  method: string
+  status: 'sent' | 'ok' | 'error' | 'debounced' | 'skipped'
+  durationMs?: number
+  timestamp: number
+}
+
 type QuickActionPreset = {
   managedAccountId: string
   managedProviderAccountId: string
@@ -107,6 +115,7 @@ function App() {
   const [subscriptionCount, setSubscriptionCount] = useState<number | null>(null)
   const [activeSubscriptionId, setActiveSubscriptionId] = useState<string | null>(null)
   const [feedLifecycle, setFeedLifecycle] = useState<FeedLifecycleBadge[]>([])
+  const [quickActionHistory, setQuickActionHistory] = useState<QuickActionHistory[]>([])
   const [blocks, setBlocks] = useState<BlockItem[]>([])
 
   const websocketUrl = useMemo(() => {
@@ -119,10 +128,26 @@ function App() {
     setBlocks((current) => [item, ...current].slice(0, 25))
   }, [])
 
+  const pushHistory = useCallback((item: QuickActionHistory) => {
+    setQuickActionHistory((current) => [item, ...current].slice(0, 20))
+  }, [])
+
+  const patchHistory = useCallback((historyId: string, patch: Partial<QuickActionHistory>) => {
+    setQuickActionHistory((current) =>
+      current.map((entry) => (entry.id === historyId ? { ...entry, ...patch } : entry)),
+    )
+  }, [])
+
   const sendRequest = useCallback(
     async (method: string, params: Record<string, unknown>): Promise<Record<string, unknown> | null> => {
       const socket = wsRef.current
       if (!socket || socket.readyState !== WebSocket.OPEN) {
+        pushHistory({
+          id: `hist_${Date.now()}`,
+          method,
+          status: 'skipped',
+          timestamp: Date.now(),
+        })
         appendBlock({
           id: `blk_${Date.now()}`,
           title: `${method} failed`,
@@ -136,6 +161,13 @@ function App() {
       const nowMs = Date.now()
       const lastSentAtMs = requestGuardsRef.current.get(method) ?? 0
       if (nowMs - lastSentAtMs < minRequestGapMs) {
+        pushHistory({
+          id: `hist_${nowMs}`,
+          method,
+          status: 'debounced',
+          durationMs: 0,
+          timestamp: nowMs,
+        })
         appendBlock({
           id: `blk_${nowMs}`,
           title: `${method} debounced`,
@@ -154,6 +186,14 @@ function App() {
         method,
         params,
       }
+      const historyId = `hist_${requestId}`
+      pushHistory({
+        id: historyId,
+        method,
+        status: 'sent',
+        durationMs: 0,
+        timestamp: nowMs,
+      })
 
       const responsePromise = new Promise<GatewayResponse>((resolve) => {
         pendingRequestsRef.current.set(requestId, resolve)
@@ -161,8 +201,13 @@ function App() {
 
       socket.send(JSON.stringify(payload))
       const response = await responsePromise
+      const durationMs = Date.now() - nowMs
 
       if (!response.ok) {
+        patchHistory(historyId, {
+          status: 'error',
+          durationMs,
+        })
         appendBlock({
           id: `blk_${Date.now()}`,
           title: `${method} rejected`,
@@ -172,6 +217,10 @@ function App() {
         return null
       }
 
+      patchHistory(historyId, {
+        status: 'ok',
+        durationMs,
+      })
       appendBlock({
         id: `blk_${Date.now()}`,
         title: `${method} response`,
@@ -180,7 +229,7 @@ function App() {
       })
       return response.payload ?? {}
     },
-    [appendBlock, minRequestGapMsInput],
+    [appendBlock, minRequestGapMsInput, patchHistory, pushHistory],
   )
 
   const sendPing = useCallback(() => {
@@ -917,6 +966,24 @@ function App() {
                       {item.subscriptionId ? `:${item.subscriptionId}` : ''}
                     </span>
                   ))
+                )}
+              </dd>
+            </div>
+            <div>
+              <dt>Quick Action History</dt>
+              <dd>
+                {quickActionHistory.length === 0 ? (
+                  <span className="history-empty">none</span>
+                ) : (
+                  <ul className="history-list">
+                    {quickActionHistory.slice(0, 8).map((entry) => (
+                      <li key={entry.id}>
+                        <span className="history-method">{entry.method}</span>
+                        <span className="history-status">{entry.status}</span>
+                        <span className="history-duration">{entry.durationMs ?? 0}ms</span>
+                      </li>
+                    ))}
+                  </ul>
                 )}
               </dd>
             </div>

@@ -16,6 +16,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByText('Agent Feed')).toBeInTheDocument()
     expect(screen.getByText('Account Status')).toBeInTheDocument()
     expect(screen.getByText('Feed Lifecycle')).toBeInTheDocument()
+    expect(screen.getByText('Quick Action History')).toBeInTheDocument()
   })
 
   it('renders gateway action buttons for account/feed listing', () => {
@@ -190,6 +191,17 @@ describe('Dashboard shell', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Delete Preset' }))
     await waitFor(() => {
       expect(screen.queryByRole('option', { name: 'swing-template' })).not.toBeInTheDocument()
+    })
+  })
+
+  it('adds quick-action history entries when requests are sent', async () => {
+    render(<App />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Accounts' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('accounts.list')).toBeInTheDocument()
+      expect(screen.getByText('sent')).toBeInTheDocument()
     })
   })
 })

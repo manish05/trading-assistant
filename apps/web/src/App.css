@@ -255,6 +255,42 @@
   font-size: 0.72rem;
 }
 
+.history-empty {
+  color: #9fb0cc;
+}
+
+.history-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.history-list li {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  font-size: 0.72rem;
+}
+
+.history-method {
+  color: #d9e4f7;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
+    'Courier New', monospace;
+}
+
+.history-status {
+  padding: 0.05rem 0.3rem;
+  border-radius: 999px;
+  border: 1px solid #2d4a7e;
+  background: #162744;
+}
+
+.history-duration {
+  color: #9fb0cc;
+}
+
 .empty-state {
   color: #9aa6be;
   font-size: 0.85rem;
