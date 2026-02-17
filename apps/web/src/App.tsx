@@ -3251,6 +3251,48 @@ function App() {
               {riskLastEmergencyUpdatedAt ?? 'never'}
             </p>
           </section>
+          <section className="template-panel mobile-emergency-panel">
+            <h3>Mobile Emergency Controls</h3>
+            <div className="mobile-emergency-actions">
+              <button
+                type="button"
+                onClick={() => void sendInterventionEmergencyAction('pause_trading')}
+              >
+                Mobile Pause
+              </button>
+              <button
+                type="button"
+                onClick={() => void sendInterventionEmergencyAction('cancel_all')}
+              >
+                Mobile Cancel All
+              </button>
+              <button
+                type="button"
+                onClick={() => void sendInterventionEmergencyAction('close_all')}
+              >
+                Mobile Close All
+              </button>
+              <button
+                type="button"
+                onClick={() => void sendInterventionEmergencyAction('disable_live')}
+              >
+                Mobile Disable Live
+              </button>
+              <button type="button" onClick={() => void sendInterventionResume()}>
+                Mobile Resume
+              </button>
+            </div>
+            <p aria-label="Mobile Intervention Summary">
+              Emergency status:{' '}
+              {riskEmergencyStopActive === null
+                ? 'n/a'
+                : riskEmergencyStopActive
+                  ? 'active'
+                  : 'inactive'}{' '}
+              · Last action: {riskLastEmergencyAction ?? 'none'} · Updated:{' '}
+              {riskLastEmergencyUpdatedAt ?? 'never'}
+            </p>
+          </section>
           <div className="block-list">
             {blocks.length === 0 ? (
               <p className="empty-state">No blocks yet. Connect and trigger gateway methods.</p>

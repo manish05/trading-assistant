@@ -41,6 +41,12 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Close All Now' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Disable Live Now' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Resume Trading Now' })).toBeInTheDocument()
+    expect(screen.getByText('Mobile Emergency Controls')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Mobile Pause' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Mobile Cancel All' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Mobile Close All' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Mobile Disable Live' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Mobile Resume' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Connect Account' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Disconnect Account' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Feeds' })).toBeInTheDocument()
@@ -201,6 +207,9 @@ describe('Dashboard shell', () => {
       'completed 0/3',
     )
     expect(screen.getByLabelText('Intervention Summary')).toHaveTextContent(
+      'Emergency status: n/a · Last action: none · Updated: never',
+    )
+    expect(screen.getByLabelText('Mobile Intervention Summary')).toHaveTextContent(
       'Emergency status: n/a · Last action: none · Updated: never',
     )
     expect(screen.getByText('Marketplace Signals (last fetch)').closest('div')).toHaveTextContent(
@@ -779,6 +788,47 @@ describe('Dashboard shell', () => {
     sendSpy.mockRestore()
   })
 
+  it('dispatches mobile emergency controls with expected payloads', async () => {
+    const sendSpy = vi.spyOn(WebSocket.prototype, 'send')
+    render(<App />)
+
+    fireEvent.change(screen.getByLabelText('Min Request Gap (ms)'), {
+      target: { value: '0' },
+    })
+    fireEvent.change(screen.getByLabelText('Emergency Reason'), {
+      target: { value: 'mobile intervention reason' },
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Mobile Pause' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Mobile Cancel All' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Mobile Close All' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Mobile Disable Live' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Mobile Resume' }))
+
+    await waitFor(() => {
+      const payloads = sendSpy.mock.calls.map(([serialized]) =>
+        JSON.parse(String(serialized)),
+      ) as Array<{ method?: string; params?: Record<string, unknown> }>
+
+      const emergencyActions = payloads
+        .filter((payload) => payload.method === 'risk.emergencyStop')
+        .map((payload) => payload.params?.action)
+      expect(emergencyActions).toEqual([
+        'pause_trading',
+        'cancel_all',
+        'close_all',
+        'disable_live',
+      ])
+
+      const resumePayload = payloads.find((payload) => payload.method === 'risk.resume')
+      expect(resumePayload?.params).toMatchObject({
+        reason: 'mobile intervention reason',
+      })
+    })
+
+    sendSpy.mockRestore()
+  })
+
   it('updates intervention summary from intervention panel actions', async () => {
     const sendSpy = vi
       .spyOn(WebSocket.prototype, 'send')
@@ -909,12 +959,18 @@ describe('Dashboard shell', () => {
       expect(screen.getByLabelText('Intervention Summary')).toHaveTextContent(
         'Emergency status: active · Last action: close_all · Updated: 2026-02-17T12:30:00.000Z',
       )
+      expect(screen.getByLabelText('Mobile Intervention Summary')).toHaveTextContent(
+        'Emergency status: active · Last action: close_all · Updated: 2026-02-17T12:30:00.000Z',
+      )
     })
 
     fireEvent.click(screen.getByRole('button', { name: 'Resume Trading Now' }))
 
     await waitFor(() => {
       expect(screen.getByLabelText('Intervention Summary')).toHaveTextContent(
+        'Emergency status: inactive · Last action: close_all · Updated: 2026-02-17T12:31:00.000Z',
+      )
+      expect(screen.getByLabelText('Mobile Intervention Summary')).toHaveTextContent(
         'Emergency status: inactive · Last action: close_all · Updated: 2026-02-17T12:31:00.000Z',
       )
     })
