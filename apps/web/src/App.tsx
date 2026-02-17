@@ -71,6 +71,7 @@ const HISTORY_FILTER_STORAGE_KEY = 'quick-action-history-filter-v1'
 const TIMESTAMP_FORMAT_STORAGE_KEY = 'quick-action-timestamp-format-v1'
 const PRESET_IMPORT_MODE_STORAGE_KEY = 'quick-action-preset-import-mode-v1'
 const PRESET_IMPORT_REPORT_EXPANDED_STORAGE_KEY = 'quick-action-preset-import-report-expanded-v1'
+const IMPORT_HINT_VISIBILITY_STORAGE_KEY = 'quick-action-import-hint-visibility-v1'
 const MAX_IMPORT_REPORT_NAMES = 6
 const DEFAULT_PRESET_TEMPLATE: QuickActionPreset = {
   managedAccountId: 'acct_demo_1',
@@ -139,6 +140,14 @@ const readPresetImportReportExpandedFromStorage = (): boolean => {
   }
   const raw = window.localStorage.getItem(PRESET_IMPORT_REPORT_EXPANDED_STORAGE_KEY)
   return raw !== 'collapsed'
+}
+
+const readImportHintVisibilityFromStorage = (): boolean => {
+  if (typeof window === 'undefined') {
+    return true
+  }
+  const raw = window.localStorage.getItem(IMPORT_HINT_VISIBILITY_STORAGE_KEY)
+  return raw !== 'hidden'
 }
 
 const sanitizePreset = (value: unknown): QuickActionPreset | null => {
@@ -262,6 +271,9 @@ function App() {
   const [presetImportReport, setPresetImportReport] = useState<PresetImportReport | null>(null)
   const [isPresetImportReportExpanded, setIsPresetImportReportExpanded] = useState<boolean>(
     readPresetImportReportExpandedFromStorage,
+  )
+  const [isImportHintVisible, setIsImportHintVisible] = useState<boolean>(
+    readImportHintVisibilityFromStorage,
   )
   const [availablePresetNames, setAvailablePresetNames] = useState<string[]>(() =>
     Object.keys(readPresetStoreFromStorage()).sort(),
@@ -1118,6 +1130,13 @@ function App() {
     )
   }, [isPresetImportReportExpanded])
 
+  useEffect(() => {
+    window.localStorage.setItem(
+      IMPORT_HINT_VISIBILITY_STORAGE_KEY,
+      isImportHintVisible ? 'visible' : 'hidden',
+    )
+  }, [isImportHintVisible])
+
   const filteredHistory =
     historyFilter === 'all'
       ? quickActionHistory
@@ -1400,14 +1419,19 @@ function App() {
                 placeholder='{"preset_name": { ... }}'
               />
             </label>
-            <p className="preset-import-hint">
-              Shortcut: Ctrl/Cmd+Enter to import, Esc to clear. Import mode{' '}
-              <strong>{presetImportMode}</strong>{' '}
-              {presetImportMode === 'merge'
-                ? 'preserves existing conflicting presets.'
-                : 'overwrites conflicting presets.'}
-            </p>
+            {isImportHintVisible ? (
+              <p className="preset-import-hint">
+                Shortcut: Ctrl/Cmd+Enter to import, Esc to clear. Import mode{' '}
+                <strong>{presetImportMode}</strong>{' '}
+                {presetImportMode === 'merge'
+                  ? 'preserves existing conflicting presets.'
+                  : 'overwrites conflicting presets.'}
+              </p>
+            ) : null}
             <div className="preset-import-actions">
+              <button type="button" onClick={() => setIsImportHintVisible((current) => !current)}>
+                {isImportHintVisible ? 'Hide Hints' : 'Show Hints'}
+              </button>
               <button
                 type="button"
                 onClick={() => setPresetImportInput('')}

@@ -55,6 +55,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Import Mode')).toBeInTheDocument()
     expect(screen.getByLabelText('Import Mode Badge')).toBeInTheDocument()
     expect(screen.getByText(/Shortcut: Ctrl\/Cmd\+Enter to import, Esc to clear\./)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Hide Hints' })).toBeInTheDocument()
     expect(screen.getByText('Last import: none')).toBeInTheDocument()
   })
 
@@ -415,6 +416,17 @@ describe('Dashboard shell', () => {
       target: { value: 'merge' },
     })
     expect(screen.getByText(/preserves existing conflicting presets\./)).toBeInTheDocument()
+  })
+
+  it('toggles import hint visibility and persists preference', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Hide Hints' }))
+    expect(screen.queryByText(/Shortcut: Ctrl\/Cmd\+Enter to import, Esc to clear\./)).not.toBeInTheDocument()
+    expect(window.localStorage.getItem('quick-action-import-hint-visibility-v1')).toBe('hidden')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Show Hints' }))
+    expect(screen.getByText(/Shortcut: Ctrl\/Cmd\+Enter to import, Esc to clear\./)).toBeInTheDocument()
+    expect(window.localStorage.getItem('quick-action-import-hint-visibility-v1')).toBe('visible')
   })
 
   it('reports accepted and rejected preset names after import', async () => {
