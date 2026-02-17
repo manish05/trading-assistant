@@ -55,6 +55,10 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Import Mode')).toBeInTheDocument()
     expect(screen.getByLabelText('Import Mode Badge')).toBeInTheDocument()
     expect(screen.getByText('Ctrl/Cmd+Enter', { selector: '.hotkey-chip' })).toBeInTheDocument()
+    expect(screen.getByText('/', { selector: '.hotkey-chip' })).toHaveAttribute(
+      'title',
+      'Slash toggles hint mode only when import input is empty.',
+    )
     expect(screen.getByText(/overwrites conflicting presets\./)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Hide Hints' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Use Compact Hints' })).toBeInTheDocument()

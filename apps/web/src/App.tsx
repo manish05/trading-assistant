@@ -1480,13 +1480,25 @@ function App() {
                   <>
                     Shortcuts: <span className="hotkey-chip">Ctrl/Cmd+Enter</span> import ·{' '}
                     <span className="hotkey-chip">Esc</span> clear ·{' '}
-                    <span className="hotkey-chip">/</span> mode.
+                    <span
+                      className="hotkey-chip"
+                      title="Slash toggles hint mode only when import input is empty."
+                    >
+                      /
+                    </span>{' '}
+                    mode.
                   </>
                 ) : (
                   <>
                     Shortcut: <span className="hotkey-chip">Ctrl/Cmd+Enter</span> to import,{' '}
                     <span className="hotkey-chip">Esc</span> to clear,{' '}
-                    <span className="hotkey-chip">/</span> to toggle mode. Import mode{' '}
+                    <span
+                      className="hotkey-chip"
+                      title="Slash toggles hint mode only when import input is empty."
+                    >
+                      /
+                    </span>{' '}
+                    to toggle mode. Import mode{' '}
                     <strong>{presetImportMode}</strong>{' '}
                     {presetImportMode === 'merge'
                       ? 'preserves existing conflicting presets.'
