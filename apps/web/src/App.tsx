@@ -58,6 +58,7 @@ type QuickActionPreset = {
 
 const PRESETS_STORAGE_KEY = 'quick-action-presets-v1'
 const HISTORY_FILTER_STORAGE_KEY = 'quick-action-history-filter-v1'
+const TIMESTAMP_FORMAT_STORAGE_KEY = 'quick-action-timestamp-format-v1'
 
 const readPresetStoreFromStorage = (): Record<string, QuickActionPreset> => {
   if (typeof window === 'undefined') {
@@ -85,6 +86,14 @@ const readHistoryFilterFromStorage = (): HistoryFilter => {
     return raw as HistoryFilter
   }
   return 'all'
+}
+
+const readTimestampFormatFromStorage = (): TimestampFormat => {
+  if (typeof window === 'undefined') {
+    return 'absolute'
+  }
+  const raw = window.localStorage.getItem(TIMESTAMP_FORMAT_STORAGE_KEY)
+  return raw === 'relative' ? 'relative' : 'absolute'
 }
 
 const formatTimestamp = (ts: string, format: TimestampFormat): string => {
@@ -157,7 +166,9 @@ function App() {
   const [feedLifecycle, setFeedLifecycle] = useState<FeedLifecycleBadge[]>([])
   const [quickActionHistory, setQuickActionHistory] = useState<QuickActionHistory[]>([])
   const [historyFilter, setHistoryFilter] = useState<HistoryFilter>(readHistoryFilterFromStorage)
-  const [timestampFormat, setTimestampFormat] = useState<TimestampFormat>('absolute')
+  const [timestampFormat, setTimestampFormat] = useState<TimestampFormat>(
+    readTimestampFormatFromStorage,
+  )
   const [lastSuccessByMethod, setLastSuccessByMethod] = useState<Record<string, string>>({})
   const [lastErrorByMethod, setLastErrorByMethod] = useState<Record<string, string>>({})
   const [blocks, setBlocks] = useState<BlockItem[]>([])
@@ -751,6 +762,10 @@ function App() {
   useEffect(() => {
     window.localStorage.setItem(HISTORY_FILTER_STORAGE_KEY, historyFilter)
   }, [historyFilter])
+
+  useEffect(() => {
+    window.localStorage.setItem(TIMESTAMP_FORMAT_STORAGE_KEY, timestampFormat)
+  }, [timestampFormat])
 
   const filteredHistory =
     historyFilter === 'all'

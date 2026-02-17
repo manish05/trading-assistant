@@ -263,5 +263,6 @@ describe('Dashboard shell', () => {
 
     fireEvent.change(selector, { target: { value: 'relative' } })
     expect(selector).toHaveValue('relative')
+    expect(window.localStorage.getItem('quick-action-timestamp-format-v1')).toBe('relative')
   })
 })
