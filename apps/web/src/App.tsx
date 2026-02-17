@@ -1778,13 +1778,14 @@ function App() {
     }
 
     const text = [
+      '[LockTelemetry]',
       `filter=${historyFilter}`,
       `lockCounterResetAt=${helperLockCountersLastResetAt ?? 'never'}`,
       `lockToggleTotal=${helperResetLockToggleCount}`,
       `lockToggleAlt+L=${helperResetLockSourceCounts['Alt+L']}`,
       `lockToggleControls=${helperResetLockSourceCounts.controls}`,
       `lockToggleSnapshot=${helperResetLockSourceCounts.snapshot}`,
-      '---',
+      '[Entries]',
       ...filteredHistory
         .slice(0, 10)
         .map((entry) => `${entry.method}\t${entry.status}\t${entry.durationMs ?? 0}ms`),
