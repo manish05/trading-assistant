@@ -575,6 +575,11 @@ function App() {
     [lockTelemetryToastDetails],
   )
 
+  const lockTelemetryFailureSuffix = useMemo(
+    () => ` Lock telemetry: ${lockTelemetryToastDetailsWithLabel}.`,
+    [lockTelemetryToastDetailsWithLabel],
+  )
+
   const toggleHelperResetLock = useCallback((source: 'Alt+L' | 'controls' | 'snapshot') => {
     const now = Date.now()
     const lockEntry: QuickActionHistory = {
@@ -1230,12 +1235,13 @@ function App() {
       appendBlock({
         id: `blk_${Date.now()}`,
         title: 'import report copy failed',
-        content: 'Clipboard access failed or is unavailable.',
+        content: `Clipboard access failed or is unavailable.${lockTelemetryFailureSuffix}`,
         severity: 'warn',
       })
     }
   }, [
     appendBlock,
+    lockTelemetryFailureSuffix,
     lockTelemetrySummaryLines,
     lockTelemetryToastDetailsWithLabel,
     presetImportReport,
@@ -1280,12 +1286,13 @@ function App() {
       appendBlock({
         id: `blk_${Date.now()}`,
         title: 'import names copy failed',
-        content: 'Clipboard access failed or is unavailable.',
+        content: `Clipboard access failed or is unavailable.${lockTelemetryFailureSuffix}`,
         severity: 'warn',
       })
     }
   }, [
     appendBlock,
+    lockTelemetryFailureSuffix,
     lockTelemetrySummaryLines,
     lockTelemetryToastDetailsWithLabel,
     presetImportReport,
@@ -1318,13 +1325,14 @@ function App() {
       appendBlock({
         id: `blk_${Date.now()}`,
         title: 'last summary copy failed',
-        content: 'Clipboard access failed or is unavailable.',
+        content: `Clipboard access failed or is unavailable.${lockTelemetryFailureSuffix}`,
         severity: 'warn',
       })
     }
   }, [
     appendBlock,
     lastImportSummaryText,
+    lockTelemetryFailureSuffix,
     lockTelemetrySummaryLines,
     lockTelemetryToastDetailsWithLabel,
     presetImportReport,
@@ -1367,7 +1375,7 @@ function App() {
       appendBlock({
         id: `blk_${Date.now()}`,
         title: 'shortcut cheat-sheet copy failed',
-        content: 'Clipboard access failed or is unavailable.',
+        content: `Clipboard access failed or is unavailable.${lockTelemetryFailureSuffix}`,
         severity: 'warn',
       })
     }
@@ -1380,6 +1388,7 @@ function App() {
     helperResetLockToggleToneClass,
     helperResetTimestampFormat,
     isHelperResetLocked,
+    lockTelemetryFailureSuffix,
     lockTelemetryToastDetails,
     presetImportMode,
   ])
@@ -1436,7 +1445,7 @@ function App() {
       appendBlock({
         id: `blk_${Date.now()}`,
         title: 'helper summary copy failed',
-        content: 'Clipboard access failed or is unavailable.',
+        content: `Clipboard access failed or is unavailable.${lockTelemetryFailureSuffix}`,
         severity: 'warn',
       })
     }
@@ -1454,6 +1463,7 @@ function App() {
     helperResetLockToggleToneClass,
     helperResetStaleThresholdHours,
     helperResetTimestampFormat,
+    lockTelemetryFailureSuffix,
     lockTelemetryToastDetails,
     shortcutLegendDensity,
     shortcutLegendOrder,
@@ -1509,7 +1519,7 @@ function App() {
       appendBlock({
         id: `blk_${Date.now()}`,
         title: 'helper reset badge copy failed',
-        content: 'Clipboard access failed or is unavailable.',
+        content: `Clipboard access failed or is unavailable.${lockTelemetryFailureSuffix}`,
         severity: 'warn',
       })
     }
@@ -1524,6 +1534,7 @@ function App() {
     isHelperResetBadgeVisible,
     isHelperResetLocked,
     lockTelemetryToastDetails,
+    lockTelemetryFailureSuffix,
     helperResetStaleThresholdHours,
     helperResetTimestampFormat,
   ])
@@ -1884,7 +1895,7 @@ function App() {
       appendBlock({
         id: `blk_${Date.now()}`,
         title: 'status legend copy failed',
-        content: 'Clipboard access failed or is unavailable.',
+        content: `Clipboard access failed or is unavailable.${lockTelemetryFailureSuffix}`,
         severity: 'warn',
       })
     }
@@ -1896,6 +1907,7 @@ function App() {
     helperResetLockToggleToneClass,
     importHintMode,
     isHelperResetLocked,
+    lockTelemetryFailureSuffix,
     lockTelemetryToastDetails,
     shortcutLegendDensity,
     shortcutLegendOrder,
@@ -1943,13 +1955,14 @@ function App() {
       appendBlock({
         id: `blk_${Date.now()}`,
         title: 'history copy failed',
-        content: 'Clipboard access failed or is unavailable.',
+        content: `Clipboard access failed or is unavailable.${lockTelemetryFailureSuffix}`,
         severity: 'warn',
       })
     }
   }, [
     appendBlock,
     filteredHistory,
+    lockTelemetryFailureSuffix,
     helperLockCountersLastResetAt,
     helperResetLockSourceCounts,
     helperResetLockToggleCount,

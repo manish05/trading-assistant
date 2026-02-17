@@ -1065,6 +1065,25 @@ describe('Dashboard shell', () => {
     })
   })
 
+  it('shows lock telemetry when helper summary copy fails', async () => {
+    const writeText = vi.fn().mockRejectedValue(new Error('denied'))
+    Object.defineProperty(window.navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    })
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Copy Helper Summary' }))
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalled()
+      expect(
+        screen.getByText(
+          'Clipboard access failed or is unavailable. Lock telemetry: lock toggles: 0, tone: none, reset: never.',
+        ),
+      ).toBeInTheDocument()
+    })
+  })
+
   it('copies helper reset badge text to clipboard', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined)
     Object.defineProperty(window.navigator, 'clipboard', {
