@@ -1145,6 +1145,23 @@ function App() {
     showShortcutLegendInStatus,
   ])
 
+  const resetHelperDiagnosticsPreferences = useCallback(() => {
+    setIsImportHintVisible(true)
+    setIsImportHelperDiagnosticsExpanded(true)
+    setImportHintMode('detailed')
+    setShowShortcutLegendInStatus(false)
+    setIsImportSnapshotTogglesExpanded(true)
+    setShortcutLegendOrder('import-first')
+    setShortcutLegendDensity('chips')
+    setHelperDiagnosticsDisplayMode('compact')
+    appendBlock({
+      id: `blk_${Date.now()}`,
+      title: 'helper diagnostics reset',
+      content: 'Reset helper diagnostics preferences to defaults.',
+      severity: 'info',
+    })
+  }, [appendBlock])
+
   const clearPresetImportReport = useCallback(() => {
     if (!presetImportReport) {
       return
@@ -2075,6 +2092,13 @@ function App() {
                   onClick={() => void copyHelperDiagnosticsSummary()}
                 >
                   Copy Helper Summary
+                </button>
+                <button
+                  type="button"
+                  className="summary-copy-button"
+                  onClick={resetHelperDiagnosticsPreferences}
+                >
+                  Reset Helper Prefs
                 </button>
               </dd>
             </div>

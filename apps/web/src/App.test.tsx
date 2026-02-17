@@ -76,6 +76,7 @@ describe('Dashboard shell', () => {
       screen.getByText('enabled:1/2', { selector: '.import-snapshot-badges .import-summary-badge' }),
     ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Copy Helper Summary' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Reset Helper Prefs' })).toBeInTheDocument()
     expect(screen.getByText('Last import: none')).toBeInTheDocument()
   })
 
@@ -649,6 +650,27 @@ describe('Dashboard shell', () => {
       expect(payload).toContain('enabled=1/2')
       expect(payload).toContain('density=chips')
     })
+  })
+
+  it('resets helper diagnostics preferences to defaults', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Quick Show Legend' }))
+    fireEvent.change(screen.getByLabelText('Legend Order'), {
+      target: { value: 'clear-first' },
+    })
+    fireEvent.change(screen.getByLabelText('Legend Density'), {
+      target: { value: 'inline' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Use Verbose Diagnostics' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Hide Quick Toggles' }))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reset Helper Prefs' }))
+
+    expect(screen.getByRole('button', { name: 'Quick Show Legend' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Legend Order')).toHaveValue('import-first')
+    expect(screen.getByLabelText('Legend Density')).toHaveValue('chips')
+    expect(screen.getByRole('button', { name: 'Use Verbose Diagnostics' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Hide Quick Toggles' })).toBeInTheDocument()
   })
 
   it('reports accepted and rejected preset names after import', async () => {
