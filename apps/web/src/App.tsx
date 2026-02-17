@@ -1361,7 +1361,10 @@ function App() {
         title: 'shortcut cheat-sheet copied',
         content: `Copied import shortcut cheat-sheet to clipboard (lock: ${
           isHelperResetLocked ? 'locked' : 'unlocked'
-        }).`,
+        }, toggles: ${helperResetLockToggleCount}, tone: ${helperResetLockToggleToneClass.replace(
+          'counter-tone-',
+          '',
+        )}, reset: ${helperLockCountersLastResetAt ?? 'never'}).`,
         severity: 'info',
       })
     } catch {

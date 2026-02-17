@@ -599,7 +599,9 @@ describe('Dashboard shell', () => {
       expect(payload).toContain('Helper lock toggle controls: 0')
       expect(payload).toContain('Helper lock toggle snapshot: 0')
       expect(
-        screen.getByText('Copied import shortcut cheat-sheet to clipboard (lock: locked).'),
+        screen.getByText(
+          'Copied import shortcut cheat-sheet to clipboard (lock: locked, toggles: 0, tone: none, reset: never).',
+        ),
       ).toBeInTheDocument()
     })
   })
