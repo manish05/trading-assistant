@@ -1121,6 +1121,7 @@ function App() {
   const canSelectNextMarketOverlayMarker =
     marketOverlayActiveTimelineIndex >= 0 &&
     marketOverlayActiveTimelineIndex < marketOverlayTimelineAnnotations.length - 1
+  const canSelectOldestMarketOverlayMarker = canSelectPreviousMarketOverlayMarker
   const canSelectLatestMarketOverlayMarker = canSelectNextMarketOverlayMarker
   const marketOverlayMarkerDrilldown = useMemo(() => {
     const latest = marketOverlayVisibleAnnotations[0]
@@ -1278,6 +1279,17 @@ function App() {
     setMarketOverlaySelectedMarkerId(next.id)
   }, [canSelectNextMarketOverlayMarker, marketOverlayActiveTimelineIndex, marketOverlayTimelineAnnotations])
 
+  const selectOldestMarketOverlayMarker = useCallback(() => {
+    if (!canSelectOldestMarketOverlayMarker) {
+      return
+    }
+    const oldest = marketOverlayTimelineAnnotations[0]
+    if (!oldest) {
+      return
+    }
+    setMarketOverlaySelectedMarkerId(oldest.id)
+  }, [canSelectOldestMarketOverlayMarker, marketOverlayTimelineAnnotations])
+
   const selectLatestMarketOverlayMarker = useCallback(() => {
     if (!canSelectLatestMarketOverlayMarker) {
       return
@@ -1301,12 +1313,22 @@ function App() {
         selectNextMarketOverlayMarker()
         return
       }
+      if (event.key === 'Home') {
+        event.preventDefault()
+        selectOldestMarketOverlayMarker()
+        return
+      }
       if (event.key === 'End') {
         event.preventDefault()
         selectLatestMarketOverlayMarker()
       }
     },
-    [selectLatestMarketOverlayMarker, selectNextMarketOverlayMarker, selectPreviousMarketOverlayMarker],
+    [
+      selectLatestMarketOverlayMarker,
+      selectNextMarketOverlayMarker,
+      selectOldestMarketOverlayMarker,
+      selectPreviousMarketOverlayMarker,
+    ],
   )
 
   useEffect(() => {
@@ -3697,6 +3719,13 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Navigation">Marker nav: {marketOverlayMarkerNavigationLabel}</p>
             <div className="market-overlay-marker-navigation">
+              <button
+                type="button"
+                onClick={selectOldestMarketOverlayMarker}
+                disabled={!canSelectOldestMarketOverlayMarker}
+              >
+                Oldest Marker
+              </button>
               <button
                 type="button"
                 onClick={selectPreviousMarketOverlayMarker}

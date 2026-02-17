@@ -62,6 +62,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
       'Marker nav: 0/0 · selected:none',
     )
+    expect(screen.getByRole('button', { name: 'Oldest Marker' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Previous Marker' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Next Marker' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Latest Marker' })).toBeDisabled()
@@ -475,6 +476,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
       'Marker nav: 0/0 · selected:none',
     )
+    expect(screen.getByRole('button', { name: 'Oldest Marker' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Previous Marker' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Next Marker' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Latest Marker' })).toBeDisabled()
@@ -551,6 +553,7 @@ describe('Dashboard shell', () => {
         'aria-pressed',
         'false',
       )
+      expect(screen.getByRole('button', { name: 'Oldest Marker' })).toBeEnabled()
       expect(screen.getByRole('button', { name: 'Previous Marker' })).toBeEnabled()
       expect(screen.getByRole('button', { name: 'Next Marker' })).toBeDisabled()
       expect(screen.getByRole('button', { name: 'Latest Marker' })).toBeDisabled()
@@ -593,6 +596,7 @@ describe('Dashboard shell', () => {
       'aria-pressed',
       'true',
     )
+    expect(screen.getByRole('button', { name: 'Oldest Marker' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Previous Marker' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Next Marker' })).toBeEnabled()
     expect(screen.getByRole('button', { name: 'Latest Marker' })).toBeEnabled()
@@ -616,6 +620,12 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Latest Marker' })).toBeDisabled()
     fireEvent.keyDown(screen.getByRole('button', { name: 'risk:live_trading_disabled:raised' }), {
       key: 'ArrowLeft',
+    })
+    expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
+      'Marker nav: 1/2 · selected:trade:closed:queued',
+    )
+    fireEvent.keyDown(screen.getByRole('button', { name: 'risk:live_trading_disabled:raised' }), {
+      key: 'Home',
     })
     expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
       'Marker nav: 1/2 · selected:trade:closed:queued',
@@ -759,6 +769,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
       'Marker nav: 2/2 · selected:risk:live_trading_disabled:raised',
     )
+    expect(screen.getByRole('button', { name: 'Oldest Marker' })).toBeEnabled()
     expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
       'Timeline buckets: mode:none · buckets:2 · latest:t2 · count:1',
     )
@@ -784,6 +795,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
       'Marker nav: 0/0 · selected:none',
     )
+    expect(screen.getByRole('button', { name: 'Oldest Marker' })).toBeDisabled()
     expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
       'Timeline buckets: mode:60s · buckets:0 · latest:none · count:0',
     )
