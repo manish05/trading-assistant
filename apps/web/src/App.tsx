@@ -751,6 +751,32 @@ function App() {
       className: delta > 0 ? 'overlay-trend-up' : 'overlay-trend-down',
     }
   }, [marketOverlayRecentCloses])
+  const marketOverlayVolatility = useMemo(() => {
+    if (marketOverlayRecentCloses.length < 2) {
+      return {
+        label: 'n/a',
+        summary: 'n/a',
+        className: 'overlay-volatility-none',
+      }
+    }
+
+    const high = Math.max(...marketOverlayRecentCloses)
+    const low = Math.min(...marketOverlayRecentCloses)
+    const range = high - low
+    const band = range < 0.5 ? 'low' : range < 2 ? 'moderate' : 'high'
+    const className =
+      band === 'low'
+        ? 'overlay-volatility-low'
+        : band === 'moderate'
+          ? 'overlay-volatility-moderate'
+          : 'overlay-volatility-high'
+
+    return {
+      label: `range:${range.toFixed(2)} · ${band}`,
+      summary: range.toFixed(2),
+      className,
+    }
+  }, [marketOverlayRecentCloses])
 
   const websocketUrl = useMemo(() => {
     const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws'
@@ -2744,10 +2770,11 @@ function App() {
     const tradeEvents = tradeControlEvents.length
     const alerts = riskAlerts.length
     const trendLabel = marketOverlayTrend.label
+    const volatilitySummary = marketOverlayVolatility.summary
     const summaryByMode: Record<MarketOverlayMode, string> = {
-      'price-only': `candles:${candles} · trend:${trendLabel}`,
-      'with-trades': `candles:${candles} · tradeEvents:${tradeEvents} · trend:${trendLabel}`,
-      'with-risk': `candles:${candles} · tradeEvents:${tradeEvents} · riskAlerts:${alerts} · trend:${trendLabel}`,
+      'price-only': `candles:${candles} · trend:${trendLabel} · vol:${volatilitySummary}`,
+      'with-trades': `candles:${candles} · tradeEvents:${tradeEvents} · trend:${trendLabel} · vol:${volatilitySummary}`,
+      'with-risk': `candles:${candles} · tradeEvents:${tradeEvents} · riskAlerts:${alerts} · trend:${trendLabel} · vol:${volatilitySummary}`,
     }
     setMarketOverlaySnapshotSummary(summaryByMode[marketOverlayMode])
     setMarketOverlaySnapshotAt(new Date().toISOString())
@@ -2755,6 +2782,7 @@ function App() {
     lastFetchedCandlesCount,
     marketOverlayMode,
     marketOverlayTrend.label,
+    marketOverlayVolatility.summary,
     riskAlerts.length,
     tradeControlEvents.length,
   ])
@@ -2806,6 +2834,12 @@ function App() {
             <p aria-label="Overlay Window Summary">Window: {marketOverlayWindowSummary}</p>
             <p aria-label="Overlay Trend" className={`overlay-trend ${marketOverlayTrend.className}`}>
               Trend: {marketOverlayTrend.label}
+            </p>
+            <p
+              aria-label="Overlay Volatility"
+              className={`overlay-volatility ${marketOverlayVolatility.className}`}
+            >
+              Volatility: {marketOverlayVolatility.label}
             </p>
             <button type="button" onClick={refreshMarketOverlaySnapshot}>
               Refresh Overlay Snapshot

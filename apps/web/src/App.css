@@ -140,6 +140,27 @@
   color: #e9cf7a;
 }
 
+.overlay-volatility {
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.overlay-volatility-none {
+  color: #9fb0cc;
+}
+
+.overlay-volatility-low {
+  color: #84d3f8;
+}
+
+.overlay-volatility-moderate {
+  color: #e9cf7a;
+}
+
+.overlay-volatility-high {
+  color: #ee8d8d;
+}
+
 .market-overlay-controls label {
   display: inline-flex;
   align-items: center;
