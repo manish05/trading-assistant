@@ -245,6 +245,16 @@
     'Courier New', monospace;
 }
 
+.preset-import-hint {
+  margin: 0.3rem 0 0;
+  font-size: 0.7rem;
+  color: #9fb0cc;
+}
+
+.preset-import-hint strong {
+  color: #dbe7fb;
+}
+
 .preset-import-actions {
   margin-top: 0.35rem;
   display: flex;

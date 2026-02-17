@@ -1362,6 +1362,13 @@ function App() {
                 placeholder='{"preset_name": { ... }}'
               />
             </label>
+            <p className="preset-import-hint">
+              Shortcut: Ctrl/Cmd+Enter to import, Esc to clear. Import mode{' '}
+              <strong>{presetImportMode}</strong>{' '}
+              {presetImportMode === 'merge'
+                ? 'preserves existing conflicting presets.'
+                : 'overwrites conflicting presets.'}
+            </p>
             <div className="preset-import-actions">
               <button
                 type="button"

@@ -53,6 +53,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Expand Report' })).toBeDisabled()
     expect(screen.getByLabelText('Import Mode')).toBeInTheDocument()
     expect(screen.getByLabelText('Import Mode Badge')).toBeInTheDocument()
+    expect(screen.getByText(/Shortcut: Ctrl\/Cmd\+Enter to import, Esc to clear\./)).toBeInTheDocument()
   })
 
   it('sends account and feed management requests', async () => {
@@ -402,6 +403,16 @@ describe('Dashboard shell', () => {
     })
 
     expect(within(badge).getByText('merge')).toHaveClass('mode-merge')
+  })
+
+  it('updates import helper hint based on import mode', () => {
+    render(<App />)
+    expect(screen.getByText(/overwrites conflicting presets\./)).toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText('Import Mode'), {
+      target: { value: 'merge' },
+    })
+    expect(screen.getByText(/preserves existing conflicting presets\./)).toBeInTheDocument()
   })
 
   it('reports accepted and rejected preset names after import', async () => {
