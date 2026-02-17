@@ -122,6 +122,17 @@
   color: #e9cf7a;
 }
 
+.market-overlay-timeline-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.overlay-marker-timeline-row {
+  font-size: 0.66rem;
+  color: #9fb0cc;
+}
+
 .market-overlay-chart-runtime.runtime-ready {
   color: #71d48c;
 }

@@ -76,6 +76,7 @@ type MarketOverlayChartLens = 'price-only' | 'price-and-trend' | 'diagnostics'
 type MarketOverlayMarkerFocus = 'all' | 'trade' | 'risk' | 'feed'
 type MarketOverlayMarkerWindow = 3 | 5 | 8
 type MarketOverlayMarkerAgeFilter = 'all' | 'last-60s' | 'last-300s'
+type MarketOverlayMarkerBucket = 'none' | '30s' | '60s'
 type MarketOverlayChartPoint = { time: number; value: number }
 type MarketOverlayChartMarker = {
   time: number
@@ -172,6 +173,7 @@ const MARKET_OVERLAY_CHART_LENS_STORAGE_KEY = 'quick-action-market-overlay-chart
 const MARKET_OVERLAY_MARKER_FOCUS_STORAGE_KEY = 'quick-action-market-overlay-marker-focus-v1'
 const MARKET_OVERLAY_MARKER_WINDOW_STORAGE_KEY = 'quick-action-market-overlay-marker-window-v1'
 const MARKET_OVERLAY_MARKER_AGE_FILTER_STORAGE_KEY = 'quick-action-market-overlay-marker-age-filter-v1'
+const MARKET_OVERLAY_MARKER_BUCKET_STORAGE_KEY = 'quick-action-market-overlay-marker-bucket-v1'
 const MAX_IMPORT_REPORT_NAMES = 6
 const FEED_CANDLE_FETCH_LIMIT = 50
 const DEVICE_NOTIFY_TEST_MESSAGE = 'Dashboard test notification'
@@ -436,6 +438,17 @@ const readMarketOverlayMarkerAgeFilterFromStorage = (): MarketOverlayMarkerAgeFi
     return raw
   }
   return 'all'
+}
+
+const readMarketOverlayMarkerBucketFromStorage = (): MarketOverlayMarkerBucket => {
+  if (typeof window === 'undefined') {
+    return 'none'
+  }
+  const raw = window.localStorage.getItem(MARKET_OVERLAY_MARKER_BUCKET_STORAGE_KEY)
+  if (raw === '30s' || raw === '60s') {
+    return raw
+  }
+  return 'none'
 }
 
 const sanitizePreset = (value: unknown): QuickActionPreset | null => {
@@ -814,6 +827,9 @@ function App() {
     useState<MarketOverlayMarkerWindow>(readMarketOverlayMarkerWindowFromStorage)
   const [marketOverlayMarkerAgeFilter, setMarketOverlayMarkerAgeFilter] =
     useState<MarketOverlayMarkerAgeFilter>(readMarketOverlayMarkerAgeFilterFromStorage)
+  const [marketOverlayMarkerBucket, setMarketOverlayMarkerBucket] = useState<MarketOverlayMarkerBucket>(
+    readMarketOverlayMarkerBucketFromStorage,
+  )
   const [marketOverlaySelectedMarkerId, setMarketOverlaySelectedMarkerId] = useState<string | null>(
     null,
   )
@@ -1119,6 +1135,41 @@ function App() {
     const ageLabel = formatElapsedMs(Date.now() - marketOverlayActiveTimelineAnnotation.timestamp)
     return `${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · t${point.time} · close:${point.value.toFixed(2)} · Δavg:${deltaFromAverage >= 0 ? '+' : ''}${deltaFromAverage.toFixed(2)} · age:${ageLabel} · tone:${marketOverlayActiveTimelineAnnotation.tone}`
   }, [marketOverlayActiveTimelineAnnotation, marketOverlayAverageClose, marketOverlayChartPoints])
+  const marketOverlayMarkerTimelineRows = useMemo(() => {
+    if (marketOverlayVisibleAnnotations.length === 0) {
+      return [] as string[]
+    }
+    const timelineById = new Map(
+      marketOverlayTimelineAnnotations.map((annotation) => [annotation.id, annotation] as const),
+    )
+    return marketOverlayVisibleAnnotations.map((annotation) => {
+      const timelineAnnotation = timelineById.get(annotation.id)
+      const point = timelineAnnotation
+        ? marketOverlayChartPoints.find((candidate) => candidate.time === timelineAnnotation.time)
+        : null
+      const ageLabel = formatElapsedMs(Date.now() - annotation.timestamp)
+      return `${annotation.kind}:${annotation.label} · t${timelineAnnotation?.time ?? 'n/a'} · close:${point ? point.value.toFixed(2) : 'n/a'} · age:${ageLabel}`
+    })
+  }, [marketOverlayChartPoints, marketOverlayTimelineAnnotations, marketOverlayVisibleAnnotations])
+  const marketOverlayMarkerBucketSummary = useMemo(() => {
+    const totalVisible = marketOverlayTimelineAnnotations.length
+    if (totalVisible === 0) {
+      return `mode:${marketOverlayMarkerBucket} · buckets:0 · latest:none · count:0`
+    }
+    if (marketOverlayMarkerBucket === 'none') {
+      const latest = marketOverlayTimelineAnnotations[marketOverlayTimelineAnnotations.length - 1]
+      return `mode:none · buckets:${totalVisible} · latest:t${latest.time} · count:1`
+    }
+    const bucketSizeMs = marketOverlayMarkerBucket === '30s' ? 30_000 : 60_000
+    const grouped = new Map<number, number>()
+    marketOverlayTimelineAnnotations.forEach((annotation) => {
+      const bucketStart = Math.floor(annotation.timestamp / bucketSizeMs) * bucketSizeMs
+      grouped.set(bucketStart, (grouped.get(bucketStart) ?? 0) + 1)
+    })
+    const orderedKeys = [...grouped.keys()].sort((a, b) => b - a)
+    const latestBucket = orderedKeys[0]
+    return `mode:${marketOverlayMarkerBucket} · buckets:${orderedKeys.length} · latest:${new Date(latestBucket).toISOString()} · count:${grouped.get(latestBucket) ?? 0}`
+  }, [marketOverlayMarkerBucket, marketOverlayTimelineAnnotations])
   const marketOverlayChartMarkers = useMemo(() => {
     if (marketOverlayChartPoints.length === 0 || marketOverlayTimelineAnnotations.length === 0) {
       return [] as MarketOverlayChartMarker[]
@@ -3133,6 +3184,10 @@ function App() {
   }, [marketOverlayMarkerAgeFilter])
 
   useEffect(() => {
+    window.localStorage.setItem(MARKET_OVERLAY_MARKER_BUCKET_STORAGE_KEY, marketOverlayMarkerBucket)
+  }, [marketOverlayMarkerBucket])
+
+  useEffect(() => {
     window.localStorage.setItem(HELPER_RESET_TIMESTAMP_FORMAT_STORAGE_KEY, helperResetTimestampFormat)
   }, [helperResetTimestampFormat])
 
@@ -3348,6 +3403,7 @@ function App() {
     const markerFocus = marketOverlayMarkerFocus
     const markerWindow = marketOverlayMarkerWindow
     const markerAge = marketOverlayMarkerAgeFilter
+    const markerBucket = marketOverlayMarkerBucket
     const markerSummary = `t${marketOverlayAnnotationSummary.tradeCount}/r${marketOverlayAnnotationSummary.riskCount}/f${marketOverlayAnnotationSummary.feedCount}`
     const correlationHint = marketOverlayCorrelationHint
     const trendLabel = marketOverlayTrend.label
@@ -3355,9 +3411,9 @@ function App() {
     const pulseSummary = marketOverlayPulse.summary
     const regimeSummary = marketOverlayRegime.summary
     const summaryByMode: Record<MarketOverlayMode, string> = {
-      'price-only': `candles:${candles} · chartPoints:${chartPoints} · chartLens:${chartLens} · markerFocus:${markerFocus} · markerWindow:${markerWindow} · markerAge:${markerAge} · markers:${markerSummary} · corr:${correlationHint} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
-      'with-trades': `candles:${candles} · tradeEvents:${tradeEvents} · chartPoints:${chartPoints} · chartLens:${chartLens} · markerFocus:${markerFocus} · markerWindow:${markerWindow} · markerAge:${markerAge} · markers:${markerSummary} · corr:${correlationHint} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
-      'with-risk': `candles:${candles} · tradeEvents:${tradeEvents} · riskAlerts:${alerts} · chartPoints:${chartPoints} · chartLens:${chartLens} · markerFocus:${markerFocus} · markerWindow:${markerWindow} · markerAge:${markerAge} · markers:${markerSummary} · corr:${correlationHint} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
+      'price-only': `candles:${candles} · chartPoints:${chartPoints} · chartLens:${chartLens} · markerFocus:${markerFocus} · markerWindow:${markerWindow} · markerAge:${markerAge} · markerBucket:${markerBucket} · markers:${markerSummary} · corr:${correlationHint} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
+      'with-trades': `candles:${candles} · tradeEvents:${tradeEvents} · chartPoints:${chartPoints} · chartLens:${chartLens} · markerFocus:${markerFocus} · markerWindow:${markerWindow} · markerAge:${markerAge} · markerBucket:${markerBucket} · markers:${markerSummary} · corr:${correlationHint} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
+      'with-risk': `candles:${candles} · tradeEvents:${tradeEvents} · riskAlerts:${alerts} · chartPoints:${chartPoints} · chartLens:${chartLens} · markerFocus:${markerFocus} · markerWindow:${markerWindow} · markerAge:${markerAge} · markerBucket:${markerBucket} · markers:${markerSummary} · corr:${correlationHint} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
     }
     setMarketOverlaySnapshotSummary(summaryByMode[marketOverlayMode])
     setMarketOverlaySnapshotAt(new Date().toISOString())
@@ -3368,6 +3424,7 @@ function App() {
     marketOverlayAnnotationSummary.tradeCount,
     marketOverlayCorrelationHint,
     marketOverlayChartLens,
+    marketOverlayMarkerBucket,
     marketOverlayMarkerAgeFilter,
     marketOverlayMarkerFocus,
     marketOverlayMarkerWindow,
@@ -3472,6 +3529,19 @@ function App() {
               </select>
             </label>
             <label>
+              Marker Bucket
+              <select
+                value={marketOverlayMarkerBucket}
+                onChange={(event) =>
+                  setMarketOverlayMarkerBucket(event.target.value as MarketOverlayMarkerBucket)
+                }
+              >
+                <option value="none">none</option>
+                <option value="30s">30s</option>
+                <option value="60s">60s</option>
+              </select>
+            </label>
+            <label>
               Chart Lens
               <select
                 value={marketOverlayChartLens}
@@ -3526,6 +3596,20 @@ function App() {
                   >
                     {annotation.kind}:{annotation.label}
                   </button>
+                ))
+              )}
+            </div>
+            <p aria-label="Overlay Marker Timeline Bucket Summary">
+              Timeline buckets: {marketOverlayMarkerBucketSummary}
+            </p>
+            <div className="market-overlay-timeline-list" aria-label="Overlay Marker Timeline">
+              {marketOverlayMarkerTimelineRows.length === 0 ? (
+                <span className="overlay-marker-chip overlay-marker-none">none</span>
+              ) : (
+                marketOverlayMarkerTimelineRows.map((row, index) => (
+                  <span key={`${row}_${index}`} className="overlay-marker-timeline-row">
+                    {row}
+                  </span>
                 ))
               )}
             </div>
