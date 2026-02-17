@@ -135,6 +135,14 @@ def _ok_response(request_id: str, payload: dict[str, Any]) -> dict:
     }
 
 
+def _event_frame(event_name: str, payload: dict[str, Any]) -> dict:
+    return {
+        "type": "event",
+        "event": event_name,
+        "payload": payload,
+    }
+
+
 def _get_or_create_queue(agent_id: str, queues: dict[str, AgentQueue]) -> AgentQueue:
     if agent_id in queues:
         return queues[agent_id]
@@ -551,6 +559,15 @@ async def handle_gateway_websocket(
                     data={"decision": risk_payload},
                 )
                 await websocket.send_json(
+                    _event_frame(
+                        "event.risk.alert",
+                        {
+                            "requestId": frame.id,
+                            "decision": risk_payload,
+                        },
+                    )
+                )
+                await websocket.send_json(
                     _error_response(
                         frame.id,
                         code="RISK_BLOCKED",
@@ -570,6 +587,15 @@ async def handle_gateway_websocket(
                     "intent": params.intent.model_dump(mode="json"),
                     "execution": execution_payload,
                 },
+            )
+            await websocket.send_json(
+                _event_frame(
+                    "event.trade.executed",
+                    {
+                        "requestId": frame.id,
+                        "execution": execution_payload,
+                    },
+                )
             )
             await websocket.send_json(
                 _ok_response(

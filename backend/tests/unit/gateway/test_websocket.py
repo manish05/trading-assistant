@@ -23,6 +23,13 @@ def _connect_payload() -> dict:
     }
 
 
+def _read_event_then_response(websocket):
+    first = websocket.receive_json()
+    if first.get("type") == "event":
+        return first, websocket.receive_json()
+    return None, first
+
+
 def test_websocket_rejects_non_connect_first_request() -> None:
     client = TestClient(create_app())
 
@@ -413,8 +420,11 @@ def test_gateway_trades_place_blocks_when_risk_rejects(tmp_path) -> None:
                 },
             }
         )
-        response = websocket.receive_json()
+        event, response = _read_event_then_response(websocket)
 
+    assert event is not None
+    assert event["type"] == "event"
+    assert event["event"] == "event.risk.alert"
     assert response["ok"] is False
     assert response["error"]["code"] == "RISK_BLOCKED"
 
@@ -455,7 +465,10 @@ def test_gateway_trades_place_executes_with_connector(tmp_path) -> None:
                 },
             }
         )
-        response = websocket.receive_json()
+        event, response = _read_event_then_response(websocket)
 
+    assert event is not None
+    assert event["type"] == "event"
+    assert event["event"] == "event.trade.executed"
     assert response["ok"] is True
     assert response["payload"]["execution"]["status"] == "executed"
