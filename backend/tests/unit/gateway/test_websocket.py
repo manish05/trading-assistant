@@ -254,3 +254,74 @@ def test_gateway_methods_write_audit_entries(tmp_path) -> None:
     assert len(audit_log) >= 2
     assert '"action":"risk.preview"' in audit_log[0]
     assert '"action":"agent.run"' in audit_log[1]
+
+
+def test_gateway_memory_search_and_backtest_methods(tmp_path) -> None:
+    workspace = tmp_path / "agent_eth_5m"
+    workspace.mkdir(parents=True)
+    (workspace / "TRADING_MANUAL.md").write_text(
+        "Never trade without stop loss.",
+        encoding="utf-8",
+    )
+
+    client = TestClient(create_app(data_dir=tmp_path))
+
+    with client.websocket_connect("/ws") as websocket:
+        websocket.send_json(_connect_payload())
+        _ = websocket.receive_json()
+
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_memory_1",
+                "method": "memory.search",
+                "params": {
+                    "workspacePath": str(workspace),
+                    "query": "stop loss",
+                    "maxResults": 5,
+                },
+            }
+        )
+        memory_response = websocket.receive_json()
+
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_backtest_1",
+                "method": "backtests.run",
+                "params": {
+                    "candles": [
+                        {
+                            "ts": "2026-01-01T00:00:00Z",
+                            "open": 100,
+                            "high": 102,
+                            "low": 99,
+                            "close": 101,
+                        },
+                        {
+                            "ts": "2026-01-01T00:05:00Z",
+                            "open": 101,
+                            "high": 106,
+                            "low": 100,
+                            "close": 105,
+                        },
+                    ],
+                    "signals": [
+                        {
+                            "index": 0,
+                            "side": "buy",
+                            "stopLoss": 99,
+                            "takeProfit": 105,
+                        }
+                    ],
+                },
+            }
+        )
+        backtest_response = websocket.receive_json()
+
+    assert memory_response["ok"] is True
+    assert len(memory_response["payload"]["results"]) >= 1
+    assert memory_response["payload"]["results"][0]["path"].endswith("TRADING_MANUAL.md")
+
+    assert backtest_response["ok"] is True
+    assert backtest_response["payload"]["metrics"]["trades"] == 1

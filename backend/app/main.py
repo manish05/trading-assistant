@@ -5,6 +5,7 @@ from fastapi import FastAPI, WebSocket
 
 from app.audit.store import AuditStore
 from app.gateway.ws_handler import handle_gateway_websocket
+from app.memory.index import MemoryIndex
 from app.queues.agent_queue import AgentQueue
 
 
@@ -13,6 +14,7 @@ def create_app(*, data_dir: str | Path = "data") -> FastAPI:
     app.state.started_at = datetime.now(UTC)
     app.state.agent_queues: dict[str, AgentQueue] = {}
     app.state.audit_store = AuditStore(data_dir=data_dir)
+    app.state.memory_index = MemoryIndex(db_path=Path(data_dir) / "memory.db")
 
     @app.get("/health")
     async def health() -> dict[str, str]:
@@ -25,6 +27,7 @@ def create_app(*, data_dir: str | Path = "data") -> FastAPI:
             started_at=app.state.started_at,
             agent_queues=app.state.agent_queues,
             audit_store=app.state.audit_store,
+            memory_index=app.state.memory_index,
         )
 
     return app

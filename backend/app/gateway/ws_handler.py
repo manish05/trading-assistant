@@ -1,13 +1,17 @@
+from dataclasses import asdict
 from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
 
 from fastapi import WebSocket
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic.alias_generators import to_camel
 from starlette.websockets import WebSocketDisconnect
 
 from app.audit.store import AuditStore
+from app.backtesting.simulator import BacktestCandle, BacktestSimulator, TradeSignal
 from app.gateway.models import GatewayConnectParams
+from app.memory.index import MemoryIndex
 from app.protocol.frames import RequestFrame, parse_gateway_frame
 from app.queues.agent_queue import AgentQueue, AgentRequest, QueueSettings
 from app.risk.engine import AccountRiskSnapshot, RiskEngine, RiskPolicy, TradeIntent
@@ -45,6 +49,34 @@ class RiskPreviewParams(BaseModel):
     intent: TradeIntent
     policy: RiskPolicy
     snapshot: AccountRiskSnapshot
+
+
+class MemorySearchParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    workspacePath: str = Field(min_length=1)
+    query: str = Field(min_length=1)
+    maxResults: int = Field(default=10, ge=1, le=50)
+
+
+class BacktestSignalInput(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+
+    index: int = Field(ge=0)
+    side: str = Field(pattern="^(buy|sell)$")
+    stop_loss: float = Field(alias="stopLoss")
+    take_profit: float = Field(alias="takeProfit")
+
+
+class BacktestsRunParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    candles: list[BacktestCandle] = Field(min_length=2)
+    signals: list[BacktestSignalInput] = Field(min_length=1)
 
 
 def _error_response(
@@ -91,12 +123,14 @@ async def handle_gateway_websocket(
     started_at: datetime,
     agent_queues: dict[str, AgentQueue],
     audit_store: AuditStore,
+    memory_index: MemoryIndex,
 ) -> None:
     await websocket.accept()
 
     connected = False
     session_id: str | None = None
     risk_engine = RiskEngine()
+    backtest_simulator = BacktestSimulator()
 
     while True:
         try:
@@ -315,6 +349,89 @@ async def handle_gateway_websocket(
                     },
                 )
             )
+            continue
+
+        if frame.method == "memory.search":
+            try:
+                params = MemorySearchParams.model_validate(frame.params)
+            except ValidationError:
+                await websocket.send_json(
+                    _error_response(
+                        frame.id,
+                        code="INVALID_PARAMS",
+                        message="invalid memory.search params",
+                    )
+                )
+                continue
+
+            memory_index.index_workspace(params.workspacePath)
+            results = memory_index.search(params.query, max_results=params.maxResults)
+            results_payload = [asdict(result) for result in results]
+            audit_store.append(
+                actor="user",
+                action="memory.search",
+                trace_id=frame.id,
+                data={
+                    "workspacePath": params.workspacePath,
+                    "query": params.query,
+                    "resultCount": len(results_payload),
+                },
+            )
+            await websocket.send_json(
+                _ok_response(
+                    frame.id,
+                    payload={"results": results_payload},
+                )
+            )
+            continue
+
+        if frame.method == "backtests.run":
+            try:
+                params = BacktestsRunParams.model_validate(frame.params)
+            except ValidationError:
+                await websocket.send_json(
+                    _error_response(
+                        frame.id,
+                        code="INVALID_PARAMS",
+                        message="invalid backtests.run params",
+                    )
+                )
+                continue
+
+            signal_map = {signal.index: signal for signal in params.signals}
+
+            def strategy(
+                index: int,
+                history: list[BacktestCandle],
+                signal_lookup: dict[int, BacktestSignalInput] = signal_map,
+            ) -> TradeSignal | None:
+                signal = signal_lookup.get(index)
+                if signal is None:
+                    return None
+                return TradeSignal(
+                    side=signal.side,
+                    entry=history[index].close,
+                    stop_loss=signal.stop_loss,
+                    take_profit=signal.take_profit,
+                )
+
+            report = backtest_simulator.run(candles=params.candles, strategy=strategy)
+            payload = {
+                "trades": [asdict(trade) for trade in report.trades],
+                "metrics": asdict(report.metrics),
+                "equityCurve": report.equity_curve,
+            }
+            audit_store.append(
+                actor="user",
+                action="backtests.run",
+                trace_id=frame.id,
+                data={
+                    "candles": len(params.candles),
+                    "signals": len(params.signals),
+                    "trades": report.metrics.trades,
+                },
+            )
+            await websocket.send_json(_ok_response(frame.id, payload=payload))
             continue
 
         await websocket.send_json(
