@@ -1286,6 +1286,15 @@ function App() {
     marketOverlayChartPoints,
     marketOverlayMarkerDeltaFilter,
   ])
+  const marketOverlayMarkerDeltaShortcutSummary = useMemo(
+    () =>
+      `keys:u/j/f/n/0 · mode:${marketOverlayMarkerDeltaFilter} · matched:${marketOverlayScopedTimelineAnnotations.length}/${marketOverlayBucketScopedTimelineAnnotations.length} · active:${marketOverlayBucketScopedTimelineAnnotations.length > 0 ? 'on' : 'off'}`,
+    [
+      marketOverlayBucketScopedTimelineAnnotations.length,
+      marketOverlayMarkerDeltaFilter,
+      marketOverlayScopedTimelineAnnotations.length,
+    ],
+  )
   const marketOverlayScopedVisibleAnnotations = useMemo(() => {
     if (marketOverlayScopedTimelineAnnotations.length === 0) {
       return [] as MarketOverlayAnnotation[]
@@ -4971,6 +4980,7 @@ function App() {
     const markerWindow = marketOverlayMarkerWindow
     const markerAge = marketOverlayMarkerAgeFilter
     const markerDeltaFilter = marketOverlayMarkerDeltaFilter
+    const markerDeltaMatched = `${marketOverlayScopedTimelineAnnotations.length}/${marketOverlayBucketScopedTimelineAnnotations.length}`
     const markerBucket = marketOverlayMarkerBucket
     const bucketScope = marketOverlayBucketScope
     const timelineOrder = marketOverlayTimelineOrder
@@ -4984,9 +4994,9 @@ function App() {
     const pulseSummary = marketOverlayPulse.summary
     const regimeSummary = marketOverlayRegime.summary
     const summaryByMode: Record<MarketOverlayMode, string> = {
-      'price-only': `candles:${candles} · chartPoints:${chartPoints} · chartLens:${chartLens} · markerFocus:${markerFocus} · markerWindow:${markerWindow} · markerAge:${markerAge} · markerDelta:${markerDeltaFilter} · markerBucket:${markerBucket} · bucketScope:${bucketScope} · timelineOrder:${timelineOrder} · markerWrap:${markerWrap} · markerSelection:${markerSelection} · markerNav:${markerNavigation} · markers:${markerSummary} · corr:${correlationHint} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
-      'with-trades': `candles:${candles} · tradeEvents:${tradeEvents} · chartPoints:${chartPoints} · chartLens:${chartLens} · markerFocus:${markerFocus} · markerWindow:${markerWindow} · markerAge:${markerAge} · markerDelta:${markerDeltaFilter} · markerBucket:${markerBucket} · bucketScope:${bucketScope} · timelineOrder:${timelineOrder} · markerWrap:${markerWrap} · markerSelection:${markerSelection} · markerNav:${markerNavigation} · markers:${markerSummary} · corr:${correlationHint} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
-      'with-risk': `candles:${candles} · tradeEvents:${tradeEvents} · riskAlerts:${alerts} · chartPoints:${chartPoints} · chartLens:${chartLens} · markerFocus:${markerFocus} · markerWindow:${markerWindow} · markerAge:${markerAge} · markerDelta:${markerDeltaFilter} · markerBucket:${markerBucket} · bucketScope:${bucketScope} · timelineOrder:${timelineOrder} · markerWrap:${markerWrap} · markerSelection:${markerSelection} · markerNav:${markerNavigation} · markers:${markerSummary} · corr:${correlationHint} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
+      'price-only': `candles:${candles} · chartPoints:${chartPoints} · chartLens:${chartLens} · markerFocus:${markerFocus} · markerWindow:${markerWindow} · markerAge:${markerAge} · markerDelta:${markerDeltaFilter} · markerDeltaMatched:${markerDeltaMatched} · markerBucket:${markerBucket} · bucketScope:${bucketScope} · timelineOrder:${timelineOrder} · markerWrap:${markerWrap} · markerSelection:${markerSelection} · markerNav:${markerNavigation} · markers:${markerSummary} · corr:${correlationHint} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
+      'with-trades': `candles:${candles} · tradeEvents:${tradeEvents} · chartPoints:${chartPoints} · chartLens:${chartLens} · markerFocus:${markerFocus} · markerWindow:${markerWindow} · markerAge:${markerAge} · markerDelta:${markerDeltaFilter} · markerDeltaMatched:${markerDeltaMatched} · markerBucket:${markerBucket} · bucketScope:${bucketScope} · timelineOrder:${timelineOrder} · markerWrap:${markerWrap} · markerSelection:${markerSelection} · markerNav:${markerNavigation} · markers:${markerSummary} · corr:${correlationHint} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
+      'with-risk': `candles:${candles} · tradeEvents:${tradeEvents} · riskAlerts:${alerts} · chartPoints:${chartPoints} · chartLens:${chartLens} · markerFocus:${markerFocus} · markerWindow:${markerWindow} · markerAge:${markerAge} · markerDelta:${markerDeltaFilter} · markerDeltaMatched:${markerDeltaMatched} · markerBucket:${markerBucket} · bucketScope:${bucketScope} · timelineOrder:${timelineOrder} · markerWrap:${markerWrap} · markerSelection:${markerSelection} · markerNav:${markerNavigation} · markers:${markerSummary} · corr:${correlationHint} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
     }
     setMarketOverlaySnapshotSummary(summaryByMode[marketOverlayMode])
     setMarketOverlaySnapshotAt(new Date().toISOString())
@@ -5002,11 +5012,13 @@ function App() {
     marketOverlayBucketScope,
     marketOverlayMarkerAgeFilter,
     marketOverlayMarkerDeltaFilter,
+    marketOverlayBucketScopedTimelineAnnotations.length,
     marketOverlayMarkerWrap,
     marketOverlaySelectionMode,
     marketOverlayTimelineOrder,
     marketOverlayMarkerFocus,
     marketOverlayMarkerWindow,
+    marketOverlayScopedTimelineAnnotations.length,
     marketOverlayChartPoints.length,
     marketOverlayMode,
     marketOverlayPulse.summary,
@@ -5260,6 +5272,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Delta Filter Summary">
               Delta filter: {marketOverlayMarkerDeltaFilterSummary}
+            </p>
+            <p aria-label="Overlay Marker Delta Shortcut Summary">
+              Delta shortcuts: {marketOverlayMarkerDeltaShortcutSummary}
             </p>
             <p aria-label="Overlay Marker Delta Summary">Delta summary: {marketOverlayMarkerDeltaSummary}</p>
             <p aria-label="Overlay Marker Delta Tone Summary">
