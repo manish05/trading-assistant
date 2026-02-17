@@ -1523,6 +1523,16 @@ function App() {
     canSelectSkipForwardMarketOverlayMarker,
     isMarketOverlayNavigationLocked,
   ])
+  const marketOverlayMarkerNumericJumpSummary = useMemo(() => {
+    if (isMarketOverlayNavigationLocked) {
+      return 'locked'
+    }
+    if (marketOverlayTimelineCount === 0 || marketOverlayActiveTimelineIndex < 0) {
+      return 'none'
+    }
+    const maxJump = Math.min(9, marketOverlayTimelineCount)
+    return `keys:1-${maxJump} · selected:${marketOverlayActiveTimelineIndex + 1}/${marketOverlayTimelineCount}`
+  }, [isMarketOverlayNavigationLocked, marketOverlayActiveTimelineIndex, marketOverlayTimelineCount])
   const marketOverlayMarkerDrilldown = useMemo(() => {
     const latest =
       marketOverlayScopedTimelineAnnotations[marketOverlayScopedTimelineAnnotations.length - 1] ?? null
@@ -2089,6 +2099,22 @@ function App() {
         selectNextBucketMarketOverlayMarker()
         return
       }
+      if (/^[1-9]$/.test(event.key)) {
+        event.preventDefault()
+        if (isMarketOverlayNavigationLocked) {
+          return
+        }
+        const numericIndex = Number(event.key) - 1
+        if (numericIndex < 0 || numericIndex >= marketOverlayTimelineCount) {
+          return
+        }
+        const target = marketOverlayScopedTimelineAnnotations[numericIndex]
+        if (!target) {
+          return
+        }
+        setMarketOverlaySelectedMarkerId(target.id)
+        return
+      }
       if (event.key === '[') {
         event.preventDefault()
         selectPreviousSameKindMarketOverlayMarker()
@@ -2110,6 +2136,9 @@ function App() {
       }
     },
     [
+      isMarketOverlayNavigationLocked,
+      marketOverlayScopedTimelineAnnotations,
+      marketOverlayTimelineCount,
       selectLatestMarketOverlayMarker,
       selectNextBucketMarketOverlayMarker,
       selectNextSameKindMarketOverlayMarker,
@@ -4610,6 +4639,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Binding Summary">
               Bindings: {marketOverlayMarkerBindingSummary}
+            </p>
+            <p aria-label="Overlay Marker Numeric Jump Summary">
+              Jump keys: {marketOverlayMarkerNumericJumpSummary}
             </p>
             <div className="market-overlay-marker-navigation">
               <button

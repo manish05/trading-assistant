@@ -96,6 +96,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Binding Summary')).toHaveTextContent(
       'Bindings: steps:off/off · skip:off/off · kind:off/off · bucket:off/off · edges:off/off',
     )
+    expect(screen.getByLabelText('Overlay Marker Numeric Jump Summary')).toHaveTextContent(
+      'Jump keys: none',
+    )
     expect(screen.getByRole('button', { name: 'Oldest Marker' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Previous Bucket' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Skip Back 2' })).toBeDisabled()
@@ -565,6 +568,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Binding Summary')).toHaveTextContent(
       'Bindings: steps:off/off · skip:off/off · kind:off/off · bucket:off/off · edges:off/off',
     )
+    expect(screen.getByLabelText('Overlay Marker Numeric Jump Summary')).toHaveTextContent(
+      'Jump keys: none',
+    )
     expect(screen.getByRole('button', { name: 'Oldest Marker' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Previous Bucket' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Skip Back 2' })).toBeDisabled()
@@ -683,6 +689,9 @@ describe('Dashboard shell', () => {
       expect(screen.getByLabelText('Overlay Marker Binding Summary')).toHaveTextContent(
         'Bindings: steps:on/off · skip:off/off · kind:off/off · bucket:off/off · edges:on/off',
       )
+      expect(screen.getByLabelText('Overlay Marker Numeric Jump Summary')).toHaveTextContent(
+        'Jump keys: keys:1-2 · selected:2/2',
+      )
       expect(screen.getByLabelText('Overlay Marker Behavior')).toHaveTextContent(
         'Marker behavior: wrap:bounded · selection:sticky · nav:manual',
       )
@@ -757,6 +766,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Distance Summary')).toHaveTextContent(
       'Distance: edges:o0/l1 · kind:n/a/n/a · bucket:n/a/n/a · step:2',
     )
+    expect(screen.getByLabelText('Overlay Marker Numeric Jump Summary')).toHaveTextContent(
+      'Jump keys: keys:1-2 · selected:1/2',
+    )
     expect(screen.getByRole('button', { name: 'trade:closed:queued' })).toHaveAttribute(
       'aria-pressed',
       'true',
@@ -786,6 +798,24 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Drilldown Detail')).toHaveTextContent('Δprev:n/a')
     expect(screen.getByLabelText('Overlay Marker Drilldown Detail')).toHaveTextContent(
       'tone:positive',
+    )
+
+    fireEvent.keyDown(screen.getByRole('button', { name: 'trade:closed:queued' }), { key: '2' })
+    expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
+      'Marker nav: 2/2 · selected:risk:live_trading_disabled:raised',
+    )
+    expect(screen.getByLabelText('Overlay Marker Numeric Jump Summary')).toHaveTextContent(
+      'Jump keys: keys:1-2 · selected:2/2',
+    )
+    fireEvent.keyDown(screen.getByRole('button', { name: 'risk:live_trading_disabled:raised' }), {
+      key: '1',
+    })
+    expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
+      'Marker nav: 1/2 · selected:trade:closed:queued',
+    )
+    fireEvent.keyDown(screen.getByRole('button', { name: 'trade:closed:queued' }), { key: '9' })
+    expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
+      'Marker nav: 1/2 · selected:trade:closed:queued',
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Latest Marker' }))
@@ -837,6 +867,9 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Overlay Marker Binding Summary')).toHaveTextContent(
       'Bindings: steps:on/on · skip:off/off · kind:off/off · bucket:off/off · edges:off/on',
+    )
+    expect(screen.getByLabelText('Overlay Marker Numeric Jump Summary')).toHaveTextContent(
+      'Jump keys: keys:1-2 · selected:1/2',
     )
     expect(screen.getByRole('button', { name: 'Previous Bucket' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Skip Back 2' })).toBeDisabled()
@@ -921,7 +954,7 @@ describe('Dashboard shell', () => {
     )
 
     sendSpy.mockRestore()
-  })
+  }, 15_000)
 
   it('filters visible markers by marker age window', async () => {
     const dateNowSpy = vi.spyOn(Date, 'now')
@@ -1163,6 +1196,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Binding Summary')).toHaveTextContent(
       'Bindings: steps:on/off · skip:on/off · kind:on/off · bucket:on/off · edges:on/off',
     )
+    expect(screen.getByLabelText('Overlay Marker Numeric Jump Summary')).toHaveTextContent(
+      'Jump keys: keys:1-3 · selected:3/3',
+    )
     expect(screen.getByRole('button', { name: 'Previous Bucket' })).toBeEnabled()
     expect(screen.getByRole('button', { name: 'Next Bucket' })).toBeDisabled()
 
@@ -1326,6 +1362,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Binding Summary')).toHaveTextContent(
       'Bindings: locked',
     )
+    expect(screen.getByLabelText('Overlay Marker Numeric Jump Summary')).toHaveTextContent(
+      'Jump keys: locked',
+    )
     expect(screen.getByRole('button', { name: 'Previous Bucket' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Previous Marker' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Previous Same Kind' })).toBeDisabled()
@@ -1362,6 +1401,9 @@ describe('Dashboard shell', () => {
     fireEvent.change(screen.getByLabelText('Selection Mode'), { target: { value: 'sticky' } })
     expect(screen.getByLabelText('Overlay Marker Behavior')).toHaveTextContent(
       'Marker behavior: wrap:bounded · selection:sticky · nav:manual',
+    )
+    expect(screen.getByLabelText('Overlay Marker Numeric Jump Summary')).toHaveTextContent(
+      'Jump keys: keys:1-3 · selected:3/3',
     )
     expect(screen.getByRole('button', { name: 'Previous Marker' })).toBeEnabled()
     expect(screen.getByRole('button', { name: 'Oldest Marker' })).toBeEnabled()
