@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import App from './App'
@@ -376,6 +376,12 @@ describe('Dashboard shell', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Load Preset' }))
 
     expect(screen.getByLabelText('Feed Symbol')).toHaveValue('ETHUSDm')
+    const preservedRow = screen.getByText('Preserved').closest('div')
+    const overwrittenRow = screen.getByText('Overwritten').closest('div')
+    expect(preservedRow).not.toBeNull()
+    expect(overwrittenRow).not.toBeNull()
+    expect(within(preservedRow as HTMLElement).getByText('1')).toBeInTheDocument()
+    expect(within(overwrittenRow as HTMLElement).getByText('0')).toBeInTheDocument()
   })
 
   it('reports accepted and rejected preset names after import', async () => {

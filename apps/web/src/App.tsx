@@ -60,6 +60,9 @@ type PresetImportReport = {
   mode: PresetImportMode
   accepted: string[]
   rejected: string[]
+  createdCount: number
+  preservedCount: number
+  overwrittenCount: number
   importedAt: string
 }
 
@@ -811,14 +814,21 @@ function App() {
       acceptedNames.push(name)
     }
     const store = readPresetStore()
+    const conflicts = acceptedNames.filter((name) => name in store).length
     const merged =
       presetImportMode === 'merge' ? { ...incoming, ...store } : { ...store, ...incoming }
+    const createdCount = acceptedNames.length - conflicts
+    const preservedCount = presetImportMode === 'merge' ? conflicts : 0
+    const overwrittenCount = presetImportMode === 'overwrite' ? conflicts : 0
     writePresetStore(merged)
     setPresetImportInput('')
     setPresetImportReport({
       mode: presetImportMode,
       accepted: acceptedNames,
       rejected: rejectedNames,
+      createdCount,
+      preservedCount,
+      overwrittenCount,
       importedAt: new Date().toISOString(),
     })
     appendBlock({
@@ -826,7 +836,8 @@ function App() {
       title: 'presets imported',
       content:
         `Imported ${acceptedNames.length} preset entries (${presetImportMode}). ` +
-        `Rejected ${rejectedNames.length}.`,
+        `Created ${createdCount}, preserved ${preservedCount}, overwritten ${overwrittenCount}, ` +
+        `rejected ${rejectedNames.length}.`,
       severity: 'info',
     })
   }, [appendBlock, presetImportInput, presetImportMode, readPresetStore, writePresetStore])
@@ -1233,6 +1244,18 @@ function App() {
                 <div>
                   <strong>Rejected</strong>
                   <span>{presetImportReport.rejected.join(', ') || 'none'}</span>
+                </div>
+                <div>
+                  <strong>Created</strong>
+                  <span>{presetImportReport.createdCount}</span>
+                </div>
+                <div>
+                  <strong>Preserved</strong>
+                  <span>{presetImportReport.preservedCount}</span>
+                </div>
+                <div>
+                  <strong>Overwritten</strong>
+                  <span>{presetImportReport.overwrittenCount}</span>
                 </div>
               </div>
             ) : null}
