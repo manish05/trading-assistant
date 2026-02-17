@@ -747,6 +747,16 @@ describe('Dashboard shell', () => {
     expect(window.localStorage.getItem('quick-action-import-snapshot-toggles-v1')).toBe('collapsed')
   })
 
+  it('shows collapsed quick-toggle hint with current lock state', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Quick Unlock Reset' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Hide Quick Toggles' }))
+    expect(screen.getByRole('button', { name: 'Show Quick Toggles' })).toHaveAttribute(
+      'title',
+      'Quick toggles collapsed; expand to access quick actions; reset lock is unlocked.',
+    )
+  })
+
   it('initializes snapshot quick-toggle expansion state from localStorage', () => {
     window.localStorage.setItem('quick-action-import-snapshot-toggles-v1', 'collapsed')
     render(<App />)
