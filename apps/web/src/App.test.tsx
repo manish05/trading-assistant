@@ -57,6 +57,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByText(/Shortcut: Ctrl\/Cmd\+Enter to import, Esc to clear\./)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Hide Hints' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Use Compact Hints' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Copy Shortcut Cheat Sheet' })).toBeInTheDocument()
     expect(screen.getByText('Last import: none')).toBeInTheDocument()
   })
 
@@ -435,6 +436,24 @@ describe('Dashboard shell', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Use Compact Hints' }))
     expect(screen.getByText(/Shortcuts: Ctrl\/Cmd\+Enter import · Esc clear\./)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Use Detailed Hints' })).toBeInTheDocument()
+  })
+
+  it('copies import shortcut cheat-sheet to clipboard', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(window.navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    })
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Copy Shortcut Cheat Sheet' }))
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalled()
+      const payload = String(writeText.mock.calls[writeText.mock.calls.length - 1][0])
+      expect(payload).toContain('Import Shortcuts')
+      expect(payload).toContain('Ctrl/Cmd+Enter')
+      expect(payload).toContain('Active mode: overwrite')
+    })
   })
 
   it('reports accepted and rejected preset names after import', async () => {

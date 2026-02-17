@@ -993,6 +993,36 @@ function App() {
     }
   }, [appendBlock, lastImportSummaryText, presetImportReport])
 
+  const copyImportShortcutCheatSheet = useCallback(async () => {
+    const cheatSheet = [
+      'Import Shortcuts',
+      '- Ctrl/Cmd+Enter: run preset JSON import',
+      '- Esc: clear preset JSON input',
+      '- Import mode overwrite: incoming presets replace conflicts',
+      '- Import mode merge: existing presets keep conflicts',
+      `- Active mode: ${presetImportMode}`,
+    ].join('\n')
+    try {
+      if (!navigator.clipboard?.writeText) {
+        throw new Error('Clipboard API unavailable')
+      }
+      await navigator.clipboard.writeText(cheatSheet)
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'shortcut cheat-sheet copied',
+        content: 'Copied import shortcut cheat-sheet to clipboard.',
+        severity: 'info',
+      })
+    } catch {
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'shortcut cheat-sheet copy failed',
+        content: 'Clipboard access failed or is unavailable.',
+        severity: 'warn',
+      })
+    }
+  }, [appendBlock, presetImportMode])
+
   const clearPresetImportReport = useCallback(() => {
     if (!presetImportReport) {
       return
@@ -1447,6 +1477,9 @@ function App() {
                 }
               >
                 {importHintMode === 'detailed' ? 'Use Compact Hints' : 'Use Detailed Hints'}
+              </button>
+              <button type="button" onClick={() => void copyImportShortcutCheatSheet()}>
+                Copy Shortcut Cheat Sheet
               </button>
               <button
                 type="button"
