@@ -46,6 +46,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Export Presets JSON' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Import Presets JSON' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Copy Import Report' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Clear Import Report' })).toBeDisabled()
     expect(screen.getByLabelText('Import Mode')).toBeInTheDocument()
     expect(screen.getByLabelText('Import Mode Badge')).toBeInTheDocument()
   })
@@ -446,5 +447,26 @@ describe('Dashboard shell', () => {
       expect(payload).toContain('accepted=copy-template')
       expect(payload).toContain('mode=overwrite')
     })
+  })
+
+  it('clears preset import report diagnostics', async () => {
+    render(<App />)
+    fireEvent.change(screen.getByLabelText('Import Presets JSON'), {
+      target: {
+        value: '{"clear-template":{"feedSymbol":"ETHUSDm"}}',
+      },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Import Presets JSON' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Clear Import Report' })).toBeEnabled()
+      expect(screen.getByText('Accepted')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Clear Import Report' }))
+
+    expect(screen.queryByText('Accepted')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Copy Import Report' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Clear Import Report' })).toBeDisabled()
   })
 })

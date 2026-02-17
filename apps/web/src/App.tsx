@@ -882,6 +882,19 @@ function App() {
     }
   }, [appendBlock, presetImportReport])
 
+  const clearPresetImportReport = useCallback(() => {
+    if (!presetImportReport) {
+      return
+    }
+    setPresetImportReport(null)
+    appendBlock({
+      id: `blk_${Date.now()}`,
+      title: 'import report cleared',
+      content: 'Cleared the latest preset import diagnostics.',
+      severity: 'info',
+    })
+  }, [appendBlock, presetImportReport])
+
   useEffect(() => {
     if (!autoRefreshEnabled) {
       return
@@ -1279,6 +1292,9 @@ function App() {
                 disabled={!presetImportReport}
               >
                 Copy Import Report
+              </button>
+              <button type="button" onClick={clearPresetImportReport} disabled={!presetImportReport}>
+                Clear Import Report
               </button>
             </div>
             {presetImportReport ? (
