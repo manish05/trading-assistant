@@ -326,6 +326,25 @@ describe('Dashboard shell', () => {
     })
   })
 
+  it('applies defaults when imported presets omit required keys', async () => {
+    render(<App />)
+
+    fireEvent.change(screen.getByLabelText('Import Presets JSON'), {
+      target: {
+        value: '{"partial-template":{"feedSymbol":"LTCUSDm"}}',
+      },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Import Presets JSON' }))
+    fireEvent.change(screen.getByLabelText('Saved Presets'), {
+      target: { value: 'partial-template' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Load Preset' }))
+
+    expect(screen.getByLabelText('Feed Symbol')).toHaveValue('LTCUSDm')
+    expect(screen.getByLabelText('Account ID')).toHaveValue('acct_demo_1')
+    expect(screen.getByLabelText('Feed Timeframe')).toHaveValue('5m')
+  })
+
   it('respects merge mode when importing conflicting presets', async () => {
     render(<App />)
 

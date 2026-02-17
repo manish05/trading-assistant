@@ -60,6 +60,22 @@ type PresetImportMode = 'overwrite' | 'merge'
 const PRESETS_STORAGE_KEY = 'quick-action-presets-v1'
 const HISTORY_FILTER_STORAGE_KEY = 'quick-action-history-filter-v1'
 const TIMESTAMP_FORMAT_STORAGE_KEY = 'quick-action-timestamp-format-v1'
+const DEFAULT_PRESET_TEMPLATE: QuickActionPreset = {
+  managedAccountId: 'acct_demo_1',
+  managedProviderAccountId: 'provider_demo_1',
+  managedAccountLabel: 'Demo Account',
+  managedAccountSymbolsInput: 'ETHUSDm,BTCUSDm',
+  managedDeviceId: 'dev_iphone_1',
+  managedDevicePlatform: 'ios',
+  managedDeviceLabel: 'Dashboard iPhone',
+  managedDevicePairPushToken: 'push_dashboard_1',
+  managedDeviceRotatePushToken: 'push_dashboard_rotated',
+  feedTopic: 'market.candle.closed',
+  feedSymbol: 'ETHUSDm',
+  feedTimeframe: '5m',
+  refreshSecondsInput: '15',
+  minRequestGapMsInput: '400',
+}
 
 const readPresetStoreFromStorage = (): Record<string, QuickActionPreset> => {
   if (typeof window === 'undefined') {
@@ -95,6 +111,35 @@ const readTimestampFormatFromStorage = (): TimestampFormat => {
   }
   const raw = window.localStorage.getItem(TIMESTAMP_FORMAT_STORAGE_KEY)
   return raw === 'relative' ? 'relative' : 'absolute'
+}
+
+const sanitizePreset = (value: unknown): QuickActionPreset | null => {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return null
+  }
+  const raw = value as Record<string, unknown>
+  const pick = (key: keyof QuickActionPreset): string => {
+    const candidate = raw[key]
+    return typeof candidate === 'string' && candidate.length > 0
+      ? candidate
+      : DEFAULT_PRESET_TEMPLATE[key]
+  }
+  return {
+    managedAccountId: pick('managedAccountId'),
+    managedProviderAccountId: pick('managedProviderAccountId'),
+    managedAccountLabel: pick('managedAccountLabel'),
+    managedAccountSymbolsInput: pick('managedAccountSymbolsInput'),
+    managedDeviceId: pick('managedDeviceId'),
+    managedDevicePlatform: pick('managedDevicePlatform'),
+    managedDeviceLabel: pick('managedDeviceLabel'),
+    managedDevicePairPushToken: pick('managedDevicePairPushToken'),
+    managedDeviceRotatePushToken: pick('managedDeviceRotatePushToken'),
+    feedTopic: pick('feedTopic'),
+    feedSymbol: pick('feedSymbol'),
+    feedTimeframe: pick('feedTimeframe'),
+    refreshSecondsInput: pick('refreshSecondsInput'),
+    minRequestGapMsInput: pick('minRequestGapMsInput'),
+  }
 }
 
 const formatTimestamp = (ts: string, format: TimestampFormat): string => {
@@ -133,26 +178,42 @@ function App() {
   const [protocolVersion, setProtocolVersion] = useState<number | null>(null)
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [accountCount, setAccountCount] = useState<number | null>(null)
-  const [managedAccountId, setManagedAccountId] = useState<string>('acct_demo_1')
-  const [managedProviderAccountId, setManagedProviderAccountId] = useState<string>('provider_demo_1')
-  const [managedAccountLabel, setManagedAccountLabel] = useState<string>('Demo Account')
+  const [managedAccountId, setManagedAccountId] = useState<string>(
+    DEFAULT_PRESET_TEMPLATE.managedAccountId,
+  )
+  const [managedProviderAccountId, setManagedProviderAccountId] = useState<string>(
+    DEFAULT_PRESET_TEMPLATE.managedProviderAccountId,
+  )
+  const [managedAccountLabel, setManagedAccountLabel] = useState<string>(
+    DEFAULT_PRESET_TEMPLATE.managedAccountLabel,
+  )
   const [managedAccountSymbolsInput, setManagedAccountSymbolsInput] = useState<string>(
-    'ETHUSDm,BTCUSDm',
+    DEFAULT_PRESET_TEMPLATE.managedAccountSymbolsInput,
   )
   const [accountConnectionStatus, setAccountConnectionStatus] = useState<string>('unknown')
   const [deviceCount, setDeviceCount] = useState<number | null>(null)
-  const [managedDeviceId, setManagedDeviceId] = useState<string>('dev_iphone_1')
-  const [managedDevicePlatform, setManagedDevicePlatform] = useState<string>('ios')
-  const [managedDeviceLabel, setManagedDeviceLabel] = useState<string>('Dashboard iPhone')
+  const [managedDeviceId, setManagedDeviceId] = useState<string>(
+    DEFAULT_PRESET_TEMPLATE.managedDeviceId,
+  )
+  const [managedDevicePlatform, setManagedDevicePlatform] = useState<string>(
+    DEFAULT_PRESET_TEMPLATE.managedDevicePlatform,
+  )
+  const [managedDeviceLabel, setManagedDeviceLabel] = useState<string>(
+    DEFAULT_PRESET_TEMPLATE.managedDeviceLabel,
+  )
   const [managedDevicePairPushToken, setManagedDevicePairPushToken] = useState<string>(
-    'push_dashboard_1',
+    DEFAULT_PRESET_TEMPLATE.managedDevicePairPushToken,
   )
   const [managedDeviceRotatePushToken, setManagedDeviceRotatePushToken] = useState<string>(
-    'push_dashboard_rotated',
+    DEFAULT_PRESET_TEMPLATE.managedDeviceRotatePushToken,
   )
   const [autoRefreshEnabled, setAutoRefreshEnabled] = useState<boolean>(false)
-  const [refreshSecondsInput, setRefreshSecondsInput] = useState<string>('15')
-  const [minRequestGapMsInput, setMinRequestGapMsInput] = useState<string>('400')
+  const [refreshSecondsInput, setRefreshSecondsInput] = useState<string>(
+    DEFAULT_PRESET_TEMPLATE.refreshSecondsInput,
+  )
+  const [minRequestGapMsInput, setMinRequestGapMsInput] = useState<string>(
+    DEFAULT_PRESET_TEMPLATE.minRequestGapMsInput,
+  )
   const [presetNameInput, setPresetNameInput] = useState<string>('default')
   const [selectedPresetName, setSelectedPresetName] = useState<string>('')
   const [presetImportInput, setPresetImportInput] = useState<string>('')
@@ -161,9 +222,9 @@ function App() {
     Object.keys(readPresetStoreFromStorage()).sort(),
   )
   const [feedCount, setFeedCount] = useState<number | null>(null)
-  const [feedTopic, setFeedTopic] = useState<string>('market.candle.closed')
-  const [feedSymbol, setFeedSymbol] = useState<string>('ETHUSDm')
-  const [feedTimeframe, setFeedTimeframe] = useState<string>('5m')
+  const [feedTopic, setFeedTopic] = useState<string>(DEFAULT_PRESET_TEMPLATE.feedTopic)
+  const [feedSymbol, setFeedSymbol] = useState<string>(DEFAULT_PRESET_TEMPLATE.feedSymbol)
+  const [feedTimeframe, setFeedTimeframe] = useState<string>(DEFAULT_PRESET_TEMPLATE.feedTimeframe)
   const [subscriptionCount, setSubscriptionCount] = useState<number | null>(null)
   const [activeSubscriptionId, setActiveSubscriptionId] = useState<string | null>(null)
   const [feedLifecycle, setFeedLifecycle] = useState<FeedLifecycleBadge[]>([])
@@ -714,7 +775,21 @@ function App() {
       return
     }
 
-    const incoming = parsed as Record<string, QuickActionPreset>
+    const incomingRaw = parsed as Record<string, unknown>
+    const incoming: Record<string, QuickActionPreset> = {}
+    let rejectedCount = 0
+    for (const [name, value] of Object.entries(incomingRaw)) {
+      if (!name.trim()) {
+        rejectedCount += 1
+        continue
+      }
+      const sanitized = sanitizePreset(value)
+      if (!sanitized) {
+        rejectedCount += 1
+        continue
+      }
+      incoming[name] = sanitized
+    }
     const store = readPresetStore()
     const merged =
       presetImportMode === 'merge' ? { ...incoming, ...store } : { ...store, ...incoming }
@@ -723,7 +798,9 @@ function App() {
     appendBlock({
       id: `blk_${Date.now()}`,
       title: 'presets imported',
-      content: `Imported ${Object.keys(incoming).length} preset entries (${presetImportMode}).`,
+      content:
+        `Imported ${Object.keys(incoming).length} preset entries (${presetImportMode}). ` +
+        `Rejected ${rejectedCount}.`,
       severity: 'info',
     })
   }, [appendBlock, presetImportInput, presetImportMode, readPresetStore, writePresetStore])
