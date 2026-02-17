@@ -215,6 +215,11 @@ const MARKET_OVERLAY_MARKER_DELTA_BASIS_ORDER: MarketOverlayMarkerDeltaBasis[] =
   'latest',
   'average',
 ]
+const MARKET_OVERLAY_MARKER_BASIS_AGREEMENT_ORDER: MarketOverlayMarkerBasisAgreement[] = [
+  'all',
+  'agree',
+  'diverge',
+]
 const MAX_IMPORT_REPORT_NAMES = 6
 const FEED_CANDLE_FETCH_LIMIT = 50
 const MARKET_OVERLAY_MARKER_SKIP_STEP = 2
@@ -1322,6 +1327,15 @@ function App() {
     marketOverlayChartPoints,
     marketOverlayMarkerBasisAgreement,
   ])
+  const marketOverlayMarkerBasisAgreementShortcutSummary = useMemo(() => {
+    const cycleTarget =
+      marketOverlayMarkerBasisAgreement === 'all'
+        ? 'agree'
+        : marketOverlayMarkerBasisAgreement === 'agree'
+          ? 'diverge'
+          : 'all'
+    return `keys:q/e/x/c · all:q · agree:e · diverge:x · cycle:c=${cycleTarget} · active:${marketOverlayMarkerBasisAgreement}`
+  }, [marketOverlayMarkerBasisAgreement])
   const marketOverlayMarkerBasisAgreementKindSummary = useMemo(() => {
     type KindCounts = {
       trade: number
@@ -3110,6 +3124,19 @@ function App() {
       if (normalizedKey === 'x') {
         event.preventDefault()
         setMarketOverlayMarkerBasisAgreement('diverge')
+        return
+      }
+      if (normalizedKey === 'c') {
+        event.preventDefault()
+        setMarketOverlayMarkerBasisAgreement((current) => {
+          const currentIndex = MARKET_OVERLAY_MARKER_BASIS_AGREEMENT_ORDER.indexOf(current)
+          if (currentIndex < 0) {
+            return 'all'
+          }
+          return MARKET_OVERLAY_MARKER_BASIS_AGREEMENT_ORDER[
+            (currentIndex + 1) % MARKET_OVERLAY_MARKER_BASIS_AGREEMENT_ORDER.length
+          ]
+        })
         return
       }
       if (normalizedKey === 'u') {
@@ -5892,6 +5919,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Basis Agreement Summary">
               Basis agreement: {marketOverlayMarkerBasisAgreementSummary}
+            </p>
+            <p aria-label="Overlay Marker Basis Agreement Shortcut Summary">
+              Basis agreement shortcuts: {marketOverlayMarkerBasisAgreementShortcutSummary}
             </p>
             <p aria-label="Overlay Marker Basis Agreement Kind Summary">
               Basis agreement kinds: {marketOverlayMarkerBasisAgreementKindSummary}
