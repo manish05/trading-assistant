@@ -1240,8 +1240,11 @@ function App() {
       return
     }
     const payload = [
+      '[ImportNames]',
       `accepted:${presetImportReport.accepted.join(',')}`,
       `rejected:${presetImportReport.rejected.join(',')}`,
+      '[LockTelemetry]',
+      ...lockTelemetrySummaryLines,
     ].join('\n')
     try {
       if (!navigator.clipboard?.writeText) {
@@ -1262,7 +1265,7 @@ function App() {
         severity: 'warn',
       })
     }
-  }, [appendBlock, presetImportReport])
+  }, [appendBlock, lockTelemetrySummaryLines, presetImportReport])
 
   const copyLastImportSummary = useCallback(async () => {
     if (!presetImportReport) {
