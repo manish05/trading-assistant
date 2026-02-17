@@ -115,6 +115,11 @@ describe('Dashboard shell', () => {
     expect(
       screen.getByText('srcSnapshot:0', { selector: '.import-snapshot-badges .import-summary-badge' }),
     ).toHaveClass('counter-tone-none')
+    expect(
+      screen.getByText('lockCounterReset:never', {
+        selector: '.import-snapshot-badges .import-summary-badge',
+      }),
+    ).toBeInTheDocument()
     expect(screen.getByText('Alt+L:0')).toHaveClass('counter-tone-none')
     expect(screen.getByRole('button', { name: 'Use Verbose Diagnostics' })).toBeInTheDocument()
     expect(
@@ -793,6 +798,11 @@ describe('Dashboard shell', () => {
     expect(window.localStorage.getItem('quick-action-helper-lock-counters-reset-at-v1')).toBeTruthy()
     expect(
       screen.queryByText('counterReset:never', {
+        selector: '.import-snapshot-badges .import-summary-badge',
+      }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText('lockCounterReset:never', {
         selector: '.import-snapshot-badges .import-summary-badge',
       }),
     ).not.toBeInTheDocument()

@@ -2475,6 +2475,12 @@ function App() {
                 >
                   srcSnapshot:{helperResetLockSourceCounts.snapshot}
                 </span>
+                <span className="import-summary-badge badge-hint-mode">
+                  lockCounterReset:
+                  {helperLockCountersLastResetAt
+                    ? formatTimestamp(helperLockCountersLastResetAt, 'relative')
+                    : 'never'}
+                </span>
                 <div className="import-snapshot-toggles" aria-label="Import Snapshot Toggles">
                   <span
                     className={`quick-toggle-lock-summary ${
