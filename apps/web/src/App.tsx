@@ -2517,6 +2517,24 @@ function App() {
     const ageLabel = formatElapsedMs(Date.now() - marketOverlayActiveTimelineAnnotation.timestamp)
     return `${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · t${point.time} · close:${point.value.toFixed(2)} · Δavg:${deltaFromAverage >= 0 ? '+' : ''}${deltaFromAverage.toFixed(2)} (${deltaFromAveragePct >= 0 ? '+' : ''}${deltaFromAveragePct.toFixed(2)}%) · Δlatest:${deltaToLatest >= 0 ? '+' : ''}${deltaToLatest.toFixed(2)} (${deltaToLatestPct >= 0 ? '+' : ''}${deltaToLatestPct.toFixed(2)}%) · Δprev:${deltaToPrevious === null ? 'n/a' : `${deltaToPrevious >= 0 ? '+' : ''}${deltaToPrevious.toFixed(2)} (${deltaToPreviousPct !== null ? `${deltaToPreviousPct >= 0 ? '+' : ''}${deltaToPreviousPct.toFixed(2)}%` : 'n/a'})`} · age:${ageLabel} · tone:${marketOverlayActiveTimelineAnnotation.tone}`
   }, [marketOverlayActiveTimelineAnnotation, marketOverlayAverageClose, marketOverlayChartPoints])
+  const marketOverlayActiveMarkerBasisAgreementDetail = useMemo(() => {
+    if (!marketOverlayActiveTimelineAnnotation || marketOverlayChartPoints.length === 0) {
+      return 'none'
+    }
+    const point =
+      marketOverlayChartPoints.find((candidate) => candidate.time === marketOverlayActiveTimelineAnnotation.time) ??
+      marketOverlayChartPoints[marketOverlayChartPoints.length - 1]
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const deltaLatest = latestPoint ? point.value - latestPoint.value : null
+    const deltaAverage = baseline !== null ? point.value - baseline : null
+    const latestTone = resolveMarketOverlayDeltaTone(deltaLatest)
+    const averageTone = resolveMarketOverlayDeltaTone(deltaAverage)
+    const relation = latestTone === averageTone ? 'agree' : 'diverge'
+    const formatDelta = (value: number | null) =>
+      value === null ? 'n/a' : `${value >= 0 ? '+' : ''}${value.toFixed(2)}`
+    return `${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · latest:${latestTone}(${formatDelta(deltaLatest)}) · average:${averageTone}(${formatDelta(deltaAverage)}) · relation:${relation}`
+  }, [marketOverlayActiveTimelineAnnotation, marketOverlayAverageClose, marketOverlayChartPoints])
   const marketOverlayMarkerTimelineRows = useMemo(() => {
     if (marketOverlayScopedVisibleAnnotations.length === 0) {
       return [] as Array<{ id: string; text: string; isSelected: boolean }>
@@ -5579,6 +5597,9 @@ function App() {
               className="market-overlay-marker-drilldown-detail"
             >
               Marker detail: {marketOverlayMarkerDrilldownDetail}
+            </p>
+            <p aria-label="Overlay Marker Active Basis Agreement">
+              Active basis agreement: {marketOverlayActiveMarkerBasisAgreementDetail}
             </p>
             <p
               aria-label="Overlay Chart Runtime"

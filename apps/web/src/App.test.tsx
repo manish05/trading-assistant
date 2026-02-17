@@ -67,6 +67,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Drilldown Detail')).toHaveTextContent(
       'Marker detail: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Active Basis Agreement')).toHaveTextContent(
+      'Active basis agreement: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
       'Timeline buckets: mode:none · scope:all-buckets · buckets:0 · latest:none · count:0',
     )
@@ -657,6 +660,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Drilldown Detail')).toHaveTextContent(
       'Marker detail: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Active Basis Agreement')).toHaveTextContent(
+      'Active basis agreement: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
       'Timeline buckets: mode:none · scope:all-buckets · buckets:0 · latest:none · count:0',
     )
@@ -779,6 +785,9 @@ describe('Dashboard shell', () => {
       )
       expect(screen.getByLabelText('Overlay Marker Drilldown Detail')).toHaveTextContent(
         'tone:warning',
+      )
+      expect(screen.getByLabelText('Overlay Marker Active Basis Agreement')).toHaveTextContent(
+        'Active basis agreement: risk:live_trading_disabled:raised · latest:flat(+0.00) · average:up(+0.50) · relation:diverge',
       )
       expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
         'Timeline buckets: mode:none · scope:all-buckets · buckets:2 · latest:t2 · count:2',
@@ -994,6 +1003,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Drilldown Detail')).toHaveTextContent('Δprev:n/a')
     expect(screen.getByLabelText('Overlay Marker Drilldown Detail')).toHaveTextContent(
       'tone:positive',
+    )
+    expect(screen.getByLabelText('Overlay Marker Active Basis Agreement')).toHaveTextContent(
+      'Active basis agreement: trade:closed:queued · latest:down(-1.00) · average:down(-0.50) · relation:agree',
     )
 
     fireEvent.keyDown(screen.getByRole('button', { name: 'trade:closed:queued' }), { key: '2' })
