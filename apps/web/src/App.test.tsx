@@ -148,7 +148,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Copy Helper Summary' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Reset Helper Prefs' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Unlock Reset' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Reset Lock Counters' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Reset Lock Counters' })).toBeEnabled()
     expect(screen.getByText('Last import: none')).toBeInTheDocument()
     expect(screen.getByText('Alt+L:0')).toBeInTheDocument()
     expect(screen.getByText('controls:0')).toBeInTheDocument()
@@ -1026,7 +1026,13 @@ describe('Dashboard shell', () => {
     expect(screen.getByText('lockToggles:0')).toBeInTheDocument()
     expect(screen.getByText('srcControls:0')).toBeInTheDocument()
     expect(screen.getByText('diagLockToggles:0')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Reset Lock Counters' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Reset Lock Counters' })).toBeEnabled()
+    fireEvent.click(screen.getByRole('button', { name: 'Reset Lock Counters' }))
+    expect(
+      screen.getByText(
+        /No helper reset lock toggle history to clear\. Lock telemetry: lock toggles: 0, tone: none, reset: .*; sources: Alt\+L=0, controls=0, snapshot=0\./,
+      ),
+    ).toBeInTheDocument()
     expect(window.localStorage.getItem('quick-action-helper-lock-counters-reset-at-v1')).toBeTruthy()
     expect(
       screen.queryByText('counterReset:never', {

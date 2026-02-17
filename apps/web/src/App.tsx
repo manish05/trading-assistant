@@ -2817,7 +2817,6 @@ function App() {
                   type="button"
                   className="summary-copy-button"
                   onClick={resetHelperLockCounters}
-                  disabled={helperResetLockToggleCount === 0}
                   title={
                     helperResetLockToggleCount === 0
                       ? 'No lock toggles recorded yet.'
