@@ -119,6 +119,8 @@ const DEVICE_NOTIFY_TEST_MESSAGE = 'Dashboard test notification'
 const DEFAULT_RISK_EMERGENCY_REASON = 'dashboard emergency stop trigger'
 const TRADE_ORDER_REFERENCE_ID = 'order_demo_1'
 const TRADE_POSITION_REFERENCE_ID = 'position_demo_1'
+const COPYTRADE_PREVIEW_SIGNAL_ID = 'sig_dashboard_preview'
+const COPYTRADE_PREVIEW_STRATEGY_ID = 'strat_dashboard_1'
 const DEFAULT_PRESET_TEMPLATE: QuickActionPreset = {
   managedAccountId: 'acct_demo_1',
   managedProviderAccountId: 'provider_demo_1',
@@ -529,6 +531,8 @@ function App() {
     Object.keys(readPresetStoreFromStorage()).sort(),
   )
   const [feedCount, setFeedCount] = useState<number | null>(null)
+  const [marketplaceSignalCount, setMarketplaceSignalCount] = useState<number | null>(null)
+  const [copytradePreviewSummary, setCopytradePreviewSummary] = useState<string>('none')
   const [feedTopic, setFeedTopic] = useState<string>(DEFAULT_PRESET_TEMPLATE.feedTopic)
   const [feedSymbol, setFeedSymbol] = useState<string>(DEFAULT_PRESET_TEMPLATE.feedSymbol)
   const [feedTimeframe, setFeedTimeframe] = useState<string>(DEFAULT_PRESET_TEMPLATE.feedTimeframe)
@@ -1260,6 +1264,63 @@ function App() {
     const candlesRaw = payload?.candles
     setLastFetchedCandlesCount(Array.isArray(candlesRaw) ? candlesRaw.length : 0)
   }, [feedSymbol, feedTimeframe, sendRequest])
+
+  const sendMarketplaceSignals = useCallback(async () => {
+    const payload = await sendRequest('marketplace.signals', {})
+    const signalsRaw = payload?.signals
+    setMarketplaceSignalCount(Array.isArray(signalsRaw) ? signalsRaw.length : 0)
+  }, [sendRequest])
+
+  const sendCopytradePreview = useCallback(async () => {
+    const accountId = managedAccountId.trim() || DEFAULT_PRESET_TEMPLATE.managedAccountId
+    const symbol = feedSymbol.trim() || DEFAULT_PRESET_TEMPLATE.feedSymbol
+    const timeframe = feedTimeframe.trim() || DEFAULT_PRESET_TEMPLATE.feedTimeframe
+    const payload = await sendRequest('copytrade.preview', {
+      accountId,
+      signal: {
+        signalId: COPYTRADE_PREVIEW_SIGNAL_ID,
+        strategyId: COPYTRADE_PREVIEW_STRATEGY_ID,
+        ts: new Date().toISOString(),
+        symbol,
+        timeframe,
+        action: 'OPEN',
+        side: 'buy',
+        volume: 0.35,
+        entry: 2500.0,
+        stopLoss: 2450.0,
+        takeProfit: 2600.0,
+      },
+      constraints: {
+        allowedSymbols: [symbol],
+        maxVolume: 0.2,
+        directionFilter: 'both',
+        maxSignalAgeSeconds: 300,
+      },
+    })
+    if (!payload) {
+      return
+    }
+    const blockedReason = typeof payload.blockedReason === 'string' ? payload.blockedReason : null
+    const deduped = payload.deduped === true
+    const intent = payload.intent
+    const intentVolume =
+      intent && typeof intent === 'object' && 'volume' in intent && typeof intent.volume === 'number'
+        ? intent.volume
+        : null
+    if (blockedReason) {
+      setCopytradePreviewSummary(`blocked:${blockedReason}`)
+      return
+    }
+    if (deduped) {
+      setCopytradePreviewSummary('deduped')
+      return
+    }
+    if (intentVolume !== null) {
+      setCopytradePreviewSummary(`allowed (volume: ${intentVolume})`)
+      return
+    }
+    setCopytradePreviewSummary('allowed')
+  }, [feedSymbol, feedTimeframe, managedAccountId, sendRequest])
 
   const collectCurrentPreset = useCallback((): QuickActionPreset => {
     return {
@@ -2398,6 +2459,9 @@ function App() {
               <button type="button" onClick={() => void sendFeedsList()}>
                 Feeds
               </button>
+              <button type="button" onClick={() => void sendMarketplaceSignals()}>
+                Marketplace Signals
+              </button>
               <button type="button" onClick={() => void sendDevicesList()}>
                 Devices
               </button>
@@ -2418,6 +2482,9 @@ function App() {
               </button>
               <button type="button" onClick={() => void sendFeedGetCandles()}>
                 Get Candles
+              </button>
+              <button type="button" onClick={() => void sendCopytradePreview()}>
+                Copytrade Preview
               </button>
               <button
                 type="button"
@@ -2965,6 +3032,14 @@ function App() {
             <div>
               <dt>Candles (last fetch)</dt>
               <dd>{lastFetchedCandlesCount ?? 'n/a'}</dd>
+            </div>
+            <div>
+              <dt>Marketplace Signals (last fetch)</dt>
+              <dd>{marketplaceSignalCount ?? 'n/a'}</dd>
+            </div>
+            <div>
+              <dt>Copytrade Preview</dt>
+              <dd>{copytradePreviewSummary}</dd>
             </div>
             <div>
               <dt>Active Subscription</dt>

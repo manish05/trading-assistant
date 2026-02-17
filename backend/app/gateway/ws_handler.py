@@ -15,6 +15,7 @@ from app.config.loader import AppConfig
 from app.devices.registry import DeviceRegistry
 from app.feeds.service import FeedService
 from app.gateway.models import GatewayConnectParams
+from app.marketplace.copytrade import CopyTradeMapper, CopyTradeSignal, FollowerConstraints
 from app.memory.index import MemoryIndex
 from app.plugins.registry import ResolvedPlugins
 from app.protocol.frames import RequestFrame, parse_gateway_frame
@@ -236,6 +237,54 @@ class ConfigPatchParams(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     patch: dict[str, Any] = Field(default_factory=dict)
+
+
+class CopytradeSignalParams(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+
+    signal_id: str = Field(alias="signalId", min_length=1)
+    strategy_id: str = Field(alias="strategyId", min_length=1)
+    ts: str = Field(min_length=1)
+    symbol: str = Field(min_length=1)
+    timeframe: str = Field(min_length=1)
+    action: Literal["OPEN", "MODIFY", "CLOSE"]
+    side: Literal["buy", "sell"]
+    volume: float = Field(gt=0)
+    entry: float
+    stop_loss: float = Field(alias="stopLoss")
+    take_profit: float = Field(alias="takeProfit")
+
+
+class CopytradeConstraintsParams(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+
+    allowed_symbols: list[str] = Field(alias="allowedSymbols", default_factory=list)
+    max_volume: float = Field(alias="maxVolume", gt=0)
+    direction_filter: Literal["both", "long-only", "short-only"] = Field(
+        alias="directionFilter",
+        default="both",
+    )
+    max_signal_age_seconds: int = Field(alias="maxSignalAgeSeconds", ge=1)
+
+
+class CopytradePreviewParams(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+
+    account_id: str = Field(alias="accountId", min_length=1)
+    signal: CopytradeSignalParams
+    constraints: CopytradeConstraintsParams
 
 
 def _error_response(
@@ -764,6 +813,111 @@ async def handle_gateway_websocket(
                     },
                 )
             )
+            continue
+
+        if frame.method == "marketplace.signals":
+            now_iso = datetime.now(UTC).isoformat()
+            signals = [
+                {
+                    "signalId": "sig_marketplace_1",
+                    "strategyId": "strat_momentum_1",
+                    "ts": now_iso,
+                    "symbol": "ETHUSDm",
+                    "timeframe": "5m",
+                    "action": "OPEN",
+                    "side": "buy",
+                    "volume": 0.15,
+                    "entry": 2500.0,
+                    "stopLoss": 2450.0,
+                    "takeProfit": 2600.0,
+                },
+                {
+                    "signalId": "sig_marketplace_2",
+                    "strategyId": "strat_mean_reversion_1",
+                    "ts": now_iso,
+                    "symbol": "BTCUSDm",
+                    "timeframe": "1h",
+                    "action": "OPEN",
+                    "side": "sell",
+                    "volume": 0.1,
+                    "entry": 61000.0,
+                    "stopLoss": 62000.0,
+                    "takeProfit": 59000.0,
+                },
+            ]
+            audit_store.append(
+                actor="user",
+                action="marketplace.signals",
+                trace_id=frame.id,
+                data={"signalCount": len(signals)},
+            )
+            await websocket.send_json(
+                _ok_response(
+                    frame.id,
+                    payload={"signals": signals},
+                )
+            )
+            continue
+
+        if frame.method == "copytrade.preview":
+            try:
+                params = CopytradePreviewParams.model_validate(frame.params)
+            except ValidationError:
+                await websocket.send_json(
+                    _error_response(
+                        frame.id,
+                        code="INVALID_PARAMS",
+                        message="invalid copytrade.preview params",
+                    )
+                )
+                continue
+
+            signal = CopyTradeSignal(
+                signal_id=params.signal.signal_id,
+                strategy_id=params.signal.strategy_id,
+                ts=params.signal.ts,
+                symbol=params.signal.symbol,
+                timeframe=params.signal.timeframe,
+                action=params.signal.action,
+                side=params.signal.side,
+                volume=params.signal.volume,
+                entry=params.signal.entry,
+                stop_loss=params.signal.stop_loss,
+                take_profit=params.signal.take_profit,
+            )
+            mapper = CopyTradeMapper(
+                constraints=FollowerConstraints(
+                    allowed_symbols=params.constraints.allowed_symbols or [params.signal.symbol],
+                    max_volume=params.constraints.max_volume,
+                    direction_filter=params.constraints.direction_filter,
+                    max_signal_age_seconds=params.constraints.max_signal_age_seconds,
+                )
+            )
+            result = mapper.map_signal(signal=signal, account_id=params.account_id)
+            result_payload = {
+                "signalId": params.signal.signal_id,
+                "deduped": result.deduped,
+                "blockedReason": result.blocked_reason,
+                "intent": result.intent.model_dump(mode="json") if result.intent else None,
+            }
+            audit_store.append(
+                actor="user",
+                action="copytrade.preview",
+                trace_id=frame.id,
+                data={
+                    "accountId": params.account_id,
+                    "signalId": params.signal.signal_id,
+                    "blockedReason": result.blocked_reason,
+                    "deduped": result.deduped,
+                },
+            )
+            await websocket.send_json(
+                _event_frame(
+                    "event.copytrade.preview",
+                    {"requestId": frame.id, **result_payload},
+                )
+            )
+            await websocket.send_json(_ok_response(frame.id, payload=result_payload))
             continue
 
         if frame.method == "risk.preview":

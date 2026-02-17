@@ -831,6 +831,116 @@ def test_gateway_config_and_plugin_status_methods(tmp_path) -> None:
     assert config_response_after_patch["payload"]["gateway"]["port"] == 19001
 
 
+def test_websocket_marketplace_signals_returns_catalog(tmp_path) -> None:
+    client = TestClient(create_app(data_dir=tmp_path))
+
+    with client.websocket_connect("/ws") as websocket:
+        websocket.send_json(_connect_payload())
+        _ = websocket.receive_json()
+
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_marketplace_signals_1",
+                "method": "marketplace.signals",
+                "params": {},
+            }
+        )
+        response = websocket.receive_json()
+
+    assert response["ok"] is True
+    signals = response["payload"]["signals"]
+    assert isinstance(signals, list)
+    assert len(signals) == 2
+    assert signals[0]["action"] == "OPEN"
+    assert signals[0]["symbol"] == "ETHUSDm"
+    assert "signalId" in signals[0]
+
+
+def test_websocket_copytrade_preview_maps_and_blocks_signals(tmp_path) -> None:
+    client = TestClient(create_app(data_dir=tmp_path))
+
+    with client.websocket_connect("/ws") as websocket:
+        websocket.send_json(_connect_payload())
+        _ = websocket.receive_json()
+
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_copytrade_preview_allowed",
+                "method": "copytrade.preview",
+                "params": {
+                    "accountId": "acct_demo_1",
+                    "signal": {
+                        "signalId": "sig_preview_allowed",
+                        "strategyId": "strat_alpha",
+                        "ts": "2026-02-17T10:00:00Z",
+                        "symbol": "ETHUSDm",
+                        "timeframe": "5m",
+                        "action": "OPEN",
+                        "side": "buy",
+                        "volume": 0.35,
+                        "entry": 2500.0,
+                        "stopLoss": 2450.0,
+                        "takeProfit": 2600.0,
+                    },
+                    "constraints": {
+                        "allowedSymbols": ["ETHUSDm"],
+                        "maxVolume": 0.2,
+                        "directionFilter": "both",
+                        "maxSignalAgeSeconds": 86400,
+                    },
+                },
+            }
+        )
+        allowed_event, allowed_response = _read_event_then_response(websocket)
+
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_copytrade_preview_blocked",
+                "method": "copytrade.preview",
+                "params": {
+                    "accountId": "acct_demo_1",
+                    "signal": {
+                        "signalId": "sig_preview_blocked",
+                        "strategyId": "strat_alpha",
+                        "ts": "2026-02-17T10:01:00Z",
+                        "symbol": "ETHUSDm",
+                        "timeframe": "5m",
+                        "action": "OPEN",
+                        "side": "sell",
+                        "volume": 0.1,
+                        "entry": 2500.0,
+                        "stopLoss": 2450.0,
+                        "takeProfit": 2600.0,
+                    },
+                    "constraints": {
+                        "allowedSymbols": ["ETHUSDm"],
+                        "maxVolume": 0.2,
+                        "directionFilter": "long-only",
+                        "maxSignalAgeSeconds": 86400,
+                    },
+                },
+            }
+        )
+        blocked_event, blocked_response = _read_event_then_response(websocket)
+
+    assert allowed_event is not None
+    assert allowed_event["event"] == "event.copytrade.preview"
+    assert allowed_response["ok"] is True
+    assert allowed_response["payload"]["blockedReason"] is None
+    assert allowed_response["payload"]["deduped"] is False
+    assert allowed_response["payload"]["intent"]["account_id"] == "acct_demo_1"
+    assert allowed_response["payload"]["intent"]["volume"] == 0.2
+
+    assert blocked_event is not None
+    assert blocked_event["event"] == "event.copytrade.preview"
+    assert blocked_response["ok"] is True
+    assert blocked_response["payload"]["intent"] is None
+    assert blocked_response["payload"]["blockedReason"] == "DIRECTION_FILTER_BLOCK"
+
+
 def test_gateway_trades_place_blocks_when_risk_rejects(tmp_path) -> None:
     client = TestClient(create_app(data_dir=tmp_path))
 

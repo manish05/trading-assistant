@@ -52,6 +52,8 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Modify Trade' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Cancel Trade' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Close Position' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Marketplace Signals' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Copytrade Preview' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Unsubscribe Feed' })).toBeDisabled()
     expect(screen.getByLabelText('Refresh Interval (sec)')).toBeInTheDocument()
     expect(screen.getByLabelText('Min Request Gap (ms)')).toBeInTheDocument()
@@ -182,6 +184,12 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByText('Trade Controls').closest('div')).toHaveTextContent('none')
     expect(screen.getByText('Risk Alerts').closest('div')).toHaveTextContent('none')
+    expect(screen.getByText('Marketplace Signals (last fetch)').closest('div')).toHaveTextContent(
+      'n/a',
+    )
+    expect(screen.getByText('Copytrade Preview', { selector: 'dt' }).closest('div')).toHaveTextContent(
+      'none',
+    )
   })
 
   it('sends account and feed management requests', async () => {
@@ -252,6 +260,8 @@ describe('Dashboard shell', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Unpair Device' }))
     fireEvent.click(screen.getByRole('button', { name: 'Subscribe Feed' }))
     fireEvent.click(screen.getByRole('button', { name: 'Get Candles' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Marketplace Signals' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Copytrade Preview' }))
 
     await waitFor(() => {
       const payloads = sendSpy.mock.calls.map(([serialized]) =>
@@ -277,6 +287,8 @@ describe('Dashboard shell', () => {
       expect(methods).toContain('devices.unpair')
       expect(methods).toContain('feeds.subscribe')
       expect(methods).toContain('feeds.getCandles')
+      expect(methods).toContain('marketplace.signals')
+      expect(methods).toContain('copytrade.preview')
 
       const accountConnect = payloads.find((payload) => payload.method === 'accounts.connect')
       expect(accountConnect?.params).toMatchObject({
@@ -360,6 +372,23 @@ describe('Dashboard shell', () => {
         timeframe: '1h',
         limit: 50,
       })
+
+      const copytradePreview = payloads.find((payload) => payload.method === 'copytrade.preview')
+      expect(copytradePreview?.params).toMatchObject({
+        accountId: 'acct_custom_9',
+        signal: {
+          symbol: 'BTCUSDm',
+          timeframe: '1h',
+          action: 'OPEN',
+          side: 'buy',
+        },
+        constraints: {
+          allowedSymbols: ['BTCUSDm'],
+          maxVolume: 0.2,
+          directionFilter: 'both',
+          maxSignalAgeSeconds: 300,
+        },
+      })
     })
 
     sendSpy.mockRestore()
@@ -407,6 +436,84 @@ describe('Dashboard shell', () => {
       const candlesRow = screen.getByText('Candles (last fetch)').closest('div')
       expect(candlesRow).not.toBeNull()
       expect(within(candlesRow as HTMLElement).getByText('3')).toBeInTheDocument()
+    })
+
+    sendSpy.mockRestore()
+  })
+
+  it('updates marketplace signal and copytrade preview status rows', async () => {
+    const sendSpy = vi
+      .spyOn(WebSocket.prototype, 'send')
+      .mockImplementation(function (
+        this: WebSocket,
+        data: string | ArrayBufferLike | Blob | ArrayBufferView<ArrayBufferLike>,
+      ) {
+        if (typeof data !== 'string') {
+          return
+        }
+        const payload = JSON.parse(data) as {
+          type?: string
+          id?: string
+          method?: string
+        }
+        if (payload.type === 'req' && payload.method === 'marketplace.signals' && payload.id) {
+          queueMicrotask(() => {
+            this.onmessage?.(
+              new MessageEvent('message', {
+                data: JSON.stringify({
+                  type: 'res',
+                  id: payload.id,
+                  ok: true,
+                  payload: {
+                    signals: [{ signalId: 'sig1' }, { signalId: 'sig2' }, { signalId: 'sig3' }],
+                  },
+                }),
+              }),
+            )
+          })
+          return
+        }
+        if (payload.type === 'req' && payload.method === 'copytrade.preview' && payload.id) {
+          queueMicrotask(() => {
+            this.onmessage?.(
+              new MessageEvent('message', {
+                data: JSON.stringify({
+                  type: 'res',
+                  id: payload.id,
+                  ok: true,
+                  payload: {
+                    signalId: 'sig_dashboard_preview',
+                    deduped: false,
+                    blockedReason: null,
+                    intent: {
+                      account_id: 'acct_demo_1',
+                      symbol: 'ETHUSDm',
+                      action: 'PLACE_MARKET_ORDER',
+                      side: 'buy',
+                      volume: 0.2,
+                      stop_loss: 2450.0,
+                      take_profit: 2600.0,
+                    },
+                  },
+                }),
+              }),
+            )
+          })
+        }
+      })
+
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Marketplace Signals' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Copytrade Preview' }))
+
+    await waitFor(() => {
+      const marketplaceRow = screen.getByText('Marketplace Signals (last fetch)').closest('div')
+      expect(marketplaceRow).not.toBeNull()
+      expect(within(marketplaceRow as HTMLElement).getByText('3')).toBeInTheDocument()
+
+      const copytradeRow = screen.getByText('Copytrade Preview', { selector: 'dt' }).closest('div')
+      expect(copytradeRow).not.toBeNull()
+      expect(within(copytradeRow as HTMLElement).getByText('allowed (volume: 0.2)')).toBeInTheDocument()
     })
 
     sendSpy.mockRestore()
