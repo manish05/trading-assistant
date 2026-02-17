@@ -62,6 +62,7 @@ type TimestampFormat = 'absolute' | 'relative'
 type RiskEmergencyAction = 'pause_trading' | 'cancel_all' | 'close_all' | 'disable_live'
 type MarketOverlayMode = 'price-only' | 'with-trades' | 'with-risk'
 type MarketOverlayChartRuntime = 'loading' | 'ready' | 'fallback' | 'error'
+type MarketOverlayChartLens = 'price-only' | 'price-and-trend' | 'diagnostics'
 type MarketOverlayChartPoint = { time: number; value: number }
 type MarketOverlayChartSeries = {
   setData: (data: MarketOverlayChartPoint[]) => void
@@ -145,6 +146,7 @@ const HELPER_RESET_LOCK_STORAGE_KEY = 'quick-action-helper-reset-lock-v1'
 const HELPER_LOCK_COUNTERS_RESET_AT_STORAGE_KEY = 'quick-action-helper-lock-counters-reset-at-v1'
 const BLOCK_TELEMETRY_VISIBILITY_STORAGE_KEY = 'quick-action-block-telemetry-visibility-v1'
 const MARKET_OVERLAY_MODE_STORAGE_KEY = 'quick-action-market-overlay-mode-v1'
+const MARKET_OVERLAY_CHART_LENS_STORAGE_KEY = 'quick-action-market-overlay-chart-lens-v1'
 const MAX_IMPORT_REPORT_NAMES = 6
 const FEED_CANDLE_FETCH_LIMIT = 50
 const DEVICE_NOTIFY_TEST_MESSAGE = 'Dashboard test notification'
@@ -367,6 +369,17 @@ const readMarketOverlayModeFromStorage = (): MarketOverlayMode => {
   return 'price-only'
 }
 
+const readMarketOverlayChartLensFromStorage = (): MarketOverlayChartLens => {
+  if (typeof window === 'undefined') {
+    return 'price-only'
+  }
+  const raw = window.localStorage.getItem(MARKET_OVERLAY_CHART_LENS_STORAGE_KEY)
+  if (raw === 'price-and-trend' || raw === 'diagnostics') {
+    return raw
+  }
+  return 'price-only'
+}
+
 const sanitizePreset = (value: unknown): QuickActionPreset | null => {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     return null
@@ -555,7 +568,9 @@ function App() {
   const blockIdCounterRef = useRef(0)
   const marketOverlayChartContainerRef = useRef<HTMLDivElement | null>(null)
   const marketOverlayChartRef = useRef<MarketOverlayChart | null>(null)
-  const marketOverlayChartSeriesRef = useRef<MarketOverlayChartSeries | null>(null)
+  const marketOverlayPriceSeriesRef = useRef<MarketOverlayChartSeries | null>(null)
+  const marketOverlayTrendSeriesRef = useRef<MarketOverlayChartSeries | null>(null)
+  const marketOverlayBaselineSeriesRef = useRef<MarketOverlayChartSeries | null>(null)
 
   const [connectionStatus, setConnectionStatus] = useState<
     'connecting' | 'connected' | 'disconnected'
@@ -710,6 +725,9 @@ function App() {
   const [blocks, setBlocks] = useState<BlockItem[]>([])
   const [marketOverlayMode, setMarketOverlayMode] = useState<MarketOverlayMode>(
     readMarketOverlayModeFromStorage,
+  )
+  const [marketOverlayChartLens, setMarketOverlayChartLens] = useState<MarketOverlayChartLens>(
+    readMarketOverlayChartLensFromStorage,
   )
   const [marketOverlaySnapshotAt, setMarketOverlaySnapshotAt] = useState<string | null>(null)
   const [marketOverlaySnapshotSummary, setMarketOverlaySnapshotSummary] = useState<string>('none')
@@ -868,13 +886,59 @@ function App() {
     () => marketOverlayRecentCloses.map((value, index) => ({ time: index + 1, value })),
     [marketOverlayRecentCloses],
   )
+  const marketOverlayTrendLinePoints = useMemo(() => {
+    if (marketOverlayRecentCloses.length < 3) {
+      return [] as MarketOverlayChartPoint[]
+    }
+    return marketOverlayRecentCloses
+      .map((_, index, closes) => {
+        if (index < 2) {
+          return null
+        }
+        const window = closes.slice(index - 2, index + 1)
+        const average = window.reduce((sum, value) => sum + value, 0) / window.length
+        return {
+          time: index + 1,
+          value: average,
+        }
+      })
+      .filter((point): point is MarketOverlayChartPoint => point !== null)
+  }, [marketOverlayRecentCloses])
+  const marketOverlayAverageClose = useMemo(() => {
+    if (marketOverlayRecentCloses.length === 0) {
+      return null
+    }
+    return (
+      marketOverlayRecentCloses.reduce((sum, value) => sum + value, 0) / marketOverlayRecentCloses.length
+    )
+  }, [marketOverlayRecentCloses])
+  const marketOverlayBaselinePoints = useMemo(() => {
+    if (marketOverlayAverageClose === null) {
+      return [] as MarketOverlayChartPoint[]
+    }
+    return marketOverlayChartPoints.map((point) => ({
+      time: point.time,
+      value: marketOverlayAverageClose,
+    }))
+  }, [marketOverlayAverageClose, marketOverlayChartPoints])
   const marketOverlayChartSummary = useMemo(() => {
     if (marketOverlayChartPoints.length === 0) {
-      return 'points:none'
+      return `points:none · lens:${marketOverlayChartLens}`
     }
     const latest = marketOverlayChartPoints[marketOverlayChartPoints.length - 1]
-    return `points:${marketOverlayChartPoints.length} · last:${latest.value.toFixed(2)}`
-  }, [marketOverlayChartPoints])
+    if (marketOverlayChartLens === 'price-only') {
+      return `points:${marketOverlayChartPoints.length} · last:${latest.value.toFixed(2)} · lens:price-only`
+    }
+    if (marketOverlayChartLens === 'price-and-trend') {
+      return `points:${marketOverlayChartPoints.length} · last:${latest.value.toFixed(2)} · trendPoints:${marketOverlayTrendLinePoints.length} · lens:price-and-trend`
+    }
+    return `points:${marketOverlayChartPoints.length} · last:${latest.value.toFixed(2)} · trendPoints:${marketOverlayTrendLinePoints.length} · baseline:${(marketOverlayAverageClose ?? 0).toFixed(2)} · lens:diagnostics`
+  }, [
+    marketOverlayAverageClose,
+    marketOverlayChartLens,
+    marketOverlayChartPoints,
+    marketOverlayTrendLinePoints.length,
+  ])
 
   useEffect(() => {
     const container = marketOverlayChartContainerRef.current
@@ -914,28 +978,35 @@ function App() {
           },
         })
 
-        const lineSeries =
-          chart.addLineSeries
-            ? chart.addLineSeries({
-                color: '#84d3f8',
-                lineWidth: 2,
-              })
-            : chart.addSeries && lightweightCharts.LineSeries
-              ? chart.addSeries(lightweightCharts.LineSeries, {
-                  color: '#84d3f8',
-                  lineWidth: 2,
-                })
-              : null
+        const addLineSeries = (
+          color: string,
+          lineWidth: number,
+        ): MarketOverlayChartSeries | null => {
+          if (chart.addLineSeries) {
+            return chart.addLineSeries({ color, lineWidth })
+          }
+          if (chart.addSeries && lightweightCharts.LineSeries) {
+            return chart.addSeries(lightweightCharts.LineSeries, { color, lineWidth })
+          }
+          return null
+        }
 
-        if (!lineSeries) {
+        const priceSeries = addLineSeries('#84d3f8', 2)
+        if (!priceSeries) {
           chart.remove()
           setMarketOverlayChartRuntime('fallback')
           return
         }
+        const trendSeries = addLineSeries('#e9cf7a', 1)
+        const baselineSeries = addLineSeries('#9fb0cc', 1)
 
         marketOverlayChartRef.current = chart
-        marketOverlayChartSeriesRef.current = lineSeries
-        lineSeries.setData([])
+        marketOverlayPriceSeriesRef.current = priceSeries
+        marketOverlayTrendSeriesRef.current = trendSeries
+        marketOverlayBaselineSeriesRef.current = baselineSeries
+        priceSeries.setData([])
+        trendSeries?.setData([])
+        baselineSeries?.setData([])
         chart.timeScale().fitContent()
         setMarketOverlayChartRuntime('ready')
 
@@ -969,17 +1040,34 @@ function App() {
       resizeObserver?.disconnect()
       marketOverlayChartRef.current?.remove?.()
       marketOverlayChartRef.current = null
-      marketOverlayChartSeriesRef.current = null
+      marketOverlayPriceSeriesRef.current = null
+      marketOverlayTrendSeriesRef.current = null
+      marketOverlayBaselineSeriesRef.current = null
     }
   }, [])
 
   useEffect(() => {
-    if (!marketOverlayChartSeriesRef.current || !marketOverlayChartRef.current) {
+    if (!marketOverlayPriceSeriesRef.current || !marketOverlayChartRef.current) {
       return
     }
-    marketOverlayChartSeriesRef.current.setData(marketOverlayChartPoints)
+    marketOverlayPriceSeriesRef.current.setData(marketOverlayChartPoints)
+    if (marketOverlayTrendSeriesRef.current) {
+      marketOverlayTrendSeriesRef.current.setData(
+        marketOverlayChartLens === 'price-only' ? [] : marketOverlayTrendLinePoints,
+      )
+    }
+    if (marketOverlayBaselineSeriesRef.current) {
+      marketOverlayBaselineSeriesRef.current.setData(
+        marketOverlayChartLens === 'diagnostics' ? marketOverlayBaselinePoints : [],
+      )
+    }
     marketOverlayChartRef.current.timeScale().fitContent()
-  }, [marketOverlayChartPoints])
+  }, [
+    marketOverlayBaselinePoints,
+    marketOverlayChartLens,
+    marketOverlayChartPoints,
+    marketOverlayTrendLinePoints,
+  ])
 
   const websocketUrl = useMemo(() => {
     const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws'
@@ -2762,6 +2850,10 @@ function App() {
   }, [marketOverlayMode])
 
   useEffect(() => {
+    window.localStorage.setItem(MARKET_OVERLAY_CHART_LENS_STORAGE_KEY, marketOverlayChartLens)
+  }, [marketOverlayChartLens])
+
+  useEffect(() => {
     window.localStorage.setItem(HELPER_RESET_TIMESTAMP_FORMAT_STORAGE_KEY, helperResetTimestampFormat)
   }, [helperResetTimestampFormat])
 
@@ -2973,19 +3065,21 @@ function App() {
     const tradeEvents = tradeControlEvents.length
     const alerts = riskAlerts.length
     const chartPoints = marketOverlayChartPoints.length
+    const chartLens = marketOverlayChartLens
     const trendLabel = marketOverlayTrend.label
     const volatilitySummary = marketOverlayVolatility.summary
     const pulseSummary = marketOverlayPulse.summary
     const regimeSummary = marketOverlayRegime.summary
     const summaryByMode: Record<MarketOverlayMode, string> = {
-      'price-only': `candles:${candles} · chartPoints:${chartPoints} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
-      'with-trades': `candles:${candles} · tradeEvents:${tradeEvents} · chartPoints:${chartPoints} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
-      'with-risk': `candles:${candles} · tradeEvents:${tradeEvents} · riskAlerts:${alerts} · chartPoints:${chartPoints} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
+      'price-only': `candles:${candles} · chartPoints:${chartPoints} · chartLens:${chartLens} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
+      'with-trades': `candles:${candles} · tradeEvents:${tradeEvents} · chartPoints:${chartPoints} · chartLens:${chartLens} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
+      'with-risk': `candles:${candles} · tradeEvents:${tradeEvents} · riskAlerts:${alerts} · chartPoints:${chartPoints} · chartLens:${chartLens} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
     }
     setMarketOverlaySnapshotSummary(summaryByMode[marketOverlayMode])
     setMarketOverlaySnapshotAt(new Date().toISOString())
   }, [
     lastFetchedCandlesCount,
+    marketOverlayChartLens,
     marketOverlayChartPoints.length,
     marketOverlayMode,
     marketOverlayPulse.summary,
@@ -3022,6 +3116,19 @@ function App() {
             </p>
           </div>
           <section className="market-overlay-controls">
+            <label>
+              Chart Lens
+              <select
+                value={marketOverlayChartLens}
+                onChange={(event) =>
+                  setMarketOverlayChartLens(event.target.value as MarketOverlayChartLens)
+                }
+              >
+                <option value="price-only">price-only</option>
+                <option value="price-and-trend">price-and-trend</option>
+                <option value="diagnostics">diagnostics</option>
+              </select>
+            </label>
             <label>
               Overlay Mode
               <select
