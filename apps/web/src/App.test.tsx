@@ -635,7 +635,9 @@ describe('Dashboard shell', () => {
       expect(payload).toContain('Ctrl/Cmd+Enter\tRun preset JSON import')
       expect(payload).toContain('Alt+L\tToggle helper reset lock')
       expect(
-        screen.getByText('Copied status shortcut legend to clipboard (lock: locked).'),
+        screen.getByText(
+          'Copied status shortcut legend to clipboard (lock: locked, toggles: 0, tone: none, reset: never).',
+        ),
       ).toBeInTheDocument()
     })
   })
@@ -1051,7 +1053,9 @@ describe('Dashboard shell', () => {
       expect(payload).toContain('lockCounterResetAt=never')
       expect(payload).toContain('[LockTelemetry]')
       expect(
-        screen.getByText('Copied helper diagnostics summary to clipboard (lock: locked).'),
+        screen.getByText(
+          'Copied helper diagnostics summary to clipboard (lock: locked, toggles: 0, tone: none, reset: never).',
+        ),
       ).toBeInTheDocument()
     })
   })

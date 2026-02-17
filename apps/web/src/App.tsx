@@ -1432,7 +1432,10 @@ function App() {
         title: 'helper summary copied',
         content: `Copied helper diagnostics summary to clipboard (lock: ${
           isHelperResetLocked ? 'locked' : 'unlocked'
-        }).`,
+        }, toggles: ${helperResetLockToggleCount}, tone: ${helperResetLockToggleToneClass.replace(
+          'counter-tone-',
+          '',
+        )}, reset: ${helperLockCountersLastResetAt ?? 'never'}).`,
         severity: 'info',
       })
     } catch {
@@ -1878,7 +1881,10 @@ function App() {
         title: 'status legend copied',
         content: `Copied status shortcut legend to clipboard (lock: ${
           isHelperResetLocked ? 'locked' : 'unlocked'
-        }).`,
+        }, toggles: ${helperResetLockToggleCount}, tone: ${helperResetLockToggleToneClass.replace(
+          'counter-tone-',
+          '',
+        )}, reset: ${helperLockCountersLastResetAt ?? 'never'}).`,
         severity: 'info',
       })
     } catch {
