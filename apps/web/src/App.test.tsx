@@ -75,6 +75,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
       'Marker nav: 0/0 · selected:none',
     )
+    expect(screen.getByLabelText('Overlay Marker Shortcut Hint')).toHaveTextContent(
+      'Shortcuts: steps:off/off · skip:off/off · kind:off/off · bucket:off/off',
+    )
     expect(screen.getByRole('button', { name: 'Oldest Marker' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Previous Bucket' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Skip Back 2' })).toBeDisabled()
@@ -523,6 +526,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
       'Marker nav: 0/0 · selected:none',
     )
+    expect(screen.getByLabelText('Overlay Marker Shortcut Hint')).toHaveTextContent(
+      'Shortcuts: steps:off/off · skip:off/off · kind:off/off · bucket:off/off',
+    )
     expect(screen.getByRole('button', { name: 'Oldest Marker' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Previous Bucket' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Skip Back 2' })).toBeDisabled()
@@ -619,6 +625,9 @@ describe('Dashboard shell', () => {
       ).toHaveAttribute('aria-pressed', 'false')
       expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
         'Marker nav: 2/2 · selected:risk:live_trading_disabled:raised',
+      )
+      expect(screen.getByLabelText('Overlay Marker Shortcut Hint')).toHaveTextContent(
+        'Shortcuts: steps:on/off · skip:off/off · kind:off/off · bucket:off/off',
       )
       expect(screen.getByLabelText('Overlay Marker Behavior')).toHaveTextContent(
         'Marker behavior: wrap:bounded · selection:sticky · nav:manual',
@@ -747,6 +756,9 @@ describe('Dashboard shell', () => {
     fireEvent.change(screen.getByLabelText('Marker Wrap'), { target: { value: 'wrap' } })
     expect(screen.getByLabelText('Overlay Marker Behavior')).toHaveTextContent(
       'Marker behavior: wrap:wrap · selection:sticky · nav:manual',
+    )
+    expect(screen.getByLabelText('Overlay Marker Shortcut Hint')).toHaveTextContent(
+      'Shortcuts: steps:on/on · skip:off/off · kind:off/off · bucket:off/off',
     )
     expect(screen.getByRole('button', { name: 'Previous Bucket' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Skip Back 2' })).toBeDisabled()
@@ -1040,6 +1052,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
       'Marker nav: 3/3 · selected:trade:closed:queued',
     )
+    expect(screen.getByLabelText('Overlay Marker Shortcut Hint')).toHaveTextContent(
+      'Shortcuts: steps:on/off · skip:on/off · kind:on/off · bucket:on/off',
+    )
     expect(screen.getByRole('button', { name: 'Previous Bucket' })).toBeEnabled()
     expect(screen.getByRole('button', { name: 'Next Bucket' })).toBeDisabled()
 
@@ -1187,6 +1202,9 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Overlay Marker Behavior')).toHaveTextContent(
       'Marker behavior: wrap:bounded · selection:follow-latest · nav:locked',
+    )
+    expect(screen.getByLabelText('Overlay Marker Shortcut Hint')).toHaveTextContent(
+      'Shortcuts: locked',
     )
     expect(screen.getByRole('button', { name: 'Previous Bucket' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Previous Marker' })).toBeDisabled()
@@ -4403,7 +4421,7 @@ describe('Dashboard shell', () => {
   it('supports compact hint mode toggle', () => {
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: 'Use Compact Hints' }))
-    expect(screen.getByText(/Shortcuts:/)).toBeInTheDocument()
+    expect(screen.getByText(/Shortcuts:/, { selector: '.preset-import-hint' })).toBeInTheDocument()
     expect(screen.getByText('/', { selector: '.hotkey-chip' })).toBeInTheDocument()
     expect(screen.queryByText(/overwrites conflicting presets\./)).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Use Detailed Hints' })).toBeInTheDocument()
@@ -4413,7 +4431,7 @@ describe('Dashboard shell', () => {
   it('initializes hint mode from localStorage preference', () => {
     window.localStorage.setItem('quick-action-import-hint-mode-v1', 'compact')
     render(<App />)
-    expect(screen.getByText(/Shortcuts:/)).toBeInTheDocument()
+    expect(screen.getByText(/Shortcuts:/, { selector: '.preset-import-hint' })).toBeInTheDocument()
     expect(screen.queryByText(/overwrites conflicting presets\./)).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Use Detailed Hints' })).toBeInTheDocument()
   })
@@ -5449,7 +5467,7 @@ describe('Dashboard shell', () => {
     const importTextarea = screen.getByLabelText('Import Presets JSON')
     fireEvent.keyDown(importTextarea, { key: '/' })
 
-    expect(screen.getByText(/Shortcuts:/)).toBeInTheDocument()
+    expect(screen.getByText(/Shortcuts:/, { selector: '.preset-import-hint' })).toBeInTheDocument()
     expect(screen.queryByText(/overwrites conflicting presets\./)).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Use Detailed Hints' })).toBeInTheDocument()
     expect(screen.getByText('Hint mode set to compact via slash shortcut.')).toBeInTheDocument()

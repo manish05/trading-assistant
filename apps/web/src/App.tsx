@@ -1390,6 +1390,23 @@ function App() {
         MARKET_OVERLAY_MARKER_SKIP_STEP % marketOverlayTimelineCount !== 0
       : marketOverlayActiveTimelineIndex + MARKET_OVERLAY_MARKER_SKIP_STEP <
         marketOverlayTimelineCount
+  const marketOverlayMarkerShortcutHint = useMemo(() => {
+    if (isMarketOverlayNavigationLocked) {
+      return 'locked'
+    }
+    const stateLabel = (enabled: boolean) => (enabled ? 'on' : 'off')
+    return `steps:${stateLabel(canSelectPreviousMarketOverlayMarker)}/${stateLabel(canSelectNextMarketOverlayMarker)} · skip:${stateLabel(canSelectSkipBackwardMarketOverlayMarker)}/${stateLabel(canSelectSkipForwardMarketOverlayMarker)} · kind:${stateLabel(canSelectPreviousSameKindMarketOverlayMarker)}/${stateLabel(canSelectNextSameKindMarketOverlayMarker)} · bucket:${stateLabel(canSelectPreviousBucketMarketOverlayMarker)}/${stateLabel(canSelectNextBucketMarketOverlayMarker)}`
+  }, [
+    canSelectNextBucketMarketOverlayMarker,
+    canSelectNextMarketOverlayMarker,
+    canSelectNextSameKindMarketOverlayMarker,
+    canSelectPreviousBucketMarketOverlayMarker,
+    canSelectPreviousMarketOverlayMarker,
+    canSelectPreviousSameKindMarketOverlayMarker,
+    canSelectSkipBackwardMarketOverlayMarker,
+    canSelectSkipForwardMarketOverlayMarker,
+    isMarketOverlayNavigationLocked,
+  ])
   const marketOverlayMarkerDrilldown = useMemo(() => {
     const latest =
       marketOverlayScopedTimelineAnnotations[marketOverlayScopedTimelineAnnotations.length - 1] ?? null
@@ -4344,6 +4361,9 @@ function App() {
             <p aria-label="Overlay Marker Delta Summary">Delta summary: {marketOverlayMarkerDeltaSummary}</p>
             <p aria-label="Overlay Marker Behavior">Marker behavior: {marketOverlayMarkerBehaviorLabel}</p>
             <p aria-label="Overlay Marker Navigation">Marker nav: {marketOverlayMarkerNavigationLabel}</p>
+            <p aria-label="Overlay Marker Shortcut Hint">
+              Shortcuts: {marketOverlayMarkerShortcutHint}
+            </p>
             <div className="market-overlay-marker-navigation">
               <button
                 type="button"
