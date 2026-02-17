@@ -45,6 +45,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Delete Preset' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Export Presets JSON' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Import Presets JSON' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Import Mode')).toBeInTheDocument()
   })
 
   it('sends account and feed management requests', async () => {
@@ -323,5 +324,33 @@ describe('Dashboard shell', () => {
     await waitFor(() => {
       expect(screen.getByRole('option', { name: 'imported-template' })).toBeInTheDocument()
     })
+  })
+
+  it('respects merge mode when importing conflicting presets', async () => {
+    render(<App />)
+
+    fireEvent.change(screen.getByLabelText('Preset Name'), {
+      target: { value: 'conflict-template' },
+    })
+    fireEvent.change(screen.getByLabelText('Feed Symbol'), {
+      target: { value: 'ETHUSDm' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Save Preset' }))
+
+    fireEvent.change(screen.getByLabelText('Import Mode'), {
+      target: { value: 'merge' },
+    })
+    fireEvent.change(screen.getByLabelText('Import Presets JSON'), {
+      target: {
+        value: '{"conflict-template":{"feedSymbol":"BTCUSDm"}}',
+      },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Import Presets JSON' }))
+    fireEvent.change(screen.getByLabelText('Saved Presets'), {
+      target: { value: 'conflict-template' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Load Preset' }))
+
+    expect(screen.getByLabelText('Feed Symbol')).toHaveValue('ETHUSDm')
   })
 })

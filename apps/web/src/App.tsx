@@ -55,6 +55,7 @@ type QuickActionPreset = {
   refreshSecondsInput: string
   minRequestGapMsInput: string
 }
+type PresetImportMode = 'overwrite' | 'merge'
 
 const PRESETS_STORAGE_KEY = 'quick-action-presets-v1'
 const HISTORY_FILTER_STORAGE_KEY = 'quick-action-history-filter-v1'
@@ -155,6 +156,7 @@ function App() {
   const [presetNameInput, setPresetNameInput] = useState<string>('default')
   const [selectedPresetName, setSelectedPresetName] = useState<string>('')
   const [presetImportInput, setPresetImportInput] = useState<string>('')
+  const [presetImportMode, setPresetImportMode] = useState<PresetImportMode>('overwrite')
   const [availablePresetNames, setAvailablePresetNames] = useState<string[]>(() =>
     Object.keys(readPresetStoreFromStorage()).sort(),
   )
@@ -714,16 +716,17 @@ function App() {
 
     const incoming = parsed as Record<string, QuickActionPreset>
     const store = readPresetStore()
-    const merged = { ...store, ...incoming }
+    const merged =
+      presetImportMode === 'merge' ? { ...incoming, ...store } : { ...store, ...incoming }
     writePresetStore(merged)
     setPresetImportInput('')
     appendBlock({
       id: `blk_${Date.now()}`,
       title: 'presets imported',
-      content: `Imported ${Object.keys(incoming).length} preset entries.`,
+      content: `Imported ${Object.keys(incoming).length} preset entries (${presetImportMode}).`,
       severity: 'info',
     })
-  }, [appendBlock, presetImportInput, readPresetStore, writePresetStore])
+  }, [appendBlock, presetImportInput, presetImportMode, readPresetStore, writePresetStore])
 
   useEffect(() => {
     if (!autoRefreshEnabled) {
@@ -1087,6 +1090,16 @@ function App() {
               <button type="button" onClick={importPresetsJson}>
                 Import Presets JSON
               </button>
+              <label>
+                Import Mode
+                <select
+                  value={presetImportMode}
+                  onChange={(event) => setPresetImportMode(event.target.value as PresetImportMode)}
+                >
+                  <option value="overwrite">overwrite</option>
+                  <option value="merge">merge</option>
+                </select>
+              </label>
             </div>
             <label className="preset-import">
               Import Presets JSON
