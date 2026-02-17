@@ -388,6 +388,24 @@
   background: #162744;
 }
 
+.import-summary-badge.counter-tone-none {
+  border-color: #51617f;
+  background: #1e2737;
+  color: #c6cfdf;
+}
+
+.import-summary-badge.counter-tone-active {
+  border-color: #2f5f9e;
+  background: #183760;
+  color: #d7e6ff;
+}
+
+.import-summary-badge.counter-tone-high {
+  border-color: #8a6d1f;
+  background: #3f3315;
+  color: #ffe6aa;
+}
+
 .import-summary-badge.helper-reset-lock-badge.lock-locked {
   border-color: #8a2f3e;
   background: #3b1720;
@@ -535,6 +553,24 @@
   background: #162744;
   color: #cdd8eb;
   font-size: 0.68rem;
+}
+
+.history-lock-source.counter-tone-none {
+  border-color: #51617f;
+  background: #1e2737;
+  color: #c6cfdf;
+}
+
+.history-lock-source.counter-tone-active {
+  border-color: #2f5f9e;
+  background: #183760;
+  color: #d7e6ff;
+}
+
+.history-lock-source.counter-tone-high {
+  border-color: #8a6d1f;
+  background: #3f3315;
+  color: #ffe6aa;
 }
 
 .history-tools {

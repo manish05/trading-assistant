@@ -105,16 +105,17 @@ describe('Dashboard shell', () => {
     ).toHaveClass('helper-reset-lock-badge', 'lock-locked')
     expect(
       screen.getByText('lockToggles:0', { selector: '.import-snapshot-badges .import-summary-badge' }),
-    ).toBeInTheDocument()
+    ).toHaveClass('counter-tone-none')
     expect(
       screen.getByText('srcAlt+L:0', { selector: '.import-snapshot-badges .import-summary-badge' }),
-    ).toBeInTheDocument()
+    ).toHaveClass('counter-tone-none')
     expect(
       screen.getByText('srcControls:0', { selector: '.import-snapshot-badges .import-summary-badge' }),
-    ).toBeInTheDocument()
+    ).toHaveClass('counter-tone-none')
     expect(
       screen.getByText('srcSnapshot:0', { selector: '.import-snapshot-badges .import-summary-badge' }),
-    ).toBeInTheDocument()
+    ).toHaveClass('counter-tone-none')
+    expect(screen.getByText('Alt+L:0')).toHaveClass('counter-tone-none')
     expect(screen.getByRole('button', { name: 'Use Verbose Diagnostics' })).toBeInTheDocument()
     expect(
       screen.getByText('enabled:1/2', { selector: '.import-snapshot-badges .import-summary-badge' }),
@@ -754,12 +755,21 @@ describe('Dashboard shell', () => {
     expect(screen.getByText('diagLockToggles:0')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Unlock Reset' }))
     expect(screen.getByText('lockToggles:1')).toBeInTheDocument()
+    expect(screen.getByText('lockToggles:1')).toHaveClass('counter-tone-active')
     expect(screen.getByText('srcControls:1')).toBeInTheDocument()
+    expect(screen.getByText('srcControls:1')).toHaveClass('counter-tone-active')
     expect(screen.getByText('diagLockToggles:1')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Lock Reset' }))
     expect(screen.getByText('lockToggles:2')).toBeInTheDocument()
     expect(screen.getByText('srcControls:2')).toBeInTheDocument()
     expect(screen.getByText('diagLockToggles:2')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Unlock Reset' }))
+    expect(screen.getByText('lockToggles:3')).toBeInTheDocument()
+    expect(screen.getByText('lockToggles:3')).toHaveClass('counter-tone-high')
+    expect(screen.getByText('srcControls:3')).toBeInTheDocument()
+    expect(screen.getByText('srcControls:3')).toHaveClass('counter-tone-high')
+    expect(screen.getByText('diagLockToggles:3')).toBeInTheDocument()
+    expect(screen.getByText('diagLockToggles:3')).toHaveClass('counter-tone-high')
   })
 
   it('initializes helper reset lock from localStorage', () => {

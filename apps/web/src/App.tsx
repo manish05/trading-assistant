@@ -351,6 +351,16 @@ const resolveHelperResetTone = (
   return ageMs >= staleThresholdHours * 60 * 60 * 1000 ? 'tone-stale' : 'tone-fresh'
 }
 
+const resolveLockCounterTone = (count: number): 'counter-tone-none' | 'counter-tone-active' | 'counter-tone-high' => {
+  if (count === 0) {
+    return 'counter-tone-none'
+  }
+  if (count >= 3) {
+    return 'counter-tone-high'
+  }
+  return 'counter-tone-active'
+}
+
 function App() {
   const wsRef = useRef<WebSocket | null>(null)
   const pendingRequestsRef = useRef<Map<string, (value: GatewayResponse) => void>>(new Map())
@@ -479,6 +489,11 @@ function App() {
     () =>
       quickActionHistory.filter((entry) => entry.method.startsWith('helper.reset.lock.toggle')).length,
     [quickActionHistory],
+  )
+
+  const helperResetLockToggleToneClass = useMemo(
+    () => resolveLockCounterTone(helperResetLockToggleCount),
+    [helperResetLockToggleCount],
   )
 
   const helperResetLockSourceCounts = useMemo(() => {
@@ -2307,11 +2322,25 @@ function App() {
                 </div>
                 <div className="history-legend lock-source-legend" aria-label="Lock Toggle Source Legend">
                   <span className="history-legend-title">Lock Sources</span>
-                  <span className="history-lock-source">Alt+L:{helperResetLockSourceCounts['Alt+L']}</span>
-                  <span className="history-lock-source">
+                  <span
+                    className={`history-lock-source ${resolveLockCounterTone(
+                      helperResetLockSourceCounts['Alt+L'],
+                    )}`}
+                  >
+                    Alt+L:{helperResetLockSourceCounts['Alt+L']}
+                  </span>
+                  <span
+                    className={`history-lock-source ${resolveLockCounterTone(
+                      helperResetLockSourceCounts.controls,
+                    )}`}
+                  >
                     controls:{helperResetLockSourceCounts.controls}
                   </span>
-                  <span className="history-lock-source">
+                  <span
+                    className={`history-lock-source ${resolveLockCounterTone(
+                      helperResetLockSourceCounts.snapshot,
+                    )}`}
+                  >
                     snapshot:{helperResetLockSourceCounts.snapshot}
                   </span>
                 </div>
@@ -2370,16 +2399,28 @@ function App() {
                 >
                   resetLock:{isHelperResetLocked ? 'locked' : 'unlocked'}
                 </span>
-                <span className="import-summary-badge badge-hint-mode">
+                <span className={`import-summary-badge badge-hint-mode ${helperResetLockToggleToneClass}`}>
                   lockToggles:{helperResetLockToggleCount}
                 </span>
-                <span className="import-summary-badge badge-hint-mode">
+                <span
+                  className={`import-summary-badge badge-hint-mode ${resolveLockCounterTone(
+                    helperResetLockSourceCounts['Alt+L'],
+                  )}`}
+                >
                   srcAlt+L:{helperResetLockSourceCounts['Alt+L']}
                 </span>
-                <span className="import-summary-badge badge-hint-mode">
+                <span
+                  className={`import-summary-badge badge-hint-mode ${resolveLockCounterTone(
+                    helperResetLockSourceCounts.controls,
+                  )}`}
+                >
                   srcControls:{helperResetLockSourceCounts.controls}
                 </span>
-                <span className="import-summary-badge badge-hint-mode">
+                <span
+                  className={`import-summary-badge badge-hint-mode ${resolveLockCounterTone(
+                    helperResetLockSourceCounts.snapshot,
+                  )}`}
+                >
                   srcSnapshot:{helperResetLockSourceCounts.snapshot}
                 </span>
                 <div className="import-snapshot-toggles" aria-label="Import Snapshot Toggles">
@@ -2477,7 +2518,7 @@ function App() {
                 >
                   lock:{isHelperResetLocked ? 'locked' : 'unlocked'}
                 </span>
-                <span className="import-summary-badge badge-hint-mode">
+                <span className={`import-summary-badge badge-hint-mode ${helperResetLockToggleToneClass}`}>
                   diagLockToggles:{helperResetLockToggleCount}
                 </span>
                 {helperDiagnosticsDisplayMode === 'verbose' ? (
