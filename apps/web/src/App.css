@@ -161,6 +161,23 @@
   color: #ee8d8d;
 }
 
+.overlay-pulse {
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.overlay-pulse-quiet {
+  color: #9fb0cc;
+}
+
+.overlay-pulse-active {
+  color: #84d3f8;
+}
+
+.overlay-pulse-intense {
+  color: #ee8d8d;
+}
+
 .market-overlay-controls label {
   display: inline-flex;
   align-items: center;

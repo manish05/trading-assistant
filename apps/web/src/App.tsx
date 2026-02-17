@@ -777,6 +777,28 @@ function App() {
       className,
     }
   }, [marketOverlayRecentCloses])
+  const marketOverlayPulse = useMemo(() => {
+    const score = tradeControlEvents.length * 2 + riskAlerts.length * 3 + feedLifecycle.length
+    if (score === 0) {
+      return {
+        label: 'quiet (0)',
+        summary: 'quiet(0)',
+        className: 'overlay-pulse-quiet',
+      }
+    }
+    if (score < 5) {
+      return {
+        label: `active (${score})`,
+        summary: `active(${score})`,
+        className: 'overlay-pulse-active',
+      }
+    }
+    return {
+      label: `intense (${score})`,
+      summary: `intense(${score})`,
+      className: 'overlay-pulse-intense',
+    }
+  }, [feedLifecycle.length, riskAlerts.length, tradeControlEvents.length])
 
   const websocketUrl = useMemo(() => {
     const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws'
@@ -2771,16 +2793,18 @@ function App() {
     const alerts = riskAlerts.length
     const trendLabel = marketOverlayTrend.label
     const volatilitySummary = marketOverlayVolatility.summary
+    const pulseSummary = marketOverlayPulse.summary
     const summaryByMode: Record<MarketOverlayMode, string> = {
-      'price-only': `candles:${candles} · trend:${trendLabel} · vol:${volatilitySummary}`,
-      'with-trades': `candles:${candles} · tradeEvents:${tradeEvents} · trend:${trendLabel} · vol:${volatilitySummary}`,
-      'with-risk': `candles:${candles} · tradeEvents:${tradeEvents} · riskAlerts:${alerts} · trend:${trendLabel} · vol:${volatilitySummary}`,
+      'price-only': `candles:${candles} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary}`,
+      'with-trades': `candles:${candles} · tradeEvents:${tradeEvents} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary}`,
+      'with-risk': `candles:${candles} · tradeEvents:${tradeEvents} · riskAlerts:${alerts} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary}`,
     }
     setMarketOverlaySnapshotSummary(summaryByMode[marketOverlayMode])
     setMarketOverlaySnapshotAt(new Date().toISOString())
   }, [
     lastFetchedCandlesCount,
     marketOverlayMode,
+    marketOverlayPulse.summary,
     marketOverlayTrend.label,
     marketOverlayVolatility.summary,
     riskAlerts.length,
@@ -2840,6 +2864,9 @@ function App() {
               className={`overlay-volatility ${marketOverlayVolatility.className}`}
             >
               Volatility: {marketOverlayVolatility.label}
+            </p>
+            <p aria-label="Overlay Pulse" className={`overlay-pulse ${marketOverlayPulse.className}`}>
+              Pulse: {marketOverlayPulse.label}
             </p>
             <button type="button" onClick={refreshMarketOverlaySnapshot}>
               Refresh Overlay Snapshot

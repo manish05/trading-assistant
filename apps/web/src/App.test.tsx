@@ -42,6 +42,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Window Summary')).toHaveTextContent('Window: closes:none')
     expect(screen.getByLabelText('Overlay Trend')).toHaveTextContent('Trend: neutral')
     expect(screen.getByLabelText('Overlay Volatility')).toHaveTextContent('Volatility: n/a')
+    expect(screen.getByLabelText('Overlay Pulse')).toHaveTextContent('Pulse: quiet (0)')
     expect(screen.getByRole('button', { name: 'Refresh Overlay Snapshot' })).toBeInTheDocument()
     expect(screen.getByLabelText('Overlay Snapshot Time')).toHaveTextContent('Snapshot: never')
     expect(screen.getByLabelText('Overlay Snapshot Summary')).toHaveTextContent('Summary: none')
@@ -245,7 +246,7 @@ describe('Dashboard shell', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Refresh Overlay Snapshot' }))
     expect(screen.getByLabelText('Overlay Snapshot Summary')).toHaveTextContent(
-      'Summary: candles:0 · trend:neutral · vol:n/a',
+      'Summary: candles:0 · trend:neutral · vol:n/a · pulse:quiet(0)',
     )
     expect(screen.getByLabelText('Overlay Snapshot Time')).not.toHaveTextContent('Snapshot: never')
 
@@ -254,7 +255,7 @@ describe('Dashboard shell', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: 'Refresh Overlay Snapshot' }))
     expect(screen.getByLabelText('Overlay Snapshot Summary')).toHaveTextContent(
-      'Summary: candles:0 · tradeEvents:0 · trend:neutral · vol:n/a',
+      'Summary: candles:0 · tradeEvents:0 · trend:neutral · vol:n/a · pulse:quiet(0)',
     )
 
     fireEvent.change(screen.getByLabelText('Overlay Mode'), {
@@ -262,7 +263,7 @@ describe('Dashboard shell', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: 'Refresh Overlay Snapshot' }))
     expect(screen.getByLabelText('Overlay Snapshot Summary')).toHaveTextContent(
-      'Summary: candles:0 · tradeEvents:0 · riskAlerts:0 · trend:neutral · vol:n/a',
+      'Summary: candles:0 · tradeEvents:0 · riskAlerts:0 · trend:neutral · vol:n/a · pulse:quiet(0)',
     )
   })
 
@@ -380,6 +381,8 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Trend')).toHaveClass('overlay-trend-neutral')
     expect(screen.getByLabelText('Overlay Volatility')).toHaveTextContent('Volatility: n/a')
     expect(screen.getByLabelText('Overlay Volatility')).toHaveClass('overlay-volatility-none')
+    expect(screen.getByLabelText('Overlay Pulse')).toHaveTextContent('Pulse: quiet (0)')
+    expect(screen.getByLabelText('Overlay Pulse')).toHaveClass('overlay-pulse-quiet')
 
     fireEvent.change(screen.getByLabelText('Overlay Mode'), { target: { value: 'with-risk' } })
     expect(within(legend).getByText('risk', { selector: '.overlay-chip' })).toHaveClass('active')
@@ -405,11 +408,13 @@ describe('Dashboard shell', () => {
         'Volatility: range:1.00 · moderate',
       )
       expect(screen.getByLabelText('Overlay Volatility')).toHaveClass('overlay-volatility-moderate')
+      expect(screen.getByLabelText('Overlay Pulse')).toHaveTextContent('Pulse: intense (5)')
+      expect(screen.getByLabelText('Overlay Pulse')).toHaveClass('overlay-pulse-intense')
     })
 
     fireEvent.click(screen.getByRole('button', { name: 'Refresh Overlay Snapshot' }))
     expect(screen.getByLabelText('Overlay Snapshot Summary')).toHaveTextContent(
-      'Summary: candles:2 · tradeEvents:1 · riskAlerts:1 · trend:up (+1.00) · vol:1.00',
+      'Summary: candles:2 · tradeEvents:1 · riskAlerts:1 · trend:up (+1.00) · vol:1.00 · pulse:intense(5)',
     )
 
     sendSpy.mockRestore()
