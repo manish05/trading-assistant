@@ -285,6 +285,19 @@
   font-size: 0.72rem;
 }
 
+.history-legend {
+  margin-bottom: 0.35rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.history-legend-title {
+  font-size: 0.72rem;
+  color: #9fb0cc;
+}
+
 .history-list li {
   display: flex;
   gap: 0.4rem;

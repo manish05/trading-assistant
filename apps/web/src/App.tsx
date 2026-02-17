@@ -1025,6 +1025,14 @@ function App() {
                     <option value="skipped">skipped</option>
                   </select>
                 </label>
+                <div className="history-legend" aria-label="History Legend">
+                  <span className="history-legend-title">Legend</span>
+                  <span className="history-status status-ok">ok</span>
+                  <span className="history-status status-error">error</span>
+                  <span className="history-status status-debounced">debounced</span>
+                  <span className="history-status status-skipped">skipped</span>
+                  <span className="history-status status-sent">sent</span>
+                </div>
                 {filteredHistory.length === 0 ? (
                   <span className="history-empty">none</span>
                 ) : (

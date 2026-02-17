@@ -19,6 +19,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByText('Quick Action History')).toBeInTheDocument()
     expect(screen.getByText('Quick Action Timestamps')).toBeInTheDocument()
     expect(screen.getByLabelText('History Filter')).toBeInTheDocument()
+    expect(screen.getByLabelText('History Legend')).toBeInTheDocument()
   })
 
   it('renders gateway action buttons for account/feed listing', () => {
@@ -203,7 +204,7 @@ describe('Dashboard shell', () => {
 
     await waitFor(() => {
       expect(screen.getByText('accounts.list')).toBeInTheDocument()
-      expect(screen.getByText('sent', { selector: '.history-status' })).toBeInTheDocument()
+      expect(screen.getByText('sent', { selector: '.history-list .history-status' })).toBeInTheDocument()
     })
   })
 
@@ -217,18 +218,39 @@ describe('Dashboard shell', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Accounts' }))
 
     await waitFor(() => {
-      expect(screen.getByText('debounced', { selector: '.history-status' })).toBeInTheDocument()
-      expect(screen.getByText('sent', { selector: '.history-status' })).toBeInTheDocument()
+      expect(
+        screen.getByText('debounced', { selector: '.history-list .history-status' }),
+      ).toBeInTheDocument()
+      expect(screen.getByText('sent', { selector: '.history-list .history-status' })).toBeInTheDocument()
     })
 
     fireEvent.change(screen.getByLabelText('History Filter'), {
       target: { value: 'debounced' },
     })
 
-    expect(screen.getByText('debounced', { selector: '.history-status' })).toHaveClass(
+    expect(screen.getByText('debounced', { selector: '.history-list .history-status' })).toHaveClass(
       'status-debounced',
     )
-    expect(screen.queryByText('sent', { selector: '.history-status' })).not.toBeInTheDocument()
+    expect(
+      screen.queryByText('sent', { selector: '.history-list .history-status' }),
+    ).not.toBeInTheDocument()
     expect(window.localStorage.getItem('quick-action-history-filter-v1')).toBe('debounced')
+  })
+
+  it('shows color legend pills for quick-action statuses', () => {
+    render(<App />)
+
+    expect(screen.getByText('ok', { selector: '.history-legend .history-status' })).toHaveClass(
+      'status-ok',
+    )
+    expect(
+      screen.getByText('error', { selector: '.history-legend .history-status' }),
+    ).toHaveClass('status-error')
+    expect(
+      screen.getByText('debounced', { selector: '.history-legend .history-status' }),
+    ).toHaveClass('status-debounced')
+    expect(
+      screen.getByText('skipped', { selector: '.history-legend .history-status' }),
+    ).toHaveClass('status-skipped')
   })
 })
