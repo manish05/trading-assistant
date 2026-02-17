@@ -54,7 +54,8 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Expand Report' })).toBeDisabled()
     expect(screen.getByLabelText('Import Mode')).toBeInTheDocument()
     expect(screen.getByLabelText('Import Mode Badge')).toBeInTheDocument()
-    expect(screen.getByText(/Shortcut: Ctrl\/Cmd\+Enter to import, Esc to clear\./)).toBeInTheDocument()
+    expect(screen.getByText('Ctrl/Cmd+Enter', { selector: '.hotkey-chip' })).toBeInTheDocument()
+    expect(screen.getByText(/overwrites conflicting presets\./)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Hide Hints' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Use Compact Hints' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Copy Shortcut Cheat Sheet' })).toBeInTheDocument()
@@ -423,18 +424,20 @@ describe('Dashboard shell', () => {
   it('toggles import hint visibility and persists preference', () => {
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: 'Hide Hints' }))
-    expect(screen.queryByText(/Shortcut: Ctrl\/Cmd\+Enter to import, Esc to clear\./)).not.toBeInTheDocument()
+    expect(screen.queryByText(/overwrites conflicting presets\./)).not.toBeInTheDocument()
     expect(window.localStorage.getItem('quick-action-import-hint-visibility-v1')).toBe('hidden')
 
     fireEvent.click(screen.getByRole('button', { name: 'Show Hints' }))
-    expect(screen.getByText(/Shortcut: Ctrl\/Cmd\+Enter to import, Esc to clear\./)).toBeInTheDocument()
+    expect(screen.getByText(/overwrites conflicting presets\./)).toBeInTheDocument()
     expect(window.localStorage.getItem('quick-action-import-hint-visibility-v1')).toBe('visible')
   })
 
   it('supports compact hint mode toggle', () => {
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: 'Use Compact Hints' }))
-    expect(screen.getByText(/Shortcuts: Ctrl\/Cmd\+Enter import · Esc clear\./)).toBeInTheDocument()
+    expect(screen.getByText(/Shortcuts:/)).toBeInTheDocument()
+    expect(screen.getByText('/', { selector: '.hotkey-chip' })).toBeInTheDocument()
+    expect(screen.queryByText(/overwrites conflicting presets\./)).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Use Detailed Hints' })).toBeInTheDocument()
     expect(window.localStorage.getItem('quick-action-import-hint-mode-v1')).toBe('compact')
   })
@@ -442,7 +445,8 @@ describe('Dashboard shell', () => {
   it('initializes hint mode from localStorage preference', () => {
     window.localStorage.setItem('quick-action-import-hint-mode-v1', 'compact')
     render(<App />)
-    expect(screen.getByText(/Shortcuts: Ctrl\/Cmd\+Enter import · Esc clear\./)).toBeInTheDocument()
+    expect(screen.getByText(/Shortcuts:/)).toBeInTheDocument()
+    expect(screen.queryByText(/overwrites conflicting presets\./)).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Use Detailed Hints' })).toBeInTheDocument()
   })
 
@@ -546,7 +550,8 @@ describe('Dashboard shell', () => {
     const importTextarea = screen.getByLabelText('Import Presets JSON')
     fireEvent.keyDown(importTextarea, { key: '/' })
 
-    expect(screen.getByText(/Shortcuts: Ctrl\/Cmd\+Enter import · Esc clear\./)).toBeInTheDocument()
+    expect(screen.getByText(/Shortcuts:/)).toBeInTheDocument()
+    expect(screen.queryByText(/overwrites conflicting presets\./)).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Use Detailed Hints' })).toBeInTheDocument()
   })
 

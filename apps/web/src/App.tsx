@@ -1477,10 +1477,16 @@ function App() {
             {isImportHintVisible ? (
               <p className="preset-import-hint">
                 {importHintMode === 'compact' ? (
-                  <>Shortcuts: Ctrl/Cmd+Enter import · Esc clear.</>
+                  <>
+                    Shortcuts: <span className="hotkey-chip">Ctrl/Cmd+Enter</span> import ·{' '}
+                    <span className="hotkey-chip">Esc</span> clear ·{' '}
+                    <span className="hotkey-chip">/</span> mode.
+                  </>
                 ) : (
                   <>
-                    Shortcut: Ctrl/Cmd+Enter to import, Esc to clear. Import mode{' '}
+                    Shortcut: <span className="hotkey-chip">Ctrl/Cmd+Enter</span> to import,{' '}
+                    <span className="hotkey-chip">Esc</span> to clear,{' '}
+                    <span className="hotkey-chip">/</span> to toggle mode. Import mode{' '}
                     <strong>{presetImportMode}</strong>{' '}
                     {presetImportMode === 'merge'
                       ? 'preserves existing conflicting presets.'

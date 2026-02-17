@@ -255,6 +255,19 @@
   color: #dbe7fb;
 }
 
+.hotkey-chip {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #2d4a7e;
+  border-radius: 6px;
+  padding: 0.03rem 0.22rem;
+  background: #162744;
+  color: #dbe7fb;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
+    'Courier New', monospace;
+  font-size: 0.66rem;
+}
+
 .preset-import-actions {
   margin-top: 0.35rem;
   display: flex;
