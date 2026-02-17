@@ -494,6 +494,71 @@ describe('Dashboard shell', () => {
     sendSpy.mockRestore()
   })
 
+  it('includes lock telemetry in incoming event blocks', async () => {
+    const sendSpy = vi
+      .spyOn(WebSocket.prototype, 'send')
+      .mockImplementation(function (
+        this: WebSocket,
+        data: string | ArrayBufferLike | Blob | ArrayBufferView<ArrayBufferLike>,
+      ) {
+        if (typeof data !== 'string') {
+          return
+        }
+        const payload = JSON.parse(data) as {
+          type?: string
+          id?: string
+          method?: string
+        }
+        if (payload.type === 'req' && payload.method === 'gateway.status' && payload.id) {
+          queueMicrotask(() => {
+            this.onmessage?.(
+              new MessageEvent('message', {
+                data: JSON.stringify({
+                  type: 'event',
+                  event: 'event.feed.event',
+                  payload: {
+                    action: 'subscribed',
+                    subscriptionId: 'sub_simulated_1',
+                  },
+                }),
+              }),
+            )
+          })
+          window.setTimeout(() => {
+            this.onmessage?.(
+              new MessageEvent('message', {
+                data: JSON.stringify({
+                  type: 'res',
+                  id: payload.id,
+                  ok: true,
+                  payload: {
+                    status: 'ok',
+                  },
+                }),
+              }),
+            )
+          }, 1)
+        }
+      })
+
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Status' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('event.feed.event')).toBeInTheDocument()
+    })
+
+    const eventCard = screen.getByText('event.feed.event').closest('article')
+    expect(eventCard).not.toBeNull()
+    expect(
+      within(eventCard as HTMLElement).getByText(
+        /\[LockTelemetry\] lock toggles: 0, tone: none, reset: never; sources: Alt\+L=0, controls=0, snapshot=0/,
+      ),
+    ).toBeInTheDocument()
+
+    sendSpy.mockRestore()
+  })
+
   it('filters quick-action history by status', async () => {
     render(<App />)
 

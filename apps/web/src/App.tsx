@@ -591,6 +591,12 @@ function App() {
     [lockTelemetryToastDetailsWithLabelAndSources],
   )
 
+  const eventBlockLockTelemetryRef = useRef(lockTelemetryToastDetailsWithLabelAndSources)
+
+  useEffect(() => {
+    eventBlockLockTelemetryRef.current = lockTelemetryToastDetailsWithLabelAndSources
+  }, [lockTelemetryToastDetailsWithLabelAndSources])
+
   const withLockTelemetrySection = useCallback(
     (lines: string[]): string[] => [...lines, '[LockTelemetry]', ...lockTelemetrySummaryLines],
     [lockTelemetrySummaryLines],
@@ -1680,7 +1686,9 @@ function App() {
         appendBlock({
           id: `blk_${Date.now()}`,
           title: parsed.event,
-          content: JSON.stringify(parsed.payload ?? {}, null, 2),
+          content:
+            `${JSON.stringify(parsed.payload ?? {}, null, 2)}\n\n` +
+            `[LockTelemetry] ${eventBlockLockTelemetryRef.current}`,
           severity: 'info',
         })
       }
