@@ -856,6 +856,28 @@ async def handle_gateway_websocket(
                     },
                 )
             )
+            if params.action == "cancel_all":
+                await websocket.send_json(
+                    _event_frame(
+                        "event.trade.canceled",
+                        {
+                            "requestId": frame.id,
+                            "scope": "all",
+                            "status": "initiated",
+                        },
+                    )
+                )
+            if params.action == "close_all":
+                await websocket.send_json(
+                    _event_frame(
+                        "event.trade.closed",
+                        {
+                            "requestId": frame.id,
+                            "scope": "all",
+                            "status": "initiated",
+                        },
+                    )
+                )
             await websocket.send_json(_ok_response(frame.id, payload=emergency_payload))
             continue
 

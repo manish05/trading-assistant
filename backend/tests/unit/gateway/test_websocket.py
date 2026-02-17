@@ -291,6 +291,69 @@ def test_websocket_risk_status_and_emergency_stop_methods(tmp_path) -> None:
     assert resumed_trade_response["ok"] is True
 
 
+def test_websocket_risk_emergency_stop_emits_trade_control_events(tmp_path) -> None:
+    client = TestClient(create_app(data_dir=tmp_path))
+
+    with client.websocket_connect("/ws") as websocket:
+        websocket.send_json(_connect_payload())
+        _ = websocket.receive_json()
+
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_risk_stop_cancel_all",
+                "method": "risk.emergencyStop",
+                "params": {
+                    "action": "cancel_all",
+                    "reason": "cancel all pending orders",
+                },
+            }
+        )
+        cancel_risk_event = websocket.receive_json()
+        cancel_trade_event = websocket.receive_json()
+        cancel_response = websocket.receive_json()
+
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_risk_resume_after_cancel",
+                "method": "risk.resume",
+                "params": {},
+            }
+        )
+        _ = websocket.receive_json()
+        _ = websocket.receive_json()
+
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_risk_stop_close_all",
+                "method": "risk.emergencyStop",
+                "params": {
+                    "action": "close_all",
+                    "reason": "close all open positions",
+                },
+            }
+        )
+        close_risk_event = websocket.receive_json()
+        close_trade_event = websocket.receive_json()
+        close_response = websocket.receive_json()
+
+    assert cancel_risk_event["type"] == "event"
+    assert cancel_risk_event["event"] == "event.risk.emergencyStop"
+    assert cancel_trade_event["type"] == "event"
+    assert cancel_trade_event["event"] == "event.trade.canceled"
+    assert cancel_trade_event["payload"]["scope"] == "all"
+    assert cancel_response["ok"] is True
+
+    assert close_risk_event["type"] == "event"
+    assert close_risk_event["event"] == "event.risk.emergencyStop"
+    assert close_trade_event["type"] == "event"
+    assert close_trade_event["event"] == "event.trade.closed"
+    assert close_trade_event["payload"]["scope"] == "all"
+    assert close_response["ok"] is True
+
+
 def test_websocket_agent_run_updates_queue_status(tmp_path) -> None:
     client = TestClient(create_app(data_dir=tmp_path))
 
