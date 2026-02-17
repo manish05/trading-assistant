@@ -734,10 +734,13 @@ function App() {
           status: 'error',
           durationMs,
         })
+        const rejectionMessage = response.error?.message ?? 'Unknown error'
         appendBlock({
           id: `blk_${Date.now()}`,
           title: `${method} rejected`,
-          content: response.error?.message ?? 'Unknown error',
+          content: /[.!?]$/.test(rejectionMessage)
+            ? `${rejectionMessage}${lockTelemetryFailureSuffix}`
+            : `${rejectionMessage}.${lockTelemetryFailureSuffix}`,
           severity: 'error',
         })
         return null
