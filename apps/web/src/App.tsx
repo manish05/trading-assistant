@@ -1293,8 +1293,15 @@ function App() {
     const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1]
     const deltaToLatest = point.value - latestPoint.value
     const deltaToLatestPct = latestPoint.value === 0 ? 0 : (deltaToLatest / latestPoint.value) * 100
+    const pointIndex = marketOverlayChartPoints.findIndex((candidate) => candidate.time === point.time)
+    const previousPoint = pointIndex > 0 ? marketOverlayChartPoints[pointIndex - 1] : null
+    const deltaToPrevious = previousPoint ? point.value - previousPoint.value : null
+    const deltaToPreviousPct =
+      deltaToPrevious !== null && previousPoint && previousPoint.value !== 0
+        ? (deltaToPrevious / previousPoint.value) * 100
+        : null
     const ageLabel = formatElapsedMs(Date.now() - marketOverlayActiveTimelineAnnotation.timestamp)
-    return `${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · t${point.time} · close:${point.value.toFixed(2)} · Δavg:${deltaFromAverage >= 0 ? '+' : ''}${deltaFromAverage.toFixed(2)} (${deltaFromAveragePct >= 0 ? '+' : ''}${deltaFromAveragePct.toFixed(2)}%) · Δlatest:${deltaToLatest >= 0 ? '+' : ''}${deltaToLatest.toFixed(2)} (${deltaToLatestPct >= 0 ? '+' : ''}${deltaToLatestPct.toFixed(2)}%) · age:${ageLabel} · tone:${marketOverlayActiveTimelineAnnotation.tone}`
+    return `${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · t${point.time} · close:${point.value.toFixed(2)} · Δavg:${deltaFromAverage >= 0 ? '+' : ''}${deltaFromAverage.toFixed(2)} (${deltaFromAveragePct >= 0 ? '+' : ''}${deltaFromAveragePct.toFixed(2)}%) · Δlatest:${deltaToLatest >= 0 ? '+' : ''}${deltaToLatest.toFixed(2)} (${deltaToLatestPct >= 0 ? '+' : ''}${deltaToLatestPct.toFixed(2)}%) · Δprev:${deltaToPrevious === null ? 'n/a' : `${deltaToPrevious >= 0 ? '+' : ''}${deltaToPrevious.toFixed(2)} (${deltaToPreviousPct !== null ? `${deltaToPreviousPct >= 0 ? '+' : ''}${deltaToPreviousPct.toFixed(2)}%` : 'n/a'})`} · age:${ageLabel} · tone:${marketOverlayActiveTimelineAnnotation.tone}`
   }, [marketOverlayActiveTimelineAnnotation, marketOverlayAverageClose, marketOverlayChartPoints])
   const marketOverlayMarkerTimelineRows = useMemo(() => {
     if (marketOverlayScopedVisibleAnnotations.length === 0) {
@@ -1302,6 +1309,10 @@ function App() {
     }
     const timelineById = new Map(
       marketOverlayScopedTimelineAnnotations.map((annotation) => [annotation.id, annotation] as const),
+    )
+    const chartPointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const chartPointIndexByTime = new Map(
+      marketOverlayChartPoints.map((point, index) => [point.time, index] as const),
     )
     const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
     const baseline = marketOverlayAverageClose
@@ -1313,9 +1324,7 @@ function App() {
           : 60_000
     return marketOverlayScopedVisibleAnnotations.map((annotation) => {
       const timelineAnnotation = timelineById.get(annotation.id)
-      const point = timelineAnnotation
-        ? marketOverlayChartPoints.find((candidate) => candidate.time === timelineAnnotation.time)
-        : null
+      const point = timelineAnnotation ? (chartPointByTime.get(timelineAnnotation.time) ?? null) : null
       const deltaFromAverage = point && baseline !== null ? point.value - baseline : null
       const deltaFromAveragePct =
         deltaFromAverage !== null && baseline !== null && baseline !== 0
@@ -1326,6 +1335,13 @@ function App() {
         deltaToLatest !== null && latestPoint && latestPoint.value !== 0
           ? (deltaToLatest / latestPoint.value) * 100
           : null
+      const pointIndex = point ? (chartPointIndexByTime.get(point.time) ?? -1) : -1
+      const previousPoint = pointIndex > 0 ? marketOverlayChartPoints[pointIndex - 1] : null
+      const deltaToPrevious = point && previousPoint ? point.value - previousPoint.value : null
+      const deltaToPreviousPct =
+        deltaToPrevious !== null && previousPoint && previousPoint.value !== 0
+          ? (deltaToPrevious / previousPoint.value) * 100
+          : null
       const ageLabel = formatElapsedMs(Date.now() - annotation.timestamp)
       const bucketLabel =
         bucketSizeMs === null
@@ -1333,7 +1349,7 @@ function App() {
           : new Date(Math.floor(annotation.timestamp / bucketSizeMs) * bucketSizeMs).toISOString()
       return {
         id: annotation.id,
-        text: `${annotation.kind}:${annotation.label} · t${timelineAnnotation?.time ?? 'n/a'} · close:${point ? point.value.toFixed(2) : 'n/a'} · Δlatest:${deltaToLatest === null ? 'n/a' : `${deltaToLatest >= 0 ? '+' : ''}${deltaToLatest.toFixed(2)} (${deltaToLatestPct !== null ? `${deltaToLatestPct >= 0 ? '+' : ''}${deltaToLatestPct.toFixed(2)}%` : 'n/a'})`} · Δavg:${deltaFromAverage === null ? 'n/a' : `${deltaFromAverage >= 0 ? '+' : ''}${deltaFromAverage.toFixed(2)} (${deltaFromAveragePct !== null ? `${deltaFromAveragePct >= 0 ? '+' : ''}${deltaFromAveragePct.toFixed(2)}%` : 'n/a'})`} · bucket:${bucketLabel} · age:${ageLabel}`,
+        text: `${annotation.kind}:${annotation.label} · t${timelineAnnotation?.time ?? 'n/a'} · close:${point ? point.value.toFixed(2) : 'n/a'} · Δlatest:${deltaToLatest === null ? 'n/a' : `${deltaToLatest >= 0 ? '+' : ''}${deltaToLatest.toFixed(2)} (${deltaToLatestPct !== null ? `${deltaToLatestPct >= 0 ? '+' : ''}${deltaToLatestPct.toFixed(2)}%` : 'n/a'})`} · Δavg:${deltaFromAverage === null ? 'n/a' : `${deltaFromAverage >= 0 ? '+' : ''}${deltaFromAverage.toFixed(2)} (${deltaFromAveragePct !== null ? `${deltaFromAveragePct >= 0 ? '+' : ''}${deltaFromAveragePct.toFixed(2)}%` : 'n/a'})`} · Δprev:${deltaToPrevious === null ? 'n/a' : `${deltaToPrevious >= 0 ? '+' : ''}${deltaToPrevious.toFixed(2)} (${deltaToPreviousPct !== null ? `${deltaToPreviousPct >= 0 ? '+' : ''}${deltaToPreviousPct.toFixed(2)}%` : 'n/a'})`} · bucket:${bucketLabel} · age:${ageLabel}`,
         isSelected: annotation.id === marketOverlaySelectedMarkerId,
       }
     })

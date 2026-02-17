@@ -563,6 +563,9 @@ describe('Dashboard shell', () => {
         'Δavg:+0.50 (+33.33%)',
       )
       expect(screen.getByLabelText('Overlay Marker Drilldown Detail')).toHaveTextContent(
+        'Δprev:+1.00 (+100.00%)',
+      )
+      expect(screen.getByLabelText('Overlay Marker Drilldown Detail')).toHaveTextContent(
         'tone:warning',
       )
       expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
@@ -578,10 +581,10 @@ describe('Dashboard shell', () => {
         'trade:closed:queued · t1 · close:1.00',
       )
       expect(screen.getByLabelText('Overlay Marker Timeline')).toHaveTextContent(
-        'risk:live_trading_disabled:raised · t2 · close:2.00 · Δlatest:+0.00 (+0.00%) · Δavg:+0.50 (+33.33%) · bucket:none',
+        'risk:live_trading_disabled:raised · t2 · close:2.00 · Δlatest:+0.00 (+0.00%) · Δavg:+0.50 (+33.33%) · Δprev:+1.00 (+100.00%) · bucket:none',
       )
       expect(screen.getByLabelText('Overlay Marker Timeline')).toHaveTextContent(
-        'trade:closed:queued · t1 · close:1.00 · Δlatest:-1.00 (-50.00%) · Δavg:-0.50 (-33.33%) · bucket:none',
+        'trade:closed:queued · t1 · close:1.00 · Δlatest:-1.00 (-50.00%) · Δavg:-0.50 (-33.33%) · Δprev:n/a · bucket:none',
       )
       expect(
         screen.getByRole('button', {
@@ -669,6 +672,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Drilldown Detail')).toHaveTextContent(
       'Δavg:-0.50 (-33.33%)',
     )
+    expect(screen.getByLabelText('Overlay Marker Drilldown Detail')).toHaveTextContent('Δprev:n/a')
     expect(screen.getByLabelText('Overlay Marker Drilldown Detail')).toHaveTextContent(
       'tone:positive',
     )
