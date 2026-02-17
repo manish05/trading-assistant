@@ -1195,7 +1195,8 @@ function App() {
   const canSelectOldestMarketOverlayMarker = canSelectPreviousMarketOverlayMarker
   const canSelectLatestMarketOverlayMarker = canSelectNextMarketOverlayMarker
   const marketOverlayMarkerDrilldown = useMemo(() => {
-    const latest = marketOverlayScopedVisibleAnnotations[0]
+    const latest =
+      marketOverlayScopedTimelineAnnotations[marketOverlayScopedTimelineAnnotations.length - 1] ?? null
     return {
       focus: marketOverlayMarkerFocus,
       ageFilter: marketOverlayMarkerAgeFilter,
@@ -1209,6 +1210,7 @@ function App() {
     marketOverlayBucketScope,
     marketOverlayMarkerAgeFilter,
     marketOverlayMarkerFocus,
+    marketOverlayScopedTimelineAnnotations,
     marketOverlayTimelineOrder,
     marketOverlayMarkerWindow,
     marketOverlayScopedVisibleAnnotations,

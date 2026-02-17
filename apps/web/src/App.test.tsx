@@ -667,7 +667,7 @@ describe('Dashboard shell', () => {
 
     fireEvent.change(screen.getByLabelText('Timeline Order'), { target: { value: 'oldest-first' } })
     expect(screen.getByLabelText('Overlay Marker Drilldown')).toHaveTextContent(
-      'Marker focus: all · window:5 · age:all · scope:all-buckets · order:oldest-first · visible:2 · latest:trade:closed:queued',
+      'Marker focus: all · window:5 · age:all · scope:all-buckets · order:oldest-first · visible:2 · latest:risk:live_trading_disabled:raised',
     )
     const markerOrderText = screen.getByLabelText('Overlay Markers').textContent ?? ''
     expect(markerOrderText.indexOf('trade:closed:queued')).toBeLessThan(
