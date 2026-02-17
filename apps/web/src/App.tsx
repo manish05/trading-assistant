@@ -1642,6 +1642,26 @@ function App() {
         : `${deltaBucket >= 0 ? '+' : ''}${deltaBucket.toFixed(2)} (${deltaBucketPct === null ? 'n/a' : `${deltaBucketPct >= 0 ? '+' : ''}${deltaBucketPct.toFixed(2)}%`})`
     return `mode:${marketOverlayMarkerBucket} · buckets:${orderedBuckets.length} · latestAvg:${latestAvg.toFixed(2)} · previousAvg:${previousAvg === null ? 'n/a' : previousAvg.toFixed(2)} · Δbucket:${deltaBucketLabel}`
   }, [marketOverlayChartPoints, marketOverlayMarkerBucket, marketOverlayScopedTimelineAnnotations])
+  const marketOverlayMarkerChronologySummary = useMemo(() => {
+    if (marketOverlayScopedTimelineAnnotations.length === 0) {
+      return 'none'
+    }
+    const sortedTimestamps = marketOverlayScopedTimelineAnnotations
+      .map((annotation) => annotation.timestamp)
+      .sort((a, b) => a - b)
+    const spanMs = sortedTimestamps[sortedTimestamps.length - 1] - sortedTimestamps[0]
+    if (sortedTimestamps.length === 1) {
+      return `count:1 · span:${formatElapsedMs(spanMs)} · avgGap:n/a · latestGap:n/a`
+    }
+    let totalGapMs = 0
+    for (let index = 1; index < sortedTimestamps.length; index += 1) {
+      totalGapMs += sortedTimestamps[index] - sortedTimestamps[index - 1]
+    }
+    const averageGapMs = totalGapMs / (sortedTimestamps.length - 1)
+    const latestGapMs =
+      sortedTimestamps[sortedTimestamps.length - 1] - sortedTimestamps[sortedTimestamps.length - 2]
+    return `count:${sortedTimestamps.length} · span:${formatElapsedMs(spanMs)} · avgGap:${formatElapsedMs(averageGapMs)} · latestGap:${formatElapsedMs(latestGapMs)}`
+  }, [marketOverlayScopedTimelineAnnotations])
   const marketOverlayChartMarkers = useMemo(() => {
     if (marketOverlayChartPoints.length === 0 || marketOverlayScopedTimelineAnnotations.length === 0) {
       return [] as MarketOverlayChartMarker[]
@@ -4394,6 +4414,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Bucket Delta Summary">
               Bucket deltas: {marketOverlayMarkerBucketDeltaSummary}
+            </p>
+            <p aria-label="Overlay Marker Chronology Summary">
+              Chronology: {marketOverlayMarkerChronologySummary}
             </p>
             <p aria-label="Overlay Marker Scope Summary">
               Scope: {marketOverlayMarkerScopeSummary}

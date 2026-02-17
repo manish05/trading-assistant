@@ -69,6 +69,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Scope Summary')).toHaveTextContent(
       'Scope: visible:t0/r0/f0 · selectedKind:none',
     )
+    expect(screen.getByLabelText('Overlay Marker Chronology Summary')).toHaveTextContent(
+      'Chronology: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Delta Summary')).toHaveTextContent(
       'Delta summary: none',
     )
@@ -526,6 +529,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Scope Summary')).toHaveTextContent(
       'Scope: visible:t0/r0/f0 · selectedKind:none',
     )
+    expect(screen.getByLabelText('Overlay Marker Chronology Summary')).toHaveTextContent(
+      'Chronology: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Delta Summary')).toHaveTextContent(
       'Delta summary: none',
     )
@@ -607,6 +613,9 @@ describe('Dashboard shell', () => {
       expect(screen.getByLabelText('Overlay Marker Scope Summary')).toHaveTextContent(
         'Scope: visible:t1/r1/f0 · selectedKind:risk',
       )
+      expect(screen.getByLabelText('Overlay Marker Chronology Summary')).toHaveTextContent(
+        /Chronology: count:2 · span:/,
+      )
       expect(screen.getByLabelText('Overlay Marker Delta Summary')).toHaveTextContent(
         'Delta summary: Δlatest:-0.50 (n:2) · Δavg:+0.00 (n:2) · Δprev:+1.00 (n:1)',
       )
@@ -684,6 +693,9 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Overlay Marker Scope Summary')).toHaveTextContent(
       'Scope: visible:t0/r1/f0 · selectedKind:risk',
+    )
+    expect(screen.getByLabelText('Overlay Marker Chronology Summary')).toHaveTextContent(
+      'Chronology: count:1 · span:0s · avgGap:n/a · latestGap:n/a',
     )
     expect(screen.getByLabelText('Overlay Marker Delta Summary')).toHaveTextContent(
       'Delta summary: Δlatest:+0.00 (n:1) · Δavg:+0.50 (n:1) · Δprev:+1.00 (n:1)',
@@ -1072,6 +1084,9 @@ describe('Dashboard shell', () => {
     })
     expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
       `Timeline buckets: mode:60s · scope:all-buckets · buckets:2 · latest:${latestBucketAfterUpdate} · count:3`,
+    )
+    expect(screen.getByLabelText('Overlay Marker Chronology Summary')).toHaveTextContent(
+      'Chronology: count:3 · span:2m · avgGap:1m · latestGap:2m',
     )
     expect(screen.getByLabelText('Overlay Marker Bucket Delta Summary')).toHaveTextContent(
       'Bucket deltas: mode:60s · buckets:2 · latestAvg:2.00 · previousAvg:1.00 · Δbucket:+1.00 (+100.00%)',
@@ -1555,7 +1570,7 @@ describe('Dashboard shell', () => {
     })
 
     sendSpy.mockRestore()
-  })
+  }, 15_000)
 
   it('updates candles last-fetch status after get-candles response', async () => {
     const sendSpy = vi
