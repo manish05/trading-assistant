@@ -1216,6 +1216,10 @@ function App() {
     marketOverlayActiveTimelineIndex,
     marketOverlayScopedTimelineAnnotations.length,
   ])
+  const marketOverlayMarkerBehaviorLabel = useMemo(
+    () => `wrap:${marketOverlayMarkerWrap} · selection:${marketOverlaySelectionMode}`,
+    [marketOverlayMarkerWrap, marketOverlaySelectionMode],
+  )
   const marketOverlayTimelineCount = marketOverlayScopedTimelineAnnotations.length
   const hasMultipleMarketOverlayMarkers = marketOverlayTimelineCount > 1
   const canSelectPreviousMarketOverlayMarker =
@@ -3961,6 +3965,7 @@ function App() {
             <p aria-label="Overlay Marker Timeline Bucket Summary">
               Timeline buckets: {marketOverlayMarkerBucketSummary}
             </p>
+            <p aria-label="Overlay Marker Behavior">Marker behavior: {marketOverlayMarkerBehaviorLabel}</p>
             <p aria-label="Overlay Marker Navigation">Marker nav: {marketOverlayMarkerNavigationLabel}</p>
             <div className="market-overlay-marker-navigation">
               <button
