@@ -58,6 +58,12 @@ type QuickActionPreset = {
 type PresetImportMode = 'overwrite' | 'merge'
 type ImportHintMode = 'detailed' | 'compact'
 type ShortcutLegendOrder = 'import-first' | 'clear-first'
+type ShortcutLegendDensity = 'chips' | 'inline'
+type ShortcutLegendItem = {
+  label: string
+  title: string
+  inlineLabel: string
+}
 type PresetImportReport = {
   mode: PresetImportMode
   accepted: string[]
@@ -311,6 +317,8 @@ function App() {
   const [shortcutLegendOrder, setShortcutLegendOrder] = useState<ShortcutLegendOrder>(
     readStatusShortcutLegendOrderFromStorage,
   )
+  const [shortcutLegendDensity, setShortcutLegendDensity] =
+    useState<ShortcutLegendDensity>('chips')
   const [availablePresetNames, setAvailablePresetNames] = useState<string[]>(() =>
     Object.keys(readPresetStoreFromStorage()).sort(),
   )
@@ -1223,6 +1231,46 @@ function App() {
       ? quickActionHistory
       : quickActionHistory.filter((entry) => entry.status === historyFilter)
 
+  const statusLegendShortcuts = useMemo<ShortcutLegendItem[]>(
+    () =>
+      shortcutLegendOrder === 'clear-first'
+        ? [
+            {
+              label: 'Esc',
+              title: 'Clear preset JSON input',
+              inlineLabel: 'Esc=clear',
+            },
+            {
+              label: 'Ctrl/Cmd+Enter',
+              title: 'Run preset JSON import',
+              inlineLabel: 'Ctrl/Cmd+Enter=import',
+            },
+            {
+              label: '/',
+              title: 'Toggle compact/detailed hints (empty input only)',
+              inlineLabel: '/=mode',
+            },
+          ]
+        : [
+            {
+              label: 'Ctrl/Cmd+Enter',
+              title: 'Run preset JSON import',
+              inlineLabel: 'Ctrl/Cmd+Enter=import',
+            },
+            {
+              label: 'Esc',
+              title: 'Clear preset JSON input',
+              inlineLabel: 'Esc=clear',
+            },
+            {
+              label: '/',
+              title: 'Toggle compact/detailed hints (empty input only)',
+              inlineLabel: '/=mode',
+            },
+          ],
+    [shortcutLegendOrder],
+  )
+
   const copyHistoryToClipboard = useCallback(async () => {
     if (filteredHistory.length === 0) {
       appendBlock({
@@ -1578,6 +1626,18 @@ function App() {
                   <option value="clear-first">clear-first</option>
                 </select>
               </label>
+              <label>
+                Legend Density
+                <select
+                  value={shortcutLegendDensity}
+                  onChange={(event) =>
+                    setShortcutLegendDensity(event.target.value as ShortcutLegendDensity)
+                  }
+                >
+                  <option value="chips">chips</option>
+                  <option value="inline">inline</option>
+                </select>
+              </label>
               <button type="button" onClick={() => void copyImportShortcutCheatSheet()}>
                 Copy Shortcut Cheat Sheet
               </button>
@@ -1832,22 +1892,22 @@ function App() {
                   Import Shortcut Legend <span className="legend-mode-indicator">({importHintMode})</span>
                 </dt>
                 <dd className="import-snapshot-badges status-legend-hotkeys">
-                  {(shortcutLegendOrder === 'clear-first'
-                    ? [
-                        { label: 'Esc', title: 'Clear preset JSON input' },
-                        { label: 'Ctrl/Cmd+Enter', title: 'Run preset JSON import' },
-                        { label: '/', title: 'Toggle compact/detailed hints (empty input only)' },
-                      ]
-                    : [
-                        { label: 'Ctrl/Cmd+Enter', title: 'Run preset JSON import' },
-                        { label: 'Esc', title: 'Clear preset JSON input' },
-                        { label: '/', title: 'Toggle compact/detailed hints (empty input only)' },
-                      ]
-                  ).map((shortcut) => (
-                    <span key={shortcut.label} className="hotkey-chip" title={shortcut.title}>
-                      {shortcut.label}
+                  {shortcutLegendDensity === 'chips' ? (
+                    statusLegendShortcuts.map((shortcut) => (
+                      <span key={shortcut.label} className="hotkey-chip" title={shortcut.title}>
+                        {shortcut.label}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="status-legend-inline">
+                      {statusLegendShortcuts.map((shortcut, index) => (
+                        <span key={shortcut.label} title={shortcut.title}>
+                          {index > 0 ? ' · ' : ''}
+                          {shortcut.inlineLabel}
+                        </span>
+                      ))}
                     </span>
-                  ))}
+                  )}
                 </dd>
               </div>
             ) : null}

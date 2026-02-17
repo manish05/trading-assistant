@@ -64,6 +64,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Use Compact Hints' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Show Legend in Status' })).toBeInTheDocument()
     expect(screen.getByLabelText('Legend Order')).toHaveValue('import-first')
+    expect(screen.getByLabelText('Legend Density')).toHaveValue('chips')
     expect(screen.getByRole('button', { name: 'Copy Shortcut Cheat Sheet' })).toBeInTheDocument()
     expect(screen.getByText('Last import: none')).toBeInTheDocument()
   })
@@ -502,6 +503,12 @@ describe('Dashboard shell', () => {
     expect(window.localStorage.getItem('quick-action-status-shortcut-legend-order-v1')).toBe(
       'clear-first',
     )
+
+    fireEvent.change(screen.getByLabelText('Legend Density'), {
+      target: { value: 'inline' },
+    })
+    expect(within(legendRow).queryByText('Esc', { selector: '.hotkey-chip' })).not.toBeInTheDocument()
+    expect(within(legendRow).getByText(/Esc=clear/)).toBeInTheDocument()
   })
 
   it('initializes status shortcut legend visibility from localStorage', () => {
