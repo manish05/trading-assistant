@@ -13,7 +13,13 @@ PROTOCOL_VERSION = 1
 SERVER_NAME = "mt5-claude-trader-v2"
 
 
-def _error_response(request_id: str, *, code: str, message: str, details: Any | None = None) -> dict:
+def _error_response(
+    request_id: str,
+    *,
+    code: str,
+    message: str,
+    details: Any | None = None,
+) -> dict:
     payload: dict[str, Any] = {
         "type": "res",
         "id": request_id,
