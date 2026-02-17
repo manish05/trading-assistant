@@ -539,6 +539,9 @@ describe('Dashboard shell', () => {
       expect(payload).toContain('Helper reset format: absolute')
       expect(payload).toContain('Helper reset stale-after hours: 24')
       expect(payload).toContain('Helper reset lock: locked')
+      expect(
+        screen.getByText('Copied import shortcut cheat-sheet to clipboard (lock: locked).'),
+      ).toBeInTheDocument()
     })
   })
 

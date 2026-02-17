@@ -1195,7 +1195,9 @@ function App() {
       appendBlock({
         id: `blk_${Date.now()}`,
         title: 'shortcut cheat-sheet copied',
-        content: 'Copied import shortcut cheat-sheet to clipboard.',
+        content: `Copied import shortcut cheat-sheet to clipboard (lock: ${
+          isHelperResetLocked ? 'locked' : 'unlocked'
+        }).`,
         severity: 'info',
       })
     } catch {
