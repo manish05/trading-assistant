@@ -1452,6 +1452,41 @@ function App() {
     marketOverlayScopedTimelineAnnotations,
     marketOverlayTimelineCount,
   ])
+  const marketOverlayMarkerDistanceSummary = useMemo(() => {
+    if (isMarketOverlayNavigationLocked) {
+      return 'locked'
+    }
+    if (marketOverlayActiveTimelineIndex < 0 || marketOverlayTimelineCount === 0) {
+      return 'none'
+    }
+    const oldestDistance = marketOverlayActiveTimelineIndex
+    const latestDistance = marketOverlayTimelineCount - 1 - marketOverlayActiveTimelineIndex
+    const previousKindDistance =
+      marketOverlayPreviousSameKindIndex < 0
+        ? 'n/a'
+        : String(marketOverlayActiveTimelineIndex - marketOverlayPreviousSameKindIndex)
+    const nextKindDistance =
+      marketOverlayNextSameKindIndex < 0
+        ? 'n/a'
+        : String(marketOverlayNextSameKindIndex - marketOverlayActiveTimelineIndex)
+    const previousBucketDistance =
+      marketOverlayPreviousBucketIndex < 0
+        ? 'n/a'
+        : String(marketOverlayActiveTimelineIndex - marketOverlayPreviousBucketIndex)
+    const nextBucketDistance =
+      marketOverlayNextBucketIndex < 0
+        ? 'n/a'
+        : String(marketOverlayNextBucketIndex - marketOverlayActiveTimelineIndex)
+    return `edges:o${oldestDistance}/l${latestDistance} · kind:${previousKindDistance}/${nextKindDistance} · bucket:${previousBucketDistance}/${nextBucketDistance} · step:${MARKET_OVERLAY_MARKER_SKIP_STEP}`
+  }, [
+    isMarketOverlayNavigationLocked,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayNextBucketIndex,
+    marketOverlayNextSameKindIndex,
+    marketOverlayPreviousBucketIndex,
+    marketOverlayPreviousSameKindIndex,
+    marketOverlayTimelineCount,
+  ])
   const marketOverlayMarkerShortcutHint = useMemo(() => {
     if (isMarketOverlayNavigationLocked) {
       return 'locked'
@@ -4547,6 +4582,9 @@ function App() {
             <p aria-label="Overlay Marker Navigation">Marker nav: {marketOverlayMarkerNavigationLabel}</p>
             <p aria-label="Overlay Marker Navigation Targets">
               Targets: {marketOverlayMarkerNavigationTargets}
+            </p>
+            <p aria-label="Overlay Marker Distance Summary">
+              Distance: {marketOverlayMarkerDistanceSummary}
             </p>
             <p aria-label="Overlay Marker Shortcut Hint">
               Shortcuts: {marketOverlayMarkerShortcutHint}

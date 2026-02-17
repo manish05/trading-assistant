@@ -87,6 +87,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Navigation Targets')).toHaveTextContent(
       'Targets: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Distance Summary')).toHaveTextContent(
+      'Distance: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Shortcut Hint')).toHaveTextContent(
       'Shortcuts: steps:off/off · skip:off/off · kind:off/off · bucket:off/off',
     )
@@ -550,6 +553,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Navigation Targets')).toHaveTextContent(
       'Targets: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Distance Summary')).toHaveTextContent(
+      'Distance: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Shortcut Hint')).toHaveTextContent(
       'Shortcuts: steps:off/off · skip:off/off · kind:off/off · bucket:off/off',
     )
@@ -662,6 +668,9 @@ describe('Dashboard shell', () => {
       expect(screen.getByLabelText('Overlay Marker Navigation Targets')).toHaveTextContent(
         'Targets: prev:trade:closed:queued · next:none · skipBack:none · skipForward:none · prevKind:none · nextKind:none · prevBucket:none · nextBucket:none',
       )
+      expect(screen.getByLabelText('Overlay Marker Distance Summary')).toHaveTextContent(
+        'Distance: edges:o1/l0 · kind:n/a/n/a · bucket:n/a/n/a · step:2',
+      )
       expect(screen.getByLabelText('Overlay Marker Shortcut Hint')).toHaveTextContent(
         'Shortcuts: steps:on/off · skip:off/off · kind:off/off · bucket:off/off',
       )
@@ -736,6 +745,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Navigation Targets')).toHaveTextContent(
       'Targets: prev:none · next:risk:live_trading_disabled:raised · skipBack:none · skipForward:none · prevKind:none · nextKind:none · prevBucket:none · nextBucket:none',
     )
+    expect(screen.getByLabelText('Overlay Marker Distance Summary')).toHaveTextContent(
+      'Distance: edges:o0/l1 · kind:n/a/n/a · bucket:n/a/n/a · step:2',
+    )
     expect(screen.getByRole('button', { name: 'trade:closed:queued' })).toHaveAttribute(
       'aria-pressed',
       'true',
@@ -807,6 +819,9 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Overlay Marker Navigation Targets')).toHaveTextContent(
       'Targets: prev:risk:live_trading_disabled:raised · next:risk:live_trading_disabled:raised · skipBack:none · skipForward:none · prevKind:none · nextKind:none · prevBucket:none · nextBucket:none',
+    )
+    expect(screen.getByLabelText('Overlay Marker Distance Summary')).toHaveTextContent(
+      'Distance: edges:o0/l1 · kind:n/a/n/a · bucket:n/a/n/a · step:2',
     )
     expect(screen.getByLabelText('Overlay Marker Shortcut Hint')).toHaveTextContent(
       'Shortcuts: steps:on/on · skip:off/off · kind:off/off · bucket:off/off',
@@ -1127,6 +1142,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Navigation Targets')).toHaveTextContent(
       'Targets: prev:risk:live_trading_disabled:raised · next:none · skipBack:trade:closed:queued · skipForward:none · prevKind:trade:closed:queued · nextKind:none · prevBucket:risk:live_trading_disabled:raised · nextBucket:none',
     )
+    expect(screen.getByLabelText('Overlay Marker Distance Summary')).toHaveTextContent(
+      'Distance: edges:o2/l0 · kind:2/n/a · bucket:1/n/a · step:2',
+    )
     expect(screen.getByLabelText('Overlay Marker Shortcut Hint')).toHaveTextContent(
       'Shortcuts: steps:on/off · skip:on/off · kind:on/off · bucket:on/off',
     )
@@ -1136,6 +1154,9 @@ describe('Dashboard shell', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Previous Bucket' }))
     expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
       'Marker nav: 2/3 · selected:risk:live_trading_disabled:raised',
+    )
+    expect(screen.getByLabelText('Overlay Marker Distance Summary')).toHaveTextContent(
+      'Distance: edges:o1/l1 · kind:n/a/n/a · bucket:n/a/1 · step:2',
     )
     expect(screen.getByRole('button', { name: 'Previous Bucket' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Next Bucket' })).toBeEnabled()
@@ -1280,6 +1301,9 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Overlay Marker Navigation Targets')).toHaveTextContent(
       'Targets: locked',
+    )
+    expect(screen.getByLabelText('Overlay Marker Distance Summary')).toHaveTextContent(
+      'Distance: locked',
     )
     expect(screen.getByLabelText('Overlay Marker Shortcut Hint')).toHaveTextContent(
       'Shortcuts: locked',
