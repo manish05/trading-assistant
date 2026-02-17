@@ -37,6 +37,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Run Onboarding Flow' })).toBeInTheDocument()
     expect(screen.getByLabelText('Marker Window')).toHaveValue('5')
     expect(screen.getByLabelText('Marker Focus')).toHaveValue('all')
+    expect(screen.getByLabelText('Marker Age')).toHaveValue('all')
     expect(screen.getByLabelText('Chart Lens')).toHaveValue('price-only')
     expect(screen.getByLabelText('Overlay Mode')).toHaveValue('price-only')
     expect(screen.getByLabelText('Overlay Legend')).toBeInTheDocument()
@@ -48,9 +49,12 @@ describe('Dashboard shell', () => {
       'Markers: trade:0 · risk:0 · feed:0 · latest:none',
     )
     expect(screen.getByLabelText('Overlay Marker Drilldown')).toHaveTextContent(
-      'Marker focus: all · window:5 · visible:0 · latest:none',
+      'Marker focus: all · window:5 · age:all · visible:0 · latest:none',
     )
     expect(screen.getByLabelText('Overlay Correlation Hint')).toHaveTextContent('Correlation: none')
+    expect(screen.getByLabelText('Overlay Marker Drilldown Detail')).toHaveTextContent(
+      'Marker detail: none',
+    )
     expect(screen.getByLabelText('Overlay Markers')).toHaveTextContent('none')
     expect(screen.getByLabelText('Overlay Chart Runtime')).toBeInTheDocument()
     expect(screen.getByLabelText('Overlay Live Summary')).toHaveTextContent('Live: candles:0')
@@ -262,6 +266,9 @@ describe('Dashboard shell', () => {
     fireEvent.change(screen.getByLabelText('Marker Window'), {
       target: { value: '8' },
     })
+    fireEvent.change(screen.getByLabelText('Marker Age'), {
+      target: { value: 'last-60s' },
+    })
 
     expect(window.localStorage.getItem('quick-action-market-overlay-mode-v1')).toBe('with-risk')
     expect(window.localStorage.getItem('quick-action-market-overlay-chart-lens-v1')).toBe(
@@ -269,6 +276,9 @@ describe('Dashboard shell', () => {
     )
     expect(window.localStorage.getItem('quick-action-market-overlay-marker-focus-v1')).toBe('risk')
     expect(window.localStorage.getItem('quick-action-market-overlay-marker-window-v1')).toBe('8')
+    expect(window.localStorage.getItem('quick-action-market-overlay-marker-age-filter-v1')).toBe(
+      'last-60s',
+    )
   })
 
   it('shows chart fallback runtime when ResizeObserver is unavailable', async () => {
@@ -300,7 +310,7 @@ describe('Dashboard shell', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Refresh Overlay Snapshot' }))
     expect(screen.getByLabelText('Overlay Snapshot Summary')).toHaveTextContent(
-      'Summary: candles:0 · chartPoints:0 · chartLens:price-only · markerFocus:all · markerWindow:5 · markers:t0/r0/f0 · corr:none · trend:neutral · vol:n/a · pulse:quiet(0) · regime:observe',
+      'Summary: candles:0 · chartPoints:0 · chartLens:price-only · markerFocus:all · markerWindow:5 · markerAge:all · markers:t0/r0/f0 · corr:none · trend:neutral · vol:n/a · pulse:quiet(0) · regime:observe',
     )
     expect(screen.getByLabelText('Overlay Snapshot Time')).not.toHaveTextContent('Snapshot: never')
 
@@ -309,7 +319,7 @@ describe('Dashboard shell', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: 'Refresh Overlay Snapshot' }))
     expect(screen.getByLabelText('Overlay Snapshot Summary')).toHaveTextContent(
-      'Summary: candles:0 · tradeEvents:0 · chartPoints:0 · chartLens:price-only · markerFocus:all · markerWindow:5 · markers:t0/r0/f0 · corr:none · trend:neutral · vol:n/a · pulse:quiet(0) · regime:observe',
+      'Summary: candles:0 · tradeEvents:0 · chartPoints:0 · chartLens:price-only · markerFocus:all · markerWindow:5 · markerAge:all · markers:t0/r0/f0 · corr:none · trend:neutral · vol:n/a · pulse:quiet(0) · regime:observe',
     )
 
     fireEvent.change(screen.getByLabelText('Overlay Mode'), {
@@ -317,7 +327,7 @@ describe('Dashboard shell', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: 'Refresh Overlay Snapshot' }))
     expect(screen.getByLabelText('Overlay Snapshot Summary')).toHaveTextContent(
-      'Summary: candles:0 · tradeEvents:0 · riskAlerts:0 · chartPoints:0 · chartLens:price-only · markerFocus:all · markerWindow:5 · markers:t0/r0/f0 · corr:none · trend:neutral · vol:n/a · pulse:quiet(0) · regime:observe',
+      'Summary: candles:0 · tradeEvents:0 · riskAlerts:0 · chartPoints:0 · chartLens:price-only · markerFocus:all · markerWindow:5 · markerAge:all · markers:t0/r0/f0 · corr:none · trend:neutral · vol:n/a · pulse:quiet(0) · regime:observe',
     )
   })
 
@@ -438,9 +448,12 @@ describe('Dashboard shell', () => {
       'Markers: trade:0 · risk:0 · feed:0 · latest:none',
     )
     expect(screen.getByLabelText('Overlay Marker Drilldown')).toHaveTextContent(
-      'Marker focus: all · window:5 · visible:0 · latest:none',
+      'Marker focus: all · window:5 · age:all · visible:0 · latest:none',
     )
     expect(screen.getByLabelText('Overlay Correlation Hint')).toHaveTextContent('Correlation: none')
+    expect(screen.getByLabelText('Overlay Marker Drilldown Detail')).toHaveTextContent(
+      'Marker detail: none',
+    )
     expect(screen.getByLabelText('Overlay Markers')).toHaveTextContent('none')
     expect(screen.getByLabelText('Overlay Trend')).toHaveTextContent('Trend: neutral')
     expect(screen.getByLabelText('Overlay Trend')).toHaveClass('overlay-trend-neutral')
@@ -476,10 +489,16 @@ describe('Dashboard shell', () => {
         'Markers: trade:1 · risk:1 · feed:0 · latest:risk:live_trading_disabled:raised',
       )
       expect(screen.getByLabelText('Overlay Marker Drilldown')).toHaveTextContent(
-        'Marker focus: all · window:5 · visible:2 · latest:risk:live_trading_disabled:raised',
+        'Marker focus: all · window:5 · age:all · visible:2 · latest:risk:live_trading_disabled:raised',
       )
       expect(screen.getByLabelText('Overlay Correlation Hint')).toHaveTextContent(
         'Correlation: risk:live_trading_disabled:raised@2.00(t2)',
+      )
+      expect(screen.getByLabelText('Overlay Marker Drilldown Detail')).toHaveTextContent(
+        'Marker detail: risk:live_trading_disabled:raised · t2 · close:2.00 · Δavg:+0.50',
+      )
+      expect(screen.getByLabelText('Overlay Marker Drilldown Detail')).toHaveTextContent(
+        'tone:warning',
       )
       expect(screen.getByLabelText('Overlay Markers')).toHaveTextContent(
         'risk:live_trading_disabled:raised',
@@ -499,7 +518,7 @@ describe('Dashboard shell', () => {
 
     fireEvent.change(screen.getByLabelText('Marker Focus'), { target: { value: 'risk' } })
     expect(screen.getByLabelText('Overlay Marker Drilldown')).toHaveTextContent(
-      'Marker focus: risk · window:5 · visible:1 · latest:risk:live_trading_disabled:raised',
+      'Marker focus: risk · window:5 · age:all · visible:1 · latest:risk:live_trading_disabled:raised',
     )
     expect(screen.getByLabelText('Overlay Correlation Hint')).toHaveTextContent(
       'Correlation: risk:live_trading_disabled:raised@2.00(t2)',
@@ -509,6 +528,18 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Overlay Markers')).not.toHaveTextContent('trade:closed:queued')
 
+    fireEvent.change(screen.getByLabelText('Marker Focus'), { target: { value: 'all' } })
+    fireEvent.click(screen.getByRole('button', { name: 'trade:closed:queued' }))
+    expect(screen.getByLabelText('Overlay Correlation Hint')).toHaveTextContent(
+      'Correlation: trade:closed:queued@1.00(t1)',
+    )
+    expect(screen.getByLabelText('Overlay Marker Drilldown Detail')).toHaveTextContent(
+      'Marker detail: trade:closed:queued · t1 · close:1.00 · Δavg:-0.50',
+    )
+    expect(screen.getByLabelText('Overlay Marker Drilldown Detail')).toHaveTextContent(
+      'tone:positive',
+    )
+
     fireEvent.change(screen.getByLabelText('Chart Lens'), { target: { value: 'diagnostics' } })
     expect(screen.getByLabelText('Overlay Chart Summary')).toHaveTextContent(
       'Chart: points:2 · last:2.00 · trendPoints:0 · baseline:1.50 · lens:diagnostics',
@@ -516,10 +547,148 @@ describe('Dashboard shell', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Refresh Overlay Snapshot' }))
     expect(screen.getByLabelText('Overlay Snapshot Summary')).toHaveTextContent(
-      'Summary: candles:2 · tradeEvents:1 · riskAlerts:1 · chartPoints:2 · chartLens:diagnostics · markerFocus:risk · markerWindow:5 · markers:t1/r1/f0 · corr:risk:live_trading_disabled:raised@2.00(t2) · trend:up (+1.00) · vol:1.00 · pulse:intense(5) · regime:risk_on',
+      'Summary: candles:2 · tradeEvents:1 · riskAlerts:1 · chartPoints:2 · chartLens:diagnostics · markerFocus:all · markerWindow:5 · markerAge:all · markers:t1/r1/f0 · corr:trade:closed:queued@1.00(t1) · trend:up (+1.00) · vol:1.00 · pulse:intense(5) · regime:risk_on',
     )
 
     sendSpy.mockRestore()
+  })
+
+  it('filters visible markers by marker age window', async () => {
+    const dateNowSpy = vi.spyOn(Date, 'now')
+    let fakeNow = 1_700_000_000_000
+    dateNowSpy.mockImplementation(() => fakeNow)
+
+    const sendSpy = vi
+      .spyOn(WebSocket.prototype, 'send')
+      .mockImplementation(function (
+        this: WebSocket,
+        data: string | ArrayBufferLike | Blob | ArrayBufferView<ArrayBufferLike>,
+      ) {
+        if (typeof data !== 'string') {
+          return
+        }
+        const payload = JSON.parse(data) as {
+          type?: string
+          id?: string
+          method?: string
+          params?: {
+            action?: string
+          }
+        }
+        if (payload.type !== 'req' || !payload.id) {
+          return
+        }
+
+        if (payload.method === 'feeds.getCandles') {
+          queueMicrotask(() => {
+            this.onmessage?.(
+              new MessageEvent('message', {
+                data: JSON.stringify({
+                  type: 'res',
+                  id: payload.id,
+                  ok: true,
+                  payload: {
+                    symbol: 'ETHUSDm',
+                    timeframe: '5m',
+                    candles: [{ close: 1 }, { close: 2 }],
+                  },
+                }),
+              }),
+            )
+          })
+          return
+        }
+
+        if (payload.method === 'risk.emergencyStop') {
+          queueMicrotask(() => {
+            if (payload.params?.action === 'close_all') {
+              this.onmessage?.(
+                new MessageEvent('message', {
+                  data: JSON.stringify({
+                    type: 'event',
+                    event: 'event.trade.closed',
+                    payload: {
+                      status: 'queued',
+                    },
+                  }),
+                }),
+              )
+            }
+            if (payload.params?.action === 'disable_live') {
+              this.onmessage?.(
+                new MessageEvent('message', {
+                  data: JSON.stringify({
+                    type: 'event',
+                    event: 'event.risk.alert',
+                    payload: {
+                      status: 'raised',
+                      kind: 'live_trading_disabled',
+                    },
+                  }),
+                }),
+              )
+            }
+            this.onmessage?.(
+              new MessageEvent('message', {
+                data: JSON.stringify({
+                  type: 'res',
+                  id: payload.id,
+                  ok: true,
+                  payload: {
+                    emergency: true,
+                    action: payload.params?.action ?? 'pause_trading',
+                    reason: 'test',
+                    updatedAt: '2025-01-01T00:00:00Z',
+                    actionCounts: {
+                      pause_trading: 0,
+                      cancel_all: 0,
+                      close_all: 0,
+                      disable_live: 0,
+                    },
+                  },
+                }),
+              }),
+            )
+          })
+        }
+      })
+
+    render(<App />)
+
+    fireEvent.change(screen.getByLabelText('Min Request Gap (ms)'), { target: { value: '0' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Get Candles' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Close All Now' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Disable Live Now' }))
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Overlay Marker Drilldown')).toHaveTextContent(
+        'Marker focus: all · window:5 · age:all · visible:2 · latest:risk:live_trading_disabled:raised',
+      )
+    })
+
+    fakeNow += 120_000
+    fireEvent.change(screen.getByLabelText('Marker Age'), { target: { value: 'last-60s' } })
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Overlay Marker Drilldown')).toHaveTextContent(
+        'Marker focus: all · window:5 · age:last-60s · visible:0 · latest:none',
+      )
+    })
+    expect(screen.getByLabelText('Overlay Markers')).toHaveTextContent('none')
+    expect(screen.getByLabelText('Overlay Correlation Hint')).toHaveTextContent('Correlation: none')
+    expect(screen.getByLabelText('Overlay Marker Drilldown Detail')).toHaveTextContent(
+      'Marker detail: none',
+    )
+
+    fireEvent.change(screen.getByLabelText('Marker Age'), { target: { value: 'last-300s' } })
+    await waitFor(() => {
+      expect(screen.getByLabelText('Overlay Marker Drilldown')).toHaveTextContent(
+        'Marker focus: all · window:5 · age:last-300s · visible:2 · latest:risk:live_trading_disabled:raised',
+      )
+    })
+
+    sendSpy.mockRestore()
+    dateNowSpy.mockRestore()
   })
 
   it('sends account and feed management requests', async () => {
