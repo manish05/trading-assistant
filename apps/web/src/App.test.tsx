@@ -2299,6 +2299,21 @@ describe('Dashboard shell', () => {
     ).not.toBeInTheDocument()
   })
 
+  it('shows telemetry for account guard warnings when block telemetry is visible', () => {
+    render(<App />)
+
+    fireEvent.change(screen.getByLabelText('Account ID'), {
+      target: { value: '' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Disconnect Account' }))
+
+    expect(
+      screen.getByText(
+        'No managed account id available. Lock telemetry: lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0.',
+      ),
+    ).toBeInTheDocument()
+  })
+
   it('shows telemetry for device guard warnings when block telemetry is visible', () => {
     render(<App />)
 
