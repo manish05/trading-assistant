@@ -77,6 +77,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Quick Show Legend' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Quick Hide Reset Badge' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Quick Unlock Reset' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Quick Toggle Lock Summary')).toHaveTextContent('quickLock:locked')
     expect(screen.getByText('Helper Diagnostics')).toBeInTheDocument()
     expect(
       screen.getByText('diag:compact', { selector: '.import-snapshot-badges .import-summary-badge' }),
@@ -637,6 +638,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Quick Lock Reset' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Reset Helper Prefs' })).toBeEnabled()
     expect(screen.getByText('Helper reset lock unlocked via snapshot.')).toBeInTheDocument()
+    expect(screen.getByLabelText('Quick Toggle Lock Summary')).toHaveTextContent('quickLock:unlocked')
   })
 
   it('toggles helper reset badge visibility and persists preference', () => {

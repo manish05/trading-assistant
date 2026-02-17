@@ -613,6 +613,16 @@
   gap: 0.3rem;
 }
 
+.quick-toggle-lock-summary {
+  display: inline-flex;
+  align-items: center;
+  border: 1px dashed #2d4a7e;
+  border-radius: 999px;
+  padding: 0.08rem 0.34rem;
+  font-size: 0.66rem;
+  color: #9fb0cc;
+}
+
 .import-snapshot-toggles button {
   background: #1d335a;
   color: #e8edf5;
