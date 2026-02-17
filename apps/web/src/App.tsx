@@ -2758,6 +2758,16 @@ function App() {
         })
         return
       }
+      if (normalizedKey === 'h') {
+        event.preventDefault()
+        setMarketOverlayMarkerDeltaBasis('latest')
+        return
+      }
+      if (normalizedKey === 'm') {
+        event.preventDefault()
+        setMarketOverlayMarkerDeltaBasis('average')
+        return
+      }
       if (normalizedKey === 'u') {
         event.preventDefault()
         setMarketOverlayMarkerDeltaFilter('latest-up')

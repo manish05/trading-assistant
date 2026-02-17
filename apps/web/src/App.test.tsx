@@ -1392,6 +1392,26 @@ describe('Dashboard shell', () => {
       within(overlayMarkersContainer).getByRole('button', {
         name: 'risk:live_trading_disabled:raised',
       }),
+      { key: 'h' },
+    )
+    expect(screen.getByLabelText('Delta Basis')).toHaveValue('latest')
+    expect(screen.getByLabelText('Overlay Marker Mode Shortcut Summary')).toHaveTextContent(
+      'Mode shortcuts: focus:a/t/r/d=all · age:y=all · window:v=5 · bucket:b=none · order:o/l=newest-first · scope:g=all-buckets · wrap:w=bounded · selection:s=sticky · basis:k=latest · delta:u/j/f/n/0/+/-=all · nav:manual',
+    )
+    fireEvent.keyDown(
+      within(overlayMarkersContainer).getByRole('button', {
+        name: 'risk:live_trading_disabled:raised',
+      }),
+      { key: 'm' },
+    )
+    expect(screen.getByLabelText('Delta Basis')).toHaveValue('average')
+    expect(screen.getByLabelText('Overlay Marker Mode Shortcut Summary')).toHaveTextContent(
+      'Mode shortcuts: focus:a/t/r/d=all · age:y=all · window:v=5 · bucket:b=none · order:o/l=newest-first · scope:g=all-buckets · wrap:w=bounded · selection:s=sticky · basis:k=average · delta:u/j/f/n/0/+/-=all · nav:manual',
+    )
+    fireEvent.keyDown(
+      within(overlayMarkersContainer).getByRole('button', {
+        name: 'risk:live_trading_disabled:raised',
+      }),
       { key: 'k' },
     )
     expect(screen.getByLabelText('Delta Basis')).toHaveValue('latest')
