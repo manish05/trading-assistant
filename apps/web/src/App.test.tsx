@@ -2737,6 +2737,59 @@ describe('Dashboard shell', () => {
     expect(screen.queryByText(/Lock telemetry:/)).not.toBeInTheDocument()
   })
 
+  it('keeps non-copy maintenance toasts telemetry-free when block telemetry is hidden', async () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Hide Block Telemetry' }))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reset Lock Counters' }))
+    expect(screen.getByText('No helper reset lock toggle history to clear.')).toBeInTheDocument()
+    expect(
+      screen.queryByText(
+        'No helper reset lock toggle history to clear. Lock telemetry: lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0.',
+      ),
+    ).not.toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText('Import Presets JSON'), {
+      target: {
+        value: '{"hidden-maintenance":{"feedSymbol":"SOLUSDm"}}',
+      },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Import Presets JSON' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Clear Import Report' })).toBeEnabled()
+    })
+    expect(
+      screen.getByText(
+        'Imported 1 preset entries (overwrite). Created 1, preserved 0, overwritten 0, rejected 0.',
+      ),
+    ).toBeInTheDocument()
+    expect(screen.getByText(/Last import:/)).not.toHaveTextContent('none')
+    expect(
+      screen.queryByText(
+        /Imported \d+ preset entries \([a-z]+\)\..*Lock telemetry:/,
+      ),
+    ).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Clear Import Report' }))
+    expect(screen.getByText('Cleared the latest preset import diagnostics.')).toBeInTheDocument()
+    expect(
+      screen.queryByText(
+        'Cleared the latest preset import diagnostics (lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0).',
+      ),
+    ).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Unlock Reset' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Reset Helper Prefs' }))
+    expect(screen.getByText('Reset helper diagnostics preferences to defaults.')).toBeInTheDocument()
+    expect(
+      screen.queryByText(
+        'Reset helper diagnostics preferences to defaults (lock toggles: 1, tone: active, reset: never; sources: Alt+L=0, controls=1, snapshot=0).',
+      ),
+    ).not.toBeInTheDocument()
+    expect(screen.queryByText(/Lock telemetry:/)).not.toBeInTheDocument()
+  })
+
   it('shows telemetry when reset helper prefs is attempted while locked', () => {
     render(<App />)
 
