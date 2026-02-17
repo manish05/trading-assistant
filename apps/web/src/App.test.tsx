@@ -834,6 +834,34 @@ describe('Dashboard shell', () => {
     })
   })
 
+  it('omits history lock telemetry metadata when block telemetry is hidden', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(window.navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    })
+
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Hide Block Telemetry' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Accounts' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Copy History' })).toBeEnabled()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy History' }))
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalledTimes(1)
+      const payload = String(writeText.mock.calls[0][0])
+      expect(payload).toContain('filter=all')
+      expect(payload).toContain('[Entries]')
+      expect(payload).toContain('accounts.list')
+      expect(payload).not.toContain('[LockTelemetry]')
+      expect(payload).not.toContain('lockToggleTotal=')
+      expect(screen.getByText('Copied 1 history entries.')).toBeInTheDocument()
+    })
+  })
+
   it('shows lock telemetry when history copy is skipped', async () => {
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: 'Copy History' }))
@@ -1944,6 +1972,38 @@ describe('Dashboard shell', () => {
     })
   })
 
+  it('omits import report lock telemetry metadata when block telemetry is hidden', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(window.navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    })
+
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Hide Block Telemetry' }))
+    fireEvent.change(screen.getByLabelText('Import Presets JSON'), {
+      target: {
+        value: '{"copy-template-hidden":{"feedSymbol":"SOLUSDm"}}',
+      },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Import Presets JSON' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Copy Import Report' })).toBeEnabled()
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Copy Import Report' }))
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalled()
+      const payload = String(writeText.mock.calls[writeText.mock.calls.length - 1][0])
+      expect(payload).toContain('accepted=copy-template-hidden')
+      expect(payload).toContain('mode=overwrite')
+      expect(payload).not.toContain('[LockTelemetry]')
+      expect(payload).not.toContain('lockToggleTotal=')
+      expect(screen.getByText('Preset import report copied to clipboard.')).toBeInTheDocument()
+    })
+  })
+
   it('copies last import summary text to clipboard', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined)
     Object.defineProperty(window.navigator, 'clipboard', {
@@ -2089,6 +2149,37 @@ describe('Dashboard shell', () => {
           'Copied full accepted/rejected import names to clipboard (lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0).',
         ),
       ).toBeInTheDocument()
+    })
+  })
+
+  it('omits full-name lock telemetry metadata when block telemetry is hidden', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(window.navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    })
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Hide Block Telemetry' }))
+    fireEvent.change(screen.getByLabelText('Import Presets JSON'), {
+      target: {
+        value: '{"full-hidden-template":{"feedSymbol":"ETHUSDm"}}',
+      },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Import Presets JSON' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Copy Full Names' })).toBeEnabled()
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Copy Full Names' }))
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalled()
+      const payload = String(writeText.mock.calls[writeText.mock.calls.length - 1][0])
+      expect(payload).toContain('[ImportNames]')
+      expect(payload).toContain('accepted:full-hidden-template')
+      expect(payload).not.toContain('[LockTelemetry]')
+      expect(payload).not.toContain('lockToggleTotal=')
+      expect(screen.getByText('Copied full accepted/rejected import names to clipboard.')).toBeInTheDocument()
     })
   })
 })
