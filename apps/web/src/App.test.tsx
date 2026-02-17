@@ -78,7 +78,7 @@ describe('Dashboard shell', () => {
       'Delta filter: mode:all · matched:0/0 · up:0 · down:0 · flat:0 · n/a:0',
     )
     expect(screen.getByLabelText('Overlay Marker Delta Shortcut Summary')).toHaveTextContent(
-      'Delta shortcuts: keys:u/j/f/n/0 · mode:all · matched:0/0 · active:off',
+      'Delta shortcuts: keys:u/j/f/n/0/+/- · mode:all · matched:0/0 · active:off',
     )
     expect(screen.getByLabelText('Overlay Marker Chronology Summary')).toHaveTextContent(
       'Chronology: none',
@@ -1202,7 +1202,7 @@ describe('Dashboard shell', () => {
       'Delta filter: mode:all · matched:2/2 · up:0 · down:1 · flat:1 · n/a:0',
     )
     expect(screen.getByLabelText('Overlay Marker Delta Shortcut Summary')).toHaveTextContent(
-      'Delta shortcuts: keys:u/j/f/n/0 · mode:all · matched:2/2 · active:on',
+      'Delta shortcuts: keys:u/j/f/n/0/+/- · mode:all · matched:2/2 · active:on',
     )
     expect(screen.getByLabelText('Delta Filter')).toHaveValue('all')
     const overlayMarkersContainer = screen.getByLabelText('Overlay Markers')
@@ -1222,8 +1222,37 @@ describe('Dashboard shell', () => {
       'Delta filter: mode:latest-down · matched:1/2 · up:0 · down:1 · flat:1 · n/a:0',
     )
     expect(screen.getByLabelText('Overlay Marker Delta Shortcut Summary')).toHaveTextContent(
-      'Delta shortcuts: keys:u/j/f/n/0 · mode:latest-down · matched:1/2 · active:on',
+      'Delta shortcuts: keys:u/j/f/n/0/+/- · mode:latest-down · matched:1/2 · active:on',
     )
+    expect(screen.getByLabelText('Overlay Markers')).toHaveTextContent('trade:closed:queued')
+    expect(screen.getByLabelText('Overlay Markers')).not.toHaveTextContent(
+      'risk:live_trading_disabled:raised',
+    )
+    fireEvent.keyDown(
+      within(screen.getByLabelText('Overlay Markers')).getByRole('button', {
+        name: 'trade:closed:queued',
+      }),
+      { key: '+' },
+    )
+    await waitFor(() => {
+      expect(screen.getByLabelText('Overlay Marker Drilldown')).toHaveTextContent(
+        'Marker focus: all · window:5 · age:all · scope:all-buckets · order:newest-first · visible:1 · latest:risk:live_trading_disabled:raised',
+      )
+    })
+    expect(screen.getByLabelText('Delta Filter')).toHaveValue('latest-flat')
+    expect(screen.getByLabelText('Overlay Markers')).toHaveTextContent(
+      'risk:live_trading_disabled:raised',
+    )
+    expect(screen.getByLabelText('Overlay Markers')).not.toHaveTextContent('trade:closed:queued')
+    fireEvent.keyDown(
+      within(screen.getByLabelText('Overlay Markers')).getByRole('button', {
+        name: 'risk:live_trading_disabled:raised',
+      }),
+      { key: '-' },
+    )
+    await waitFor(() => {
+      expect(screen.getByLabelText('Delta Filter')).toHaveValue('latest-down')
+    })
     expect(screen.getByLabelText('Overlay Markers')).toHaveTextContent('trade:closed:queued')
     expect(screen.getByLabelText('Overlay Markers')).not.toHaveTextContent(
       'risk:live_trading_disabled:raised',
@@ -1241,7 +1270,7 @@ describe('Dashboard shell', () => {
     })
     expect(screen.getByLabelText('Delta Filter')).toHaveValue('all')
     expect(screen.getByLabelText('Overlay Marker Delta Shortcut Summary')).toHaveTextContent(
-      'Delta shortcuts: keys:u/j/f/n/0 · mode:all · matched:2/2 · active:on',
+      'Delta shortcuts: keys:u/j/f/n/0/+/- · mode:all · matched:2/2 · active:on',
     )
     fireEvent.change(screen.getByLabelText('Marker Bucket'), { target: { value: '60s' } })
     const expectedBucket = new Date(Math.floor(fakeNow / 60_000) * 60_000).toISOString()

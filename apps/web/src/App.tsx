@@ -190,6 +190,13 @@ const MARKET_OVERLAY_BUCKET_SCOPE_STORAGE_KEY = 'quick-action-market-overlay-buc
 const MARKET_OVERLAY_TIMELINE_ORDER_STORAGE_KEY = 'quick-action-market-overlay-timeline-order-v1'
 const MARKET_OVERLAY_MARKER_WRAP_STORAGE_KEY = 'quick-action-market-overlay-marker-wrap-v1'
 const MARKET_OVERLAY_SELECTION_MODE_STORAGE_KEY = 'quick-action-market-overlay-selection-mode-v1'
+const MARKET_OVERLAY_MARKER_DELTA_FILTER_ORDER: MarketOverlayMarkerDeltaFilter[] = [
+  'all',
+  'latest-up',
+  'latest-down',
+  'latest-flat',
+  'latest-unavailable',
+]
 const MAX_IMPORT_REPORT_NAMES = 6
 const FEED_CANDLE_FETCH_LIMIT = 50
 const MARKET_OVERLAY_MARKER_SKIP_STEP = 2
@@ -1288,7 +1295,7 @@ function App() {
   ])
   const marketOverlayMarkerDeltaShortcutSummary = useMemo(
     () =>
-      `keys:u/j/f/n/0 · mode:${marketOverlayMarkerDeltaFilter} · matched:${marketOverlayScopedTimelineAnnotations.length}/${marketOverlayBucketScopedTimelineAnnotations.length} · active:${marketOverlayBucketScopedTimelineAnnotations.length > 0 ? 'on' : 'off'}`,
+      `keys:u/j/f/n/0/+/- · mode:${marketOverlayMarkerDeltaFilter} · matched:${marketOverlayScopedTimelineAnnotations.length}/${marketOverlayBucketScopedTimelineAnnotations.length} · active:${marketOverlayBucketScopedTimelineAnnotations.length > 0 ? 'on' : 'off'}`,
     [
       marketOverlayBucketScopedTimelineAnnotations.length,
       marketOverlayMarkerDeltaFilter,
@@ -2600,6 +2607,33 @@ function App() {
       if (event.key === '0') {
         event.preventDefault()
         setMarketOverlayMarkerDeltaFilter('all')
+        return
+      }
+      if (event.key === '+' || event.key === '=') {
+        event.preventDefault()
+        setMarketOverlayMarkerDeltaFilter((current) => {
+          const currentIndex = MARKET_OVERLAY_MARKER_DELTA_FILTER_ORDER.indexOf(current)
+          if (currentIndex < 0) {
+            return 'all'
+          }
+          return MARKET_OVERLAY_MARKER_DELTA_FILTER_ORDER[
+            (currentIndex + 1) % MARKET_OVERLAY_MARKER_DELTA_FILTER_ORDER.length
+          ]
+        })
+        return
+      }
+      if (event.key === '-' || event.key === '_') {
+        event.preventDefault()
+        setMarketOverlayMarkerDeltaFilter((current) => {
+          const currentIndex = MARKET_OVERLAY_MARKER_DELTA_FILTER_ORDER.indexOf(current)
+          if (currentIndex < 0) {
+            return 'all'
+          }
+          return MARKET_OVERLAY_MARKER_DELTA_FILTER_ORDER[
+            (currentIndex - 1 + MARKET_OVERLAY_MARKER_DELTA_FILTER_ORDER.length) %
+              MARKET_OVERLAY_MARKER_DELTA_FILTER_ORDER.length
+          ]
+        })
         return
       }
       if (/^[1-9]$/.test(event.key)) {
