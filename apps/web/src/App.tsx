@@ -2294,7 +2294,11 @@ function App() {
                     ? formatTimestamp(helperDiagnosticsLastResetAt, 'relative')
                     : 'never'}
                 </span>
-                <span className="import-summary-badge badge-hint-mode">
+                <span
+                  className={`import-summary-badge badge-hint-mode helper-reset-lock-badge ${
+                    isHelperResetLocked ? 'lock-locked' : 'lock-unlocked'
+                  }`}
+                >
                   resetLock:{isHelperResetLocked ? 'locked' : 'unlocked'}
                 </span>
                 <div className="import-snapshot-toggles" aria-label="Import Snapshot Toggles">
@@ -2358,7 +2362,11 @@ function App() {
                 <span className="import-summary-badge badge-hint-mode">
                   staleAfter:{helperResetStaleThresholdHours}h
                 </span>
-                <span className="import-summary-badge badge-hint-mode">
+                <span
+                  className={`import-summary-badge badge-hint-mode helper-reset-lock-badge ${
+                    isHelperResetLocked ? 'lock-locked' : 'lock-unlocked'
+                  }`}
+                >
                   lock:{isHelperResetLocked ? 'locked' : 'unlocked'}
                 </span>
                 {helperDiagnosticsDisplayMode === 'verbose' ? (

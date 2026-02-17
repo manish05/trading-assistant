@@ -388,6 +388,18 @@
   background: #162744;
 }
 
+.import-summary-badge.helper-reset-lock-badge.lock-locked {
+  border-color: #8a2f3e;
+  background: #3b1720;
+  color: #ffd7df;
+}
+
+.import-summary-badge.helper-reset-lock-badge.lock-unlocked {
+  border-color: #20673f;
+  background: #123822;
+  color: #ccf2dc;
+}
+
 .preset-import-report {
   margin-top: 0.45rem;
   border: 1px solid #2d4a7e;
