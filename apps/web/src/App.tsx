@@ -2064,6 +2064,12 @@ function App() {
                 <span className="import-summary-badge badge-hint-mode">
                   diag:{helperDiagnosticsDisplayMode}
                 </span>
+                <span className="import-summary-badge badge-hint-mode">
+                  resetAge:
+                  {helperDiagnosticsLastResetAt
+                    ? formatTimestamp(helperDiagnosticsLastResetAt, 'relative')
+                    : 'never'}
+                </span>
                 <div className="import-snapshot-toggles" aria-label="Import Snapshot Toggles">
                   <button
                     type="button"

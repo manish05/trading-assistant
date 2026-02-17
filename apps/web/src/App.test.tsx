@@ -74,6 +74,9 @@ describe('Dashboard shell', () => {
     expect(
       screen.getByText('diag:compact', { selector: '.import-snapshot-badges .import-summary-badge' }),
     ).toBeInTheDocument()
+    expect(
+      screen.getByText('resetAge:never', { selector: '.import-snapshot-badges .import-summary-badge' }),
+    ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Use Verbose Diagnostics' })).toBeInTheDocument()
     expect(
       screen.getByText('enabled:1/2', { selector: '.import-snapshot-badges .import-summary-badge' }),
@@ -709,6 +712,8 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Use Verbose Diagnostics' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Hide Quick Toggles' })).toBeInTheDocument()
     expect(window.localStorage.getItem('quick-action-helper-diagnostics-reset-at-v1')).toBeTruthy()
+    expect(screen.queryByText('resetAge:never')).not.toBeInTheDocument()
+    expect(screen.getByText(/resetAge:/)).toBeInTheDocument()
   })
 
   it('reports accepted and rejected preset names after import', async () => {
