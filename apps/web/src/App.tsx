@@ -1380,6 +1380,21 @@ function App() {
         ? null
         : marketOverlayChartPoints.reduce((sum, point) => sum + point.value, 0) /
           marketOverlayChartPoints.length
+    const resolveToneForBasis = (
+      annotation: MarketOverlayTimelineAnnotation,
+      basis: MarketOverlayMarkerDeltaBasis,
+    ): 'up' | 'down' | 'flat' | 'unavailable' => {
+      const point = pointByTime.get(annotation.time) ?? null
+      const deltaValue =
+        basis === 'latest'
+          ? point && latestPoint
+            ? point.value - latestPoint.value
+            : null
+          : point && baseline !== null
+            ? point.value - baseline
+            : null
+      return resolveMarketOverlayDeltaTone(deltaValue)
+    }
     const computeStats = (basis: MarketOverlayMarkerDeltaBasis): DeltaToneStats => {
       const stats: DeltaToneStats = {
         total: marketOverlayBucketScopedTimelineAnnotations.length,
@@ -1390,16 +1405,7 @@ function App() {
         unavailable: 0,
       }
       marketOverlayBucketScopedTimelineAnnotations.forEach((annotation) => {
-        const point = pointByTime.get(annotation.time) ?? null
-        const deltaValue =
-          basis === 'latest'
-            ? point && latestPoint
-              ? point.value - latestPoint.value
-              : null
-            : point && baseline !== null
-              ? point.value - baseline
-              : null
-        const tone = resolveMarketOverlayDeltaTone(deltaValue)
+        const tone = resolveToneForBasis(annotation, basis)
         if (tone === 'up') {
           stats.up += 1
         } else if (tone === 'down') {
@@ -1423,9 +1429,15 @@ function App() {
     }
     const latestStats = computeStats('latest')
     const averageStats = computeStats('average')
+    const agreementCount = marketOverlayBucketScopedTimelineAnnotations.reduce((count, annotation) => {
+      const latestTone = resolveToneForBasis(annotation, 'latest')
+      const averageTone = resolveToneForBasis(annotation, 'average')
+      return latestTone === averageTone ? count + 1 : count
+    }, 0)
+    const divergenceCount = marketOverlayBucketScopedTimelineAnnotations.length - agreementCount
     const formatStats = (label: 'latest' | 'average', stats: DeltaToneStats) =>
       `${label}:m${stats.matched}/${stats.total}|u${stats.up}|d${stats.down}|f${stats.flat}|n${stats.unavailable}`
-    return `${formatStats('latest', latestStats)} · ${formatStats('average', averageStats)} · mode:${marketOverlayMarkerDeltaFilter} · active:${marketOverlayMarkerDeltaBasis}`
+    return `${formatStats('latest', latestStats)} · ${formatStats('average', averageStats)} · mode:${marketOverlayMarkerDeltaFilter} · active:${marketOverlayMarkerDeltaBasis} · agree:${agreementCount}/${marketOverlayBucketScopedTimelineAnnotations.length} · diverge:${divergenceCount}`
   }, [
     marketOverlayBucketScopedTimelineAnnotations,
     marketOverlayChartPoints,
