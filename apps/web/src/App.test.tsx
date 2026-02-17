@@ -879,6 +879,75 @@ describe('Dashboard shell', () => {
     sendSpy.mockRestore()
   })
 
+  it('derives risk alert badge kind from decision violation codes when kind is missing', async () => {
+    const sendSpy = vi
+      .spyOn(WebSocket.prototype, 'send')
+      .mockImplementation(function (
+        this: WebSocket,
+        data: string | ArrayBufferLike | Blob | ArrayBufferView<ArrayBufferLike>,
+      ) {
+        if (typeof data !== 'string') {
+          return
+        }
+        const payload = JSON.parse(data) as {
+          type?: string
+          id?: string
+          method?: string
+        }
+        if (payload.type === 'req' && payload.method === 'risk.preview' && payload.id) {
+          queueMicrotask(() => {
+            this.onmessage?.(
+              new MessageEvent('message', {
+                data: JSON.stringify({
+                  type: 'event',
+                  event: 'event.risk.alert',
+                  payload: {
+                    requestId: payload.id,
+                    decision: {
+                      allowed: false,
+                      violations: [
+                        {
+                          code: 'MAX_DAILY_LOSS',
+                        },
+                      ],
+                    },
+                  },
+                }),
+              }),
+            )
+          })
+          queueMicrotask(() => {
+            this.onmessage?.(
+              new MessageEvent('message', {
+                data: JSON.stringify({
+                  type: 'res',
+                  id: payload.id,
+                  ok: true,
+                  payload: {
+                    allowed: false,
+                    violations: [
+                      {
+                        code: 'MAX_DAILY_LOSS',
+                      },
+                    ],
+                  },
+                }),
+              }),
+            )
+          })
+        }
+      })
+
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Risk Preview' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Risk Alerts').closest('div')).toHaveTextContent('MAX_DAILY_LOSS')
+    })
+
+    sendSpy.mockRestore()
+  })
+
   it('uses default emergency reason when emergency reason input is blank', async () => {
     const sendSpy = vi.spyOn(WebSocket.prototype, 'send')
     render(<App />)
