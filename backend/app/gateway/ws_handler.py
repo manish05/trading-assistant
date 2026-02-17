@@ -13,6 +13,7 @@ from app.audit.store import AuditStore
 from app.backtesting.simulator import BacktestCandle, BacktestSimulator, TradeSignal
 from app.config.loader import AppConfig
 from app.devices.registry import DeviceRegistry
+from app.feeds.service import FeedService
 from app.gateway.models import GatewayConnectParams
 from app.memory.index import MemoryIndex
 from app.plugins.registry import ResolvedPlugins
@@ -170,6 +171,32 @@ class AccountIdParams(BaseModel):
     account_id: str = Field(alias="accountId", min_length=1)
 
 
+class FeedSubscribeParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    topics: list[str] = Field(min_length=1)
+    symbols: list[str] = Field(default_factory=list)
+    timeframes: list[str] = Field(default_factory=list)
+
+
+class FeedUnsubscribeParams(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+
+    subscription_id: str = Field(alias="subscriptionId", min_length=1)
+
+
+class FeedGetCandlesParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    symbol: str = Field(min_length=1)
+    timeframe: str = Field(min_length=1)
+    limit: int = Field(default=200, ge=1, le=500)
+
+
 def _error_response(
     request_id: str,
     *,
@@ -226,6 +253,7 @@ async def handle_gateway_websocket(
     account_registry: AccountRegistry,
     app_config: AppConfig,
     device_registry: DeviceRegistry,
+    feed_service: FeedService,
     memory_index: MemoryIndex,
     resolved_plugins: ResolvedPlugins,
     trade_execution_service: TradeExecutionService,
@@ -485,6 +513,134 @@ async def handle_gateway_websocket(
                 )
             )
             await websocket.send_json(_ok_response(frame.id, payload=payload))
+            continue
+
+        if frame.method == "feeds.list":
+            await websocket.send_json(
+                _ok_response(
+                    frame.id,
+                    payload={
+                        "feeds": feed_service.list_feeds(),
+                        "subscriptions": feed_service.list_subscriptions(),
+                    },
+                )
+            )
+            continue
+
+        if frame.method == "feeds.subscribe":
+            try:
+                params = FeedSubscribeParams.model_validate(frame.params)
+            except ValidationError:
+                await websocket.send_json(
+                    _error_response(
+                        frame.id,
+                        code="INVALID_PARAMS",
+                        message="invalid feeds.subscribe params",
+                    )
+                )
+                continue
+
+            subscription = feed_service.subscribe(
+                topics=params.topics,
+                symbols=params.symbols,
+                timeframes=params.timeframes,
+            )
+            payload = {
+                "subscription": feed_service.as_subscription_payload(subscription),
+                "subscriptionCount": len(feed_service.list_subscriptions()),
+            }
+            audit_store.append(
+                actor="user",
+                action="feeds.subscribe",
+                trace_id=frame.id,
+                data={
+                    "subscriptionId": subscription.subscription_id,
+                    "topics": params.topics,
+                },
+            )
+            await websocket.send_json(_ok_response(frame.id, payload=payload))
+            continue
+
+        if frame.method == "feeds.unsubscribe":
+            try:
+                params = FeedUnsubscribeParams.model_validate(frame.params)
+            except ValidationError:
+                await websocket.send_json(
+                    _error_response(
+                        frame.id,
+                        code="INVALID_PARAMS",
+                        message="invalid feeds.unsubscribe params",
+                    )
+                )
+                continue
+
+            removed = feed_service.unsubscribe(subscription_id=params.subscription_id)
+            if not removed:
+                await websocket.send_json(
+                    _error_response(
+                        frame.id,
+                        code="NOT_FOUND",
+                        message=f"subscription not found: {params.subscription_id}",
+                    )
+                )
+                continue
+
+            audit_store.append(
+                actor="user",
+                action="feeds.unsubscribe",
+                trace_id=frame.id,
+                data={"subscriptionId": params.subscription_id},
+            )
+            await websocket.send_json(
+                _ok_response(
+                    frame.id,
+                    payload={
+                        "status": "removed",
+                        "subscriptionId": params.subscription_id,
+                        "subscriptionCount": len(feed_service.list_subscriptions()),
+                    },
+                )
+            )
+            continue
+
+        if frame.method == "feeds.getCandles":
+            try:
+                params = FeedGetCandlesParams.model_validate(frame.params)
+            except ValidationError:
+                await websocket.send_json(
+                    _error_response(
+                        frame.id,
+                        code="INVALID_PARAMS",
+                        message="invalid feeds.getCandles params",
+                    )
+                )
+                continue
+
+            candles = feed_service.get_candles(
+                symbol=params.symbol,
+                timeframe=params.timeframe,
+                limit=params.limit,
+            )
+            audit_store.append(
+                actor="user",
+                action="feeds.getCandles",
+                trace_id=frame.id,
+                data={
+                    "symbol": params.symbol,
+                    "timeframe": params.timeframe,
+                    "limit": params.limit,
+                },
+            )
+            await websocket.send_json(
+                _ok_response(
+                    frame.id,
+                    payload={
+                        "symbol": params.symbol,
+                        "timeframe": params.timeframe,
+                        "candles": candles,
+                    },
+                )
+            )
             continue
 
         if frame.method == "risk.preview":

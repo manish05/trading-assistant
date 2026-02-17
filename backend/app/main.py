@@ -7,6 +7,7 @@ from app.accounts.registry import AccountRegistry
 from app.audit.store import AuditStore
 from app.config.loader import AppConfig, default_config, load_config
 from app.devices.registry import DeviceRegistry
+from app.feeds.service import FeedService
 from app.gateway.ws_handler import handle_gateway_websocket
 from app.memory.index import MemoryIndex
 from app.plugins.registry import PluginConfig, PluginRecord, PluginRegistry
@@ -59,6 +60,7 @@ def create_app(
     app.state.audit_store = AuditStore(data_dir=data_dir)
     app.state.account_registry = AccountRegistry(state_path=state_dir / "accounts.json")
     app.state.device_registry = DeviceRegistry(state_path=state_dir / "devices.json")
+    app.state.feed_service = FeedService()
     app.state.memory_index = MemoryIndex(db_path=Path(data_dir) / "memory.db")
     app.state.resolved_plugins = resolved_plugins
     app.state.trade_execution_service = TradeExecutionService()
@@ -78,6 +80,7 @@ def create_app(
             account_registry=app.state.account_registry,
             app_config=app.state.app_config,
             device_registry=app.state.device_registry,
+            feed_service=app.state.feed_service,
             memory_index=app.state.memory_index,
             resolved_plugins=app.state.resolved_plugins,
             trade_execution_service=app.state.trade_execution_service,

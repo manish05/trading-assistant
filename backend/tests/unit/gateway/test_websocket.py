@@ -746,3 +746,70 @@ def test_gateway_accounts_namespace_methods(tmp_path) -> None:
 
     assert get_response["ok"] is True
     assert get_response["payload"]["account"]["status"] == "disconnected"
+
+
+def test_gateway_feeds_namespace_methods(tmp_path) -> None:
+    client = TestClient(create_app(data_dir=tmp_path))
+
+    with client.websocket_connect("/ws") as websocket:
+        websocket.send_json(_connect_payload())
+        _ = websocket.receive_json()
+
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_feeds_list_1",
+                "method": "feeds.list",
+                "params": {},
+            }
+        )
+        list_response = websocket.receive_json()
+
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_feeds_sub_1",
+                "method": "feeds.subscribe",
+                "params": {
+                    "topics": ["market.candle.closed"],
+                    "symbols": ["ETHUSDm"],
+                    "timeframes": ["5m"],
+                },
+            }
+        )
+        subscribe_response = websocket.receive_json()
+
+        subscription_id = subscribe_response["payload"]["subscription"]["subscriptionId"]
+
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_feeds_candles_1",
+                "method": "feeds.getCandles",
+                "params": {"symbol": "ETHUSDm", "timeframe": "5m", "limit": 3},
+            }
+        )
+        candles_response = websocket.receive_json()
+
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_feeds_unsub_1",
+                "method": "feeds.unsubscribe",
+                "params": {"subscriptionId": subscription_id},
+            }
+        )
+        unsubscribe_response = websocket.receive_json()
+
+    assert list_response["ok"] is True
+    assert len(list_response["payload"]["feeds"]) >= 1
+
+    assert subscribe_response["ok"] is True
+    assert subscribe_response["payload"]["subscription"]["topics"] == ["market.candle.closed"]
+
+    assert candles_response["ok"] is True
+    assert len(candles_response["payload"]["candles"]) == 3
+    assert candles_response["payload"]["candles"][0]["symbol"] == "ETHUSDm"
+
+    assert unsubscribe_response["ok"] is True
+    assert unsubscribe_response["payload"]["status"] == "removed"
