@@ -3995,7 +3995,6 @@ function App() {
                   type="button"
                   className="summary-copy-button"
                   onClick={resetHelperDiagnosticsPreferences}
-                  disabled={isHelperResetLocked}
                   title={
                     isHelperResetLocked
                       ? 'Unlock reset controls to enable.'

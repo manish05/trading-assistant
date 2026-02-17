@@ -196,7 +196,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Stale After')).toHaveValue('24')
     expect(screen.getByRole('button', { name: 'Copy Helper Summary' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Hide Block Telemetry' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Reset Helper Prefs' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Reset Helper Prefs' })).toBeEnabled()
     expect(screen.getByRole('button', { name: 'Unlock Reset' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Reset Lock Counters' })).toBeEnabled()
     expect(screen.getByText('Last import: none')).toBeInTheDocument()
@@ -2245,6 +2245,34 @@ describe('Dashboard shell', () => {
     expect(screen.queryByText(/Lock telemetry:/)).not.toBeInTheDocument()
   })
 
+  it('shows telemetry when reset helper prefs is attempted while locked', () => {
+    render(<App />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reset Helper Prefs' }))
+
+    expect(
+      screen.getByText(
+        'Unlock reset controls before resetting helper diagnostics preferences. Lock telemetry: lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0.',
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it('omits reset-helper locked warning telemetry when block telemetry is hidden', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Hide Block Telemetry' }))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reset Helper Prefs' }))
+
+    expect(
+      screen.getByText('Unlock reset controls before resetting helper diagnostics preferences.'),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText(
+        'Unlock reset controls before resetting helper diagnostics preferences. Lock telemetry: lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0.',
+      ),
+    ).not.toBeInTheDocument()
+  })
+
   it('shows telemetry when feed unsubscribe is skipped without active subscription', () => {
     render(<App />)
 
@@ -3720,7 +3748,7 @@ describe('Dashboard shell', () => {
   it('toggles helper reset lock via Alt+L keyboard shortcut', () => {
     render(<App />)
     const input = screen.getByLabelText('Import Presets JSON')
-    expect(screen.getByRole('button', { name: 'Reset Helper Prefs' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Reset Helper Prefs' })).toBeEnabled()
 
     fireEvent.keyDown(input, { key: 'l', altKey: true })
     expect(screen.getByRole('button', { name: 'Lock Reset' })).toBeInTheDocument()
@@ -3730,7 +3758,7 @@ describe('Dashboard shell', () => {
 
     fireEvent.keyDown(input, { key: 'l', altKey: true })
     expect(screen.getByRole('button', { name: 'Unlock Reset' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Reset Helper Prefs' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Reset Helper Prefs' })).toBeEnabled()
     expect(screen.getByText('Helper reset lock locked via Alt+L.')).toBeInTheDocument()
     expect(screen.getByText('Alt+L:2')).toBeInTheDocument()
   })
@@ -3870,7 +3898,7 @@ describe('Dashboard shell', () => {
 
   it('toggles helper reset lock and persists preference', () => {
     render(<App />)
-    expect(screen.getByRole('button', { name: 'Reset Helper Prefs' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Reset Helper Prefs' })).toBeEnabled()
     fireEvent.click(screen.getByRole('button', { name: 'Unlock Reset' }))
     expect(screen.getByRole('button', { name: 'Lock Reset' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Reset Helper Prefs' })).toBeEnabled()
