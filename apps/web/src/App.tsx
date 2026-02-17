@@ -1901,6 +1901,49 @@ function App() {
       `${label}:p${counts.positive}/n${counts.negative}/z${counts.zero}/u${counts.unavailable}`
     return `${formatCounts('Δl', deltaLatestCounts)} · ${formatCounts('Δa', deltaAverageCounts)} · ${formatCounts('Δp', deltaPreviousCounts)}`
   }, [marketOverlayAverageClose, marketOverlayChartPoints, marketOverlayScopedTimelineAnnotations])
+  const marketOverlayMarkerDeltaCoverageSummary = useMemo(() => {
+    if (marketOverlayScopedTimelineAnnotations.length === 0 || marketOverlayChartPoints.length === 0) {
+      return 'none'
+    }
+    const baseline = marketOverlayAverageClose
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const pointIndexByTime = new Map(
+      marketOverlayChartPoints.map((point, index) => [point.time, index] as const),
+    )
+    const totalCount = marketOverlayScopedTimelineAnnotations.length
+    let fullCoverageCount = 0
+    let partialCoverageCount = 0
+    let missingCoverageCount = 0
+    let latestReadyCount = 0
+    let averageReadyCount = 0
+    let previousReadyCount = 0
+    marketOverlayScopedTimelineAnnotations.forEach((annotation) => {
+      const point = pointByTime.get(annotation.time)
+      if (!point) {
+        missingCoverageCount += 1
+        return
+      }
+      const hasLatest = true
+      const hasAverage = baseline !== null
+      const pointIndex = pointIndexByTime.get(annotation.time) ?? -1
+      const hasPrevious = pointIndex > 0
+      if (hasLatest) {
+        latestReadyCount += 1
+      }
+      if (hasAverage) {
+        averageReadyCount += 1
+      }
+      if (hasPrevious) {
+        previousReadyCount += 1
+      }
+      if (hasLatest && hasAverage && hasPrevious) {
+        fullCoverageCount += 1
+        return
+      }
+      partialCoverageCount += 1
+    })
+    return `full:${fullCoverageCount}/${totalCount} · partial:${partialCoverageCount} · missing:${missingCoverageCount} · ready:l${latestReadyCount}/a${averageReadyCount}/p${previousReadyCount}`
+  }, [marketOverlayAverageClose, marketOverlayChartPoints, marketOverlayScopedTimelineAnnotations])
   const marketOverlayMarkerDeltaExtremes = useMemo(() => {
     if (marketOverlayScopedTimelineAnnotations.length === 0 || marketOverlayChartPoints.length === 0) {
       return 'none'
@@ -4925,6 +4968,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Delta Polarity Summary">
               Delta polarity: {marketOverlayMarkerDeltaPolaritySummary}
+            </p>
+            <p aria-label="Overlay Marker Delta Coverage Summary">
+              Delta coverage: {marketOverlayMarkerDeltaCoverageSummary}
             </p>
             <p aria-label="Overlay Marker Delta Extremes">
               Delta extremes: {marketOverlayMarkerDeltaExtremes}
