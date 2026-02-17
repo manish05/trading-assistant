@@ -622,6 +622,7 @@ describe('Dashboard shell', () => {
       expect(payload).toContain('order=import-first')
       expect(payload).toContain('density=chips')
       expect(payload).toContain('legendVisible=yes')
+      expect(payload).toContain('[LockTelemetry]')
       expect(payload).toContain('lockCounterResetAt=never')
       expect(payload).toContain('lockToggleTotal=0')
       expect(payload).toContain('lockToggleTone=none')

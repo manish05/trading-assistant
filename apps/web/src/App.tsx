@@ -1834,6 +1834,7 @@ function App() {
       `order=${shortcutLegendOrder}`,
       `density=${shortcutLegendDensity}`,
       `legendVisible=${showShortcutLegendInStatus ? 'yes' : 'no'}`,
+      '[LockTelemetry]',
       `lockCounterResetAt=${helperLockCountersLastResetAt ?? 'never'}`,
       `lockToggleTotal=${helperResetLockToggleCount}`,
       `lockToggleTone=${helperResetLockToggleToneClass.replace('counter-tone-', '')}`,
