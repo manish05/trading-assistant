@@ -1099,6 +1099,12 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Latest Marker' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'risk:live_trading_disabled:raised' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'trade:closed:queued' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'risk:live_trading_disabled:raised' })).toHaveClass(
+      'is-disabled',
+    )
+    expect(
+      screen.getByRole('button', { name: /risk:live_trading_disabled:raised · t2 · close:2\.00/ }),
+    ).toHaveClass('is-disabled')
     fireEvent.click(screen.getByRole('button', { name: 'Refresh Overlay Snapshot' }))
     expect(screen.getByLabelText('Overlay Snapshot Summary')).toHaveTextContent(
       'markerSelection:follow-latest',
@@ -1117,6 +1123,10 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByRole('button', { name: 'Previous Marker' })).toBeEnabled()
     expect(screen.getByRole('button', { name: 'Oldest Marker' })).toBeEnabled()
+    screen.getAllByRole('button', { name: 'trade:closed:queued' }).forEach((button) => {
+      expect(button).toBeEnabled()
+      expect(button).not.toHaveClass('is-disabled')
+    })
     fireEvent.click(screen.getByRole('button', { name: 'Previous Marker' }))
     expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
       'Marker nav: 2/3 · selected:risk:live_trading_disabled:raised',

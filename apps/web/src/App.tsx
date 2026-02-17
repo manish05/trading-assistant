@@ -3962,7 +3962,7 @@ function App() {
                   <button
                     type="button"
                     key={annotation.id}
-                    className={`overlay-marker-chip overlay-marker-${annotation.kind} overlay-marker-tone-${annotation.tone} ${marketOverlaySelectedMarkerId === annotation.id ? 'is-selected' : ''}`}
+                    className={`overlay-marker-chip overlay-marker-${annotation.kind} overlay-marker-tone-${annotation.tone} ${marketOverlaySelectedMarkerId === annotation.id ? 'is-selected' : ''} ${isMarketOverlayNavigationLocked ? 'is-disabled' : ''}`}
                     onClick={() => setMarketOverlaySelectedMarkerId(annotation.id)}
                     onKeyDown={onMarketOverlayMarkerKeyDown}
                     aria-pressed={marketOverlaySelectedMarkerId === annotation.id}
@@ -4016,7 +4016,7 @@ function App() {
                   <button
                     key={row.id}
                     type="button"
-                    className={`overlay-marker-timeline-row ${row.isSelected ? 'is-selected' : ''}`}
+                    className={`overlay-marker-timeline-row ${row.isSelected ? 'is-selected' : ''} ${isMarketOverlayNavigationLocked ? 'is-disabled' : ''}`}
                     onClick={() => setMarketOverlaySelectedMarkerId(row.id)}
                     onKeyDown={onMarketOverlayMarkerKeyDown}
                     aria-pressed={row.isSelected}

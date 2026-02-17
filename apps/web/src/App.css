@@ -142,6 +142,11 @@
   font-size: 0.68rem;
 }
 
+.market-overlay-marker-navigation button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .overlay-marker-timeline-row {
   font-size: 0.66rem;
   color: #9fb0cc;
@@ -155,6 +160,11 @@
 .overlay-marker-timeline-row.is-selected {
   border-color: #d8ecff;
   color: #e8edf5;
+}
+
+.overlay-marker-timeline-row.is-disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .market-overlay-chart-runtime.runtime-ready {
@@ -205,6 +215,11 @@
 
 .overlay-marker-chip.is-selected {
   box-shadow: 0 0 0 1px #d8ecff;
+}
+
+.overlay-marker-chip.is-disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .overlay-marker-none {
