@@ -45,6 +45,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Get Candles' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Risk Status' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Emergency Stop' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Resume Risk' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Unsubscribe Feed' })).toBeDisabled()
     expect(screen.getByLabelText('Refresh Interval (sec)')).toBeInTheDocument()
     expect(screen.getByLabelText('Min Request Gap (ms)')).toBeInTheDocument()
@@ -228,6 +229,7 @@ describe('Dashboard shell', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Accounts' }))
     fireEvent.click(screen.getByRole('button', { name: 'Risk Status' }))
     fireEvent.click(screen.getByRole('button', { name: 'Emergency Stop' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Resume Risk' }))
     fireEvent.click(screen.getByRole('button', { name: 'Connect Account' }))
     fireEvent.click(screen.getByRole('button', { name: 'Disconnect Account' }))
     fireEvent.click(screen.getByRole('button', { name: 'Feeds' }))
@@ -248,6 +250,7 @@ describe('Dashboard shell', () => {
       expect(methods).toContain('accounts.list')
       expect(methods).toContain('risk.status')
       expect(methods).toContain('risk.emergencyStop')
+      expect(methods).toContain('risk.resume')
       expect(methods).toContain('accounts.connect')
       expect(methods).toContain('accounts.disconnect')
       expect(methods).toContain('feeds.list')
@@ -292,6 +295,11 @@ describe('Dashboard shell', () => {
       const riskEmergencyStop = payloads.find((payload) => payload.method === 'risk.emergencyStop')
       expect(riskEmergencyStop?.params).toMatchObject({
         action: 'close_all',
+        reason: 'operator close-all drill',
+      })
+
+      const riskResume = payloads.find((payload) => payload.method === 'risk.resume')
+      expect(riskResume?.params).toMatchObject({
         reason: 'operator close-all drill',
       })
 
@@ -360,7 +368,7 @@ describe('Dashboard shell', () => {
     sendSpy.mockRestore()
   })
 
-  it('updates risk emergency status from risk status and emergency-stop responses', async () => {
+  it('updates risk emergency status from risk status, emergency-stop, and resume responses', async () => {
     const sendSpy = vi
       .spyOn(WebSocket.prototype, 'send')
       .mockImplementation(function (
@@ -453,6 +461,57 @@ describe('Dashboard shell', () => {
             )
           })
         }
+
+        if (payload.type === 'req' && payload.method === 'risk.resume' && payload.id) {
+          queueMicrotask(() => {
+            this.onmessage?.(
+              new MessageEvent('message', {
+                data: JSON.stringify({
+                  type: 'event',
+                  event: 'event.risk.emergencyStop',
+                  payload: {
+                    requestId: payload.id,
+                    status: {
+                      emergencyStopActive: false,
+                      lastAction: 'pause_trading',
+                      lastReason: 'resume after drill',
+                      updatedAt: '2026-02-17T12:05:00.000Z',
+                      actionCounts: {
+                        pause_trading: 1,
+                        cancel_all: 0,
+                        close_all: 0,
+                        disable_live: 0,
+                      },
+                    },
+                  },
+                }),
+              }),
+            )
+          })
+          queueMicrotask(() => {
+            this.onmessage?.(
+              new MessageEvent('message', {
+                data: JSON.stringify({
+                  type: 'res',
+                  id: payload.id,
+                  ok: true,
+                  payload: {
+                    emergencyStopActive: false,
+                    lastAction: 'pause_trading',
+                    lastReason: 'resume after drill',
+                    updatedAt: '2026-02-17T12:05:00.000Z',
+                    actionCounts: {
+                      pause_trading: 1,
+                      cancel_all: 0,
+                      close_all: 0,
+                      disable_live: 0,
+                    },
+                  },
+                }),
+              }),
+            )
+          })
+        }
       })
 
     render(<App />)
@@ -472,6 +531,17 @@ describe('Dashboard shell', () => {
       )
       expect(screen.getByText('Risk Action Counts').closest('div')).toHaveTextContent(
         'pause:1, cancel:0, close:0, disable:0',
+      )
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Resume Risk' }))
+    await waitFor(() => {
+      expect(screen.getByText('Risk Emergency').closest('div')).toHaveTextContent('inactive')
+      expect(screen.getByText('Risk Last Reason').closest('div')).toHaveTextContent(
+        'resume after drill',
+      )
+      expect(screen.getByText('Risk Last Updated').closest('div')).toHaveTextContent(
+        '2026-02-17T12:05:00.000Z',
       )
     })
 

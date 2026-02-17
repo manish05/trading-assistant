@@ -954,6 +954,13 @@ function App() {
     applyRiskStatusPayload(payload)
   }, [applyRiskStatusPayload, riskEmergencyAction, riskEmergencyReason, sendRequest])
 
+  const sendRiskResume = useCallback(async () => {
+    const payload = await sendRequest('risk.resume', {
+      reason: riskEmergencyReason.trim() || DEFAULT_RISK_EMERGENCY_REASON,
+    })
+    applyRiskStatusPayload(payload)
+  }, [applyRiskStatusPayload, riskEmergencyReason, sendRequest])
+
   const sendAccountsList = useCallback(async () => {
     const payload = await sendRequest('accounts.list', {})
     const accountsRaw = payload?.accounts
@@ -2209,6 +2216,9 @@ function App() {
               </button>
               <button type="button" onClick={() => void sendRiskEmergencyStop()}>
                 Emergency Stop
+              </button>
+              <button type="button" onClick={() => void sendRiskResume()}>
+                Resume Risk
               </button>
               <button type="button" onClick={() => void sendAccountsList()}>
                 Accounts
