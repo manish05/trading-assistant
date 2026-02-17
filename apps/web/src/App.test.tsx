@@ -44,6 +44,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Load Preset' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Delete Preset' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Export Presets JSON' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Import Presets JSON' })).toBeInTheDocument()
   })
 
   it('sends account and feed management requests', async () => {
@@ -306,6 +307,21 @@ describe('Dashboard shell', () => {
       expect(writeText).toHaveBeenCalled()
       const payload = String(writeText.mock.calls[writeText.mock.calls.length - 1][0])
       expect(payload).toContain('export-template')
+    })
+  })
+
+  it('imports presets from JSON payload', async () => {
+    render(<App />)
+
+    fireEvent.change(screen.getByLabelText('Import Presets JSON'), {
+      target: {
+        value: '{"imported-template":{"managedAccountId":"acct_imported"}}',
+      },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Import Presets JSON' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('option', { name: 'imported-template' })).toBeInTheDocument()
     })
   })
 })

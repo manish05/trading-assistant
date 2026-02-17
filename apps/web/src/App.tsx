@@ -154,6 +154,7 @@ function App() {
   const [minRequestGapMsInput, setMinRequestGapMsInput] = useState<string>('400')
   const [presetNameInput, setPresetNameInput] = useState<string>('default')
   const [selectedPresetName, setSelectedPresetName] = useState<string>('')
+  const [presetImportInput, setPresetImportInput] = useState<string>('')
   const [availablePresetNames, setAvailablePresetNames] = useState<string[]>(() =>
     Object.keys(readPresetStoreFromStorage()).sort(),
   )
@@ -676,6 +677,54 @@ function App() {
     }
   }, [appendBlock, readPresetStore])
 
+  const importPresetsJson = useCallback(() => {
+    const source = presetImportInput.trim()
+    if (!source) {
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'preset import skipped',
+        content: 'Import JSON field is empty.',
+        severity: 'warn',
+      })
+      return
+    }
+
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(source)
+    } catch {
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'preset import failed',
+        content: 'Invalid JSON payload.',
+        severity: 'error',
+      })
+      return
+    }
+
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'preset import failed',
+        content: 'Expected a JSON object keyed by preset name.',
+        severity: 'error',
+      })
+      return
+    }
+
+    const incoming = parsed as Record<string, QuickActionPreset>
+    const store = readPresetStore()
+    const merged = { ...store, ...incoming }
+    writePresetStore(merged)
+    setPresetImportInput('')
+    appendBlock({
+      id: `blk_${Date.now()}`,
+      title: 'presets imported',
+      content: `Imported ${Object.keys(incoming).length} preset entries.`,
+      severity: 'info',
+    })
+  }, [appendBlock, presetImportInput, readPresetStore, writePresetStore])
+
   useEffect(() => {
     if (!autoRefreshEnabled) {
       return
@@ -1035,7 +1084,18 @@ function App() {
               <button type="button" onClick={() => void exportPresetsJson()}>
                 Export Presets JSON
               </button>
+              <button type="button" onClick={importPresetsJson}>
+                Import Presets JSON
+              </button>
             </div>
+            <label className="preset-import">
+              Import Presets JSON
+              <textarea
+                value={presetImportInput}
+                onChange={(event) => setPresetImportInput(event.target.value)}
+                placeholder='{"preset_name": { ... }}'
+              />
+            </label>
           </section>
           <div className="block-list">
             {blocks.length === 0 ? (
