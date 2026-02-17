@@ -1312,6 +1312,7 @@ function App() {
       `- Helper reset format: ${helperResetTimestampFormat}`,
       `- Helper reset stale-after hours: ${helperResetStaleThresholdHours}`,
       `- Helper reset lock: ${isHelperResetLocked ? 'locked' : 'unlocked'}`,
+      '- [LockTelemetry]',
       `- Helper lock counter reset at: ${helperLockCountersLastResetAt ?? 'never'}`,
       `- Helper lock toggle total: ${helperResetLockToggleCount}`,
       `- Helper lock toggle tone: ${helperResetLockToggleToneClass.replace('counter-tone-', '')}`,

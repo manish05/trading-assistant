@@ -591,6 +591,7 @@ describe('Dashboard shell', () => {
       expect(payload).toContain('Helper reset format: absolute')
       expect(payload).toContain('Helper reset stale-after hours: 24')
       expect(payload).toContain('Helper reset lock: locked')
+      expect(payload).toContain('[LockTelemetry]')
       expect(payload).toContain('Helper lock counter reset at: never')
       expect(payload).toContain('Helper lock toggle total: 0')
       expect(payload).toContain('Helper lock toggle tone: none')
