@@ -29,3 +29,14 @@ def test_risk_control_state_tracks_emergency_stop_updates() -> None:
     assert payload["lastReason"] == "manual kill-switch"
     assert payload["updatedAt"] is not None
     assert payload["actionCounts"]["pause_trading"] == 1
+
+
+def test_risk_control_state_can_resume_after_emergency_stop() -> None:
+    state = RiskControlState()
+    state.activate_emergency_stop(action="pause_trading", reason="kill-switch")
+
+    resumed_payload = state.resume(reason="resume after drill")
+
+    assert resumed_payload["emergencyStopActive"] is False
+    assert resumed_payload["lastAction"] == "pause_trading"
+    assert resumed_payload["lastReason"] == "resume after drill"

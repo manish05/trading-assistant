@@ -211,6 +211,49 @@ def test_websocket_risk_status_and_emergency_stop_methods(tmp_path) -> None:
         )
         blocked_trade_event, blocked_trade_response = _read_event_then_response(websocket)
 
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_risk_resume_1",
+                "method": "risk.resume",
+                "params": {
+                    "reason": "resume after drill",
+                },
+            }
+        )
+        resume_event, resume_response = _read_event_then_response(websocket)
+
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_trade_after_resume",
+                "method": "trades.place",
+                "params": {
+                    "intent": {
+                        "account_id": "acct_demo_1",
+                        "symbol": "ETHUSDm",
+                        "action": "PLACE_MARKET_ORDER",
+                        "side": "buy",
+                        "volume": 0.1,
+                        "stop_loss": 2400.0,
+                        "take_profit": 2700.0,
+                    },
+                    "policy": {
+                        "allowed_symbols": ["ETHUSDm"],
+                        "max_volume": 0.2,
+                        "max_concurrent_positions": 2,
+                        "max_daily_loss": 100.0,
+                        "require_stop_loss": True,
+                    },
+                    "snapshot": {
+                        "open_positions": 0,
+                        "daily_pnl": -20.0,
+                    },
+                },
+            }
+        )
+        resumed_trade_event, resumed_trade_response = _read_event_then_response(websocket)
+
     assert initial_status_response["ok"] is True
     assert initial_status_response["payload"]["emergencyStopActive"] is False
     assert initial_status_response["payload"]["lastAction"] is None
@@ -236,6 +279,16 @@ def test_websocket_risk_status_and_emergency_stop_methods(tmp_path) -> None:
     assert blocked_trade_response["error"]["details"]["decision"]["violations"][0]["code"] == (
         "EMERGENCY_STOP_ACTIVE"
     )
+
+    assert resume_event is not None
+    assert resume_event["event"] == "event.risk.emergencyStop"
+    assert resume_response["ok"] is True
+    assert resume_response["payload"]["emergencyStopActive"] is False
+    assert resume_response["payload"]["lastReason"] == "resume after drill"
+
+    assert resumed_trade_event is not None
+    assert resumed_trade_event["event"] == "event.trade.executed"
+    assert resumed_trade_response["ok"] is True
 
 
 def test_websocket_agent_run_updates_queue_status(tmp_path) -> None:

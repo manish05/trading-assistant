@@ -74,6 +74,12 @@ class RiskEmergencyStopParams(BaseModel):
     reason: str | None = None
 
 
+class RiskResumeParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    reason: str | None = None
+
+
 class MemorySearchParams(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -851,6 +857,41 @@ async def handle_gateway_websocket(
                 )
             )
             await websocket.send_json(_ok_response(frame.id, payload=emergency_payload))
+            continue
+
+        if frame.method == "risk.resume":
+            try:
+                params = RiskResumeParams.model_validate(frame.params)
+            except ValidationError:
+                await websocket.send_json(
+                    _error_response(
+                        frame.id,
+                        code="INVALID_PARAMS",
+                        message="invalid risk.resume params",
+                    )
+                )
+                continue
+
+            resumed_payload = risk_control_state.resume(reason=params.reason)
+            audit_store.append(
+                actor="user",
+                action="risk.resume",
+                trace_id=frame.id,
+                data={
+                    "reason": params.reason,
+                    "emergencyStopActive": resumed_payload["emergencyStopActive"],
+                },
+            )
+            await websocket.send_json(
+                _event_frame(
+                    "event.risk.emergencyStop",
+                    {
+                        "requestId": frame.id,
+                        "status": resumed_payload,
+                    },
+                )
+            )
+            await websocket.send_json(_ok_response(frame.id, payload=resumed_payload))
             continue
 
         if frame.method == "agent.run":

@@ -38,3 +38,10 @@ class RiskControlState:
         self._updated_at = datetime.now(UTC).isoformat()
         self._action_counts[action] += 1
         return self.status_payload()
+
+    def resume(self, *, reason: str | None) -> dict:
+        self._emergency_stop_active = False
+        if reason is not None:
+            self._last_reason = reason
+        self._updated_at = datetime.now(UTC).isoformat()
+        return self.status_payload()
