@@ -906,6 +906,13 @@ function App() {
     }
   }, [appendBlock, presetImportReport])
 
+  const lastImportSummaryText = useMemo(() => {
+    if (!presetImportReport) {
+      return 'Last import: none'
+    }
+    return `Last import: ${presetImportReport.importedAt} · accepted ${presetImportReport.accepted.length} · rejected ${presetImportReport.rejected.length}`
+  }, [presetImportReport])
+
   const copyPresetImportNames = useCallback(async () => {
     if (!presetImportReport) {
       appendBlock({
@@ -940,6 +947,37 @@ function App() {
       })
     }
   }, [appendBlock, presetImportReport])
+
+  const copyLastImportSummary = useCallback(async () => {
+    if (!presetImportReport) {
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'last summary copy skipped',
+        content: 'No preset import report available yet.',
+        severity: 'warn',
+      })
+      return
+    }
+    try {
+      if (!navigator.clipboard?.writeText) {
+        throw new Error('Clipboard API unavailable')
+      }
+      await navigator.clipboard.writeText(lastImportSummaryText)
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'last summary copied',
+        content: 'Copied last import summary to clipboard.',
+        severity: 'info',
+      })
+    } catch {
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'last summary copy failed',
+        content: 'Clipboard access failed or is unavailable.',
+        severity: 'warn',
+      })
+    }
+  }, [appendBlock, lastImportSummaryText, presetImportReport])
 
   const clearPresetImportReport = useCallback(() => {
     if (!presetImportReport) {
@@ -1384,6 +1422,13 @@ function App() {
               >
                 Copy Import Report
               </button>
+              <button
+                type="button"
+                onClick={() => void copyLastImportSummary()}
+                disabled={!presetImportReport}
+              >
+                Copy Last Summary
+              </button>
               <button type="button" onClick={clearPresetImportReport} disabled={!presetImportReport}>
                 Clear Import Report
               </button>
@@ -1404,9 +1449,7 @@ function App() {
               </button>
             </div>
             <div className="preset-import-last-summary">
-              {presetImportReport
-                ? `Last import: ${presetImportReport.importedAt} · accepted ${presetImportReport.accepted.length} · rejected ${presetImportReport.rejected.length}`
-                : 'Last import: none'}
+              {lastImportSummaryText}
             </div>
             {presetImportReport ? (
               <div className="preset-import-mini" aria-label="Import Report Summary Badges">

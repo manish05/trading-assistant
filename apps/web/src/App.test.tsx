@@ -48,6 +48,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Import Presets JSON' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Clear Import JSON' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Copy Import Report' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Copy Last Summary' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Clear Import Report' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Copy Full Names' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Expand Report' })).toBeDisabled()
@@ -535,6 +536,34 @@ describe('Dashboard shell', () => {
       const payload = String(writeText.mock.calls[writeText.mock.calls.length - 1][0])
       expect(payload).toContain('accepted=copy-template')
       expect(payload).toContain('mode=overwrite')
+    })
+  })
+
+  it('copies last import summary text to clipboard', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(window.navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    })
+    render(<App />)
+    fireEvent.change(screen.getByLabelText('Import Presets JSON'), {
+      target: {
+        value: '{"summary-template":{"feedSymbol":"SOLUSDm"}}',
+      },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Import Presets JSON' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Copy Last Summary' })).toBeEnabled()
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Copy Last Summary' }))
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalled()
+      const payload = String(writeText.mock.calls[writeText.mock.calls.length - 1][0])
+      expect(payload).toContain('Last import:')
+      expect(payload).toContain('accepted 1')
+      expect(payload).toContain('rejected 0')
     })
   })
 
