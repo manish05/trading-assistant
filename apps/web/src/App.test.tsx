@@ -89,6 +89,12 @@ describe('Dashboard shell', () => {
     expect(
       screen.getByText('reset:never', { selector: '.import-snapshot-badges .import-summary-badge' }),
     ).toBeInTheDocument()
+    expect(
+      screen.getByText('tone:none', { selector: '.import-snapshot-badges .import-summary-badge' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText('staleAfter:24h', { selector: '.import-snapshot-badges .import-summary-badge' }),
+    ).toBeInTheDocument()
     expect(screen.getByLabelText('Reset TS')).toHaveValue('absolute')
     expect(screen.getByLabelText('Stale After')).toHaveValue('24')
     expect(screen.getByRole('button', { name: 'Copy Helper Summary' })).toBeInTheDocument()
@@ -649,6 +655,9 @@ describe('Dashboard shell', () => {
     window.localStorage.setItem('quick-action-helper-diagnostics-reset-at-v1', '2020-01-01T00:00:00.000Z')
     render(<App />)
     expect(screen.getByLabelText('Helper Reset Badge')).toHaveClass('tone-stale')
+    expect(
+      screen.getByText('tone:stale', { selector: '.import-snapshot-badges .import-summary-badge' }),
+    ).toBeInTheDocument()
   })
 
   it('persists helper reset timestamp format selection', () => {
@@ -805,6 +814,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Hide Reset Badge' })).toBeInTheDocument()
     expect(screen.getByLabelText('Helper Reset Badge')).toBeInTheDocument()
     expect(screen.getByLabelText('Stale After')).toHaveValue('24')
+    expect(
+      screen.getByText('tone:fresh', { selector: '.import-snapshot-badges .import-summary-badge' }),
+    ).toBeInTheDocument()
     expect(window.localStorage.getItem('quick-action-helper-diagnostics-reset-at-v1')).toBeTruthy()
     expect(screen.queryByText('resetAge:never')).not.toBeInTheDocument()
     expect(screen.getByText(/resetAge:/)).toBeInTheDocument()

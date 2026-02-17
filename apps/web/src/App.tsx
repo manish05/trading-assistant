@@ -2244,6 +2244,12 @@ function App() {
                     ? formatTimestamp(helperDiagnosticsLastResetAt, helperResetTimestampFormat)
                     : 'never'}
                 </span>
+                <span className="import-summary-badge badge-hint-mode">
+                  tone:{helperResetToneClass.replace('tone-', '')}
+                </span>
+                <span className="import-summary-badge badge-hint-mode">
+                  staleAfter:{helperResetStaleThresholdHours}h
+                </span>
                 {helperDiagnosticsDisplayMode === 'verbose' ? (
                   <>
                     <span className="import-summary-badge badge-hint-mode">
