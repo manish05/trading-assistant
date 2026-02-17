@@ -1360,12 +1360,13 @@ function App() {
   const marketOverlayMarkerModeShortcutSummary = useMemo(
     () => {
       const isLocked = marketOverlaySelectionMode === 'follow-latest'
-      return `focus:${MARKET_OVERLAY_MARKER_FOCUS_SHORTCUTS}=${marketOverlayMarkerFocus} · age:y=${marketOverlayMarkerAgeFilter} · window:v=${marketOverlayMarkerWindow} · bucket:b=${marketOverlayMarkerBucket} · order:o/l=${marketOverlayTimelineOrder} · scope:g=${marketOverlayBucketScope} · wrap:w=${marketOverlayMarkerWrap} · selection:s=${marketOverlaySelectionMode} · delta:u/j/f/n/0/+/-=${marketOverlayMarkerDeltaFilter} · nav:${isLocked ? 'locked' : 'manual'}`
+      return `focus:${MARKET_OVERLAY_MARKER_FOCUS_SHORTCUTS}=${marketOverlayMarkerFocus} · age:y=${marketOverlayMarkerAgeFilter} · window:v=${marketOverlayMarkerWindow} · bucket:b=${marketOverlayMarkerBucket} · order:o/l=${marketOverlayTimelineOrder} · scope:g=${marketOverlayBucketScope} · wrap:w=${marketOverlayMarkerWrap} · selection:s=${marketOverlaySelectionMode} · basis:k=${marketOverlayMarkerDeltaBasis} · delta:u/j/f/n/0/+/-=${marketOverlayMarkerDeltaFilter} · nav:${isLocked ? 'locked' : 'manual'}`
     },
     [
       marketOverlayMarkerAgeFilter,
       marketOverlayMarkerBucket,
       marketOverlayBucketScope,
+      marketOverlayMarkerDeltaBasis,
       marketOverlayMarkerDeltaFilter,
       marketOverlayMarkerFocus,
       marketOverlayMarkerWrap,
