@@ -1504,6 +1504,25 @@ function App() {
     canSelectSkipForwardMarketOverlayMarker,
     isMarketOverlayNavigationLocked,
   ])
+  const marketOverlayMarkerBindingSummary = useMemo(() => {
+    if (isMarketOverlayNavigationLocked) {
+      return 'locked'
+    }
+    const stateLabel = (enabled: boolean) => (enabled ? 'on' : 'off')
+    return `steps:${stateLabel(canSelectPreviousMarketOverlayMarker)}/${stateLabel(canSelectNextMarketOverlayMarker)} · skip:${stateLabel(canSelectSkipBackwardMarketOverlayMarker)}/${stateLabel(canSelectSkipForwardMarketOverlayMarker)} · kind:${stateLabel(canSelectPreviousSameKindMarketOverlayMarker)}/${stateLabel(canSelectNextSameKindMarketOverlayMarker)} · bucket:${stateLabel(canSelectPreviousBucketMarketOverlayMarker)}/${stateLabel(canSelectNextBucketMarketOverlayMarker)} · edges:${stateLabel(canSelectOldestMarketOverlayMarker)}/${stateLabel(canSelectLatestMarketOverlayMarker)}`
+  }, [
+    canSelectLatestMarketOverlayMarker,
+    canSelectNextBucketMarketOverlayMarker,
+    canSelectNextMarketOverlayMarker,
+    canSelectNextSameKindMarketOverlayMarker,
+    canSelectOldestMarketOverlayMarker,
+    canSelectPreviousBucketMarketOverlayMarker,
+    canSelectPreviousMarketOverlayMarker,
+    canSelectPreviousSameKindMarketOverlayMarker,
+    canSelectSkipBackwardMarketOverlayMarker,
+    canSelectSkipForwardMarketOverlayMarker,
+    isMarketOverlayNavigationLocked,
+  ])
   const marketOverlayMarkerDrilldown = useMemo(() => {
     const latest =
       marketOverlayScopedTimelineAnnotations[marketOverlayScopedTimelineAnnotations.length - 1] ?? null
@@ -4588,6 +4607,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Shortcut Hint">
               Shortcuts: {marketOverlayMarkerShortcutHint}
+            </p>
+            <p aria-label="Overlay Marker Binding Summary">
+              Bindings: {marketOverlayMarkerBindingSummary}
             </p>
             <div className="market-overlay-marker-navigation">
               <button

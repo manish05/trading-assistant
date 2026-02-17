@@ -93,6 +93,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Shortcut Hint')).toHaveTextContent(
       'Shortcuts: steps:off/off · skip:off/off · kind:off/off · bucket:off/off',
     )
+    expect(screen.getByLabelText('Overlay Marker Binding Summary')).toHaveTextContent(
+      'Bindings: steps:off/off · skip:off/off · kind:off/off · bucket:off/off · edges:off/off',
+    )
     expect(screen.getByRole('button', { name: 'Oldest Marker' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Previous Bucket' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Skip Back 2' })).toBeDisabled()
@@ -559,6 +562,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Shortcut Hint')).toHaveTextContent(
       'Shortcuts: steps:off/off · skip:off/off · kind:off/off · bucket:off/off',
     )
+    expect(screen.getByLabelText('Overlay Marker Binding Summary')).toHaveTextContent(
+      'Bindings: steps:off/off · skip:off/off · kind:off/off · bucket:off/off · edges:off/off',
+    )
     expect(screen.getByRole('button', { name: 'Oldest Marker' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Previous Bucket' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Skip Back 2' })).toBeDisabled()
@@ -673,6 +679,9 @@ describe('Dashboard shell', () => {
       )
       expect(screen.getByLabelText('Overlay Marker Shortcut Hint')).toHaveTextContent(
         'Shortcuts: steps:on/off · skip:off/off · kind:off/off · bucket:off/off',
+      )
+      expect(screen.getByLabelText('Overlay Marker Binding Summary')).toHaveTextContent(
+        'Bindings: steps:on/off · skip:off/off · kind:off/off · bucket:off/off · edges:on/off',
       )
       expect(screen.getByLabelText('Overlay Marker Behavior')).toHaveTextContent(
         'Marker behavior: wrap:bounded · selection:sticky · nav:manual',
@@ -825,6 +834,9 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Overlay Marker Shortcut Hint')).toHaveTextContent(
       'Shortcuts: steps:on/on · skip:off/off · kind:off/off · bucket:off/off',
+    )
+    expect(screen.getByLabelText('Overlay Marker Binding Summary')).toHaveTextContent(
+      'Bindings: steps:on/on · skip:off/off · kind:off/off · bucket:off/off · edges:off/on',
     )
     expect(screen.getByRole('button', { name: 'Previous Bucket' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Skip Back 2' })).toBeDisabled()
@@ -1148,6 +1160,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Shortcut Hint')).toHaveTextContent(
       'Shortcuts: steps:on/off · skip:on/off · kind:on/off · bucket:on/off',
     )
+    expect(screen.getByLabelText('Overlay Marker Binding Summary')).toHaveTextContent(
+      'Bindings: steps:on/off · skip:on/off · kind:on/off · bucket:on/off · edges:on/off',
+    )
     expect(screen.getByRole('button', { name: 'Previous Bucket' })).toBeEnabled()
     expect(screen.getByRole('button', { name: 'Next Bucket' })).toBeDisabled()
 
@@ -1307,6 +1322,9 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Overlay Marker Shortcut Hint')).toHaveTextContent(
       'Shortcuts: locked',
+    )
+    expect(screen.getByLabelText('Overlay Marker Binding Summary')).toHaveTextContent(
+      'Bindings: locked',
     )
     expect(screen.getByRole('button', { name: 'Previous Bucket' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Previous Marker' })).toBeDisabled()
