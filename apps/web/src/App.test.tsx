@@ -70,6 +70,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Active Basis Agreement')).toHaveTextContent(
       'Active basis agreement: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Active Delta Rank')).toHaveTextContent(
+      'Active delta rank: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
       'Timeline buckets: mode:none · scope:all-buckets · buckets:0 · latest:none · count:0',
     )
@@ -663,6 +666,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Active Basis Agreement')).toHaveTextContent(
       'Active basis agreement: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Active Delta Rank')).toHaveTextContent(
+      'Active delta rank: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
       'Timeline buckets: mode:none · scope:all-buckets · buckets:0 · latest:none · count:0',
     )
@@ -788,6 +794,9 @@ describe('Dashboard shell', () => {
       )
       expect(screen.getByLabelText('Overlay Marker Active Basis Agreement')).toHaveTextContent(
         'Active basis agreement: risk:live_trading_disabled:raised · latest:flat(+0.00) · average:up(+0.50) · relation:diverge',
+      )
+      expect(screen.getByLabelText('Overlay Marker Active Delta Rank')).toHaveTextContent(
+        'Active delta rank: latest:1/2 · average:1/2 · scope:all · mode:all',
       )
       expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
         'Timeline buckets: mode:none · scope:all-buckets · buckets:2 · latest:t2 · count:2',
@@ -1006,6 +1015,9 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Overlay Marker Active Basis Agreement')).toHaveTextContent(
       'Active basis agreement: trade:closed:queued · latest:down(-1.00) · average:down(-0.50) · relation:agree',
+    )
+    expect(screen.getByLabelText('Overlay Marker Active Delta Rank')).toHaveTextContent(
+      'Active delta rank: latest:2/2 · average:2/2 · scope:all · mode:all',
     )
 
     fireEvent.keyDown(screen.getByRole('button', { name: 'trade:closed:queued' }), { key: '2' })
