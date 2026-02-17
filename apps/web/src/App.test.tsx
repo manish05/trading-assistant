@@ -623,6 +623,56 @@ describe('Dashboard shell', () => {
     sendSpy.mockRestore()
   })
 
+  it('omits gateway rejection telemetry when block telemetry is hidden', async () => {
+    const sendSpy = vi
+      .spyOn(WebSocket.prototype, 'send')
+      .mockImplementation(function (
+        this: WebSocket,
+        data: string | ArrayBufferLike | Blob | ArrayBufferView<ArrayBufferLike>,
+      ) {
+        if (typeof data !== 'string') {
+          return
+        }
+        const payload = JSON.parse(data) as {
+          type?: string
+          id?: string
+          method?: string
+        }
+        if (payload.type === 'req' && payload.method === 'gateway.ping' && payload.id) {
+          queueMicrotask(() => {
+            this.onmessage?.(
+              new MessageEvent('message', {
+                data: JSON.stringify({
+                  type: 'res',
+                  id: payload.id,
+                  ok: false,
+                  error: {
+                    code: 'SIMULATED_REJECTION',
+                    message: 'Simulated gateway rejection',
+                  },
+                }),
+              }),
+            )
+          })
+        }
+      })
+
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Hide Block Telemetry' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Ping' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Simulated gateway rejection.')).toBeInTheDocument()
+      expect(
+        screen.queryByText(
+          'Simulated gateway rejection. Lock telemetry: lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0.',
+        ),
+      ).not.toBeInTheDocument()
+    })
+
+    sendSpy.mockRestore()
+  })
+
   it('includes lock telemetry in successful request response blocks', async () => {
     const sendSpy = vi
       .spyOn(WebSocket.prototype, 'send')
