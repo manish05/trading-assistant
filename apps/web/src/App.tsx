@@ -49,6 +49,16 @@ type RiskAlertBadge = {
   status?: string
 }
 
+type MarketOverlayAnnotationKind = 'trade' | 'risk' | 'feed'
+type MarketOverlayAnnotationTone = 'neutral' | 'warning' | 'positive'
+type MarketOverlayAnnotation = {
+  id: string
+  kind: MarketOverlayAnnotationKind
+  label: string
+  tone: MarketOverlayAnnotationTone
+  timestamp: number
+}
+
 type QuickActionHistory = {
   id: string
   method: string
@@ -64,8 +74,16 @@ type MarketOverlayMode = 'price-only' | 'with-trades' | 'with-risk'
 type MarketOverlayChartRuntime = 'loading' | 'ready' | 'fallback' | 'error'
 type MarketOverlayChartLens = 'price-only' | 'price-and-trend' | 'diagnostics'
 type MarketOverlayChartPoint = { time: number; value: number }
+type MarketOverlayChartMarker = {
+  time: number
+  position: 'aboveBar' | 'belowBar' | 'inBar'
+  color: string
+  shape: 'circle' | 'square' | 'arrowUp' | 'arrowDown'
+  text: string
+}
 type MarketOverlayChartSeries = {
   setData: (data: MarketOverlayChartPoint[]) => void
+  setMarkers?: (markers: MarketOverlayChartMarker[]) => void
 }
 type MarketOverlayChart = {
   addLineSeries?: (options: { color: string; lineWidth: number }) => MarketOverlayChartSeries
@@ -698,6 +716,9 @@ function App() {
   const [feedTimeframe, setFeedTimeframe] = useState<string>(DEFAULT_PRESET_TEMPLATE.feedTimeframe)
   const [lastFetchedCandlesCount, setLastFetchedCandlesCount] = useState<number | null>(null)
   const [marketOverlayRecentCloses, setMarketOverlayRecentCloses] = useState<number[]>([])
+  const [marketOverlayAnnotations, setMarketOverlayAnnotations] = useState<MarketOverlayAnnotation[]>(
+    [],
+  )
   const [subscriptionCount, setSubscriptionCount] = useState<number | null>(null)
   const [activeSubscriptionId, setActiveSubscriptionId] = useState<string | null>(null)
   const [feedLifecycle, setFeedLifecycle] = useState<FeedLifecycleBadge[]>([])
@@ -939,6 +960,55 @@ function App() {
     marketOverlayChartPoints,
     marketOverlayTrendLinePoints.length,
   ])
+  const marketOverlayAnnotationSummary = useMemo(() => {
+    const tradeCount = marketOverlayAnnotations.filter((annotation) => annotation.kind === 'trade').length
+    const riskCount = marketOverlayAnnotations.filter((annotation) => annotation.kind === 'risk').length
+    const feedCount = marketOverlayAnnotations.filter((annotation) => annotation.kind === 'feed').length
+    const latest = marketOverlayAnnotations[0]
+    return {
+      tradeCount,
+      riskCount,
+      feedCount,
+      totalCount: marketOverlayAnnotations.length,
+      latestLabel: latest ? `${latest.kind}:${latest.label}` : 'none',
+    }
+  }, [marketOverlayAnnotations])
+  const marketOverlayChartMarkers = useMemo(() => {
+    if (marketOverlayChartPoints.length === 0 || marketOverlayAnnotations.length === 0) {
+      return [] as MarketOverlayChartMarker[]
+    }
+    const latestTime = marketOverlayChartPoints[marketOverlayChartPoints.length - 1].time
+    const source = marketOverlayAnnotations.slice(0, Math.min(6, marketOverlayAnnotations.length)).reverse()
+    return source.map((annotation, index): MarketOverlayChartMarker => {
+      const offset = source.length - 1 - index
+      const time = Math.max(1, latestTime - offset)
+      if (annotation.kind === 'trade') {
+        return {
+          time,
+          position: 'belowBar',
+          color: annotation.tone === 'positive' ? '#71d48c' : '#e9cf7a',
+          shape: annotation.tone === 'positive' ? 'arrowUp' : 'arrowDown',
+          text: `trade:${annotation.label}`,
+        }
+      }
+      if (annotation.kind === 'risk') {
+        return {
+          time,
+          position: 'aboveBar',
+          color: '#ee8d8d',
+          shape: 'circle',
+          text: `risk:${annotation.label}`,
+        }
+      }
+      return {
+        time,
+        position: 'inBar',
+        color: '#84d3f8',
+        shape: 'square',
+        text: `feed:${annotation.label}`,
+      }
+    })
+  }, [marketOverlayAnnotations, marketOverlayChartPoints])
 
   useEffect(() => {
     const container = marketOverlayChartContainerRef.current
@@ -1061,8 +1131,10 @@ function App() {
         marketOverlayChartLens === 'diagnostics' ? marketOverlayBaselinePoints : [],
       )
     }
+    marketOverlayPriceSeriesRef.current.setMarkers?.(marketOverlayChartMarkers)
     marketOverlayChartRef.current.timeScale().fitContent()
   }, [
+    marketOverlayChartMarkers,
     marketOverlayBaselinePoints,
     marketOverlayChartLens,
     marketOverlayChartPoints,
@@ -1252,6 +1324,29 @@ function App() {
       return [dedupedItem, ...current].slice(0, 25)
     })
   }, [])
+
+  const appendMarketOverlayAnnotation = useCallback(
+    (
+      kind: MarketOverlayAnnotationKind,
+      label: string,
+      tone: MarketOverlayAnnotationTone = 'neutral',
+      timestamp = Date.now(),
+    ) => {
+      setMarketOverlayAnnotations((current) =>
+        [
+          {
+            id: `overlay_ann_${timestamp}_${kind}_${current.length}`,
+            kind,
+            label,
+            tone,
+            timestamp,
+          },
+          ...current,
+        ].slice(0, 8),
+      )
+    },
+    [],
+  )
 
   const resetHelperLockCounters = useCallback(() => {
     if (helperResetLockToggleCount === 0) {
@@ -2691,6 +2786,11 @@ function App() {
               ...current,
             ].slice(0, 6),
           )
+          appendMarketOverlayAnnotation(
+            'trade',
+            `${action}:${status ?? 'unknown'}`,
+            action === 'closed' ? 'positive' : 'neutral',
+          )
         }
         if (parsed.event === 'event.risk.alert') {
           const payload = parsed.payload ?? {}
@@ -2722,6 +2822,7 @@ function App() {
               ...current,
             ].slice(0, 6),
           )
+          appendMarketOverlayAnnotation('risk', `${kind}:${status ?? 'active'}`, 'warning')
         }
         if (parsed.event === 'event.agent.status') {
           const payload = parsed.payload ?? {}
@@ -2758,6 +2859,7 @@ function App() {
               ...current,
             ].slice(0, 6),
           )
+          appendMarketOverlayAnnotation('feed', `${action}${subscriptionId ? `:${subscriptionId}` : ''}`)
         }
         appendBlock({
           id: `blk_${Date.now()}`,
@@ -2777,7 +2879,7 @@ function App() {
       wsRef.current = null
       pendingMap.clear()
     }
-  }, [appendBlock, applyRiskStatusPayload, websocketUrl])
+  }, [appendBlock, appendMarketOverlayAnnotation, applyRiskStatusPayload, websocketUrl])
 
   useEffect(() => {
     window.localStorage.setItem(HISTORY_FILTER_STORAGE_KEY, historyFilter)
@@ -3066,19 +3168,23 @@ function App() {
     const alerts = riskAlerts.length
     const chartPoints = marketOverlayChartPoints.length
     const chartLens = marketOverlayChartLens
+    const markerSummary = `t${marketOverlayAnnotationSummary.tradeCount}/r${marketOverlayAnnotationSummary.riskCount}/f${marketOverlayAnnotationSummary.feedCount}`
     const trendLabel = marketOverlayTrend.label
     const volatilitySummary = marketOverlayVolatility.summary
     const pulseSummary = marketOverlayPulse.summary
     const regimeSummary = marketOverlayRegime.summary
     const summaryByMode: Record<MarketOverlayMode, string> = {
-      'price-only': `candles:${candles} · chartPoints:${chartPoints} · chartLens:${chartLens} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
-      'with-trades': `candles:${candles} · tradeEvents:${tradeEvents} · chartPoints:${chartPoints} · chartLens:${chartLens} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
-      'with-risk': `candles:${candles} · tradeEvents:${tradeEvents} · riskAlerts:${alerts} · chartPoints:${chartPoints} · chartLens:${chartLens} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
+      'price-only': `candles:${candles} · chartPoints:${chartPoints} · chartLens:${chartLens} · markers:${markerSummary} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
+      'with-trades': `candles:${candles} · tradeEvents:${tradeEvents} · chartPoints:${chartPoints} · chartLens:${chartLens} · markers:${markerSummary} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
+      'with-risk': `candles:${candles} · tradeEvents:${tradeEvents} · riskAlerts:${alerts} · chartPoints:${chartPoints} · chartLens:${chartLens} · markers:${markerSummary} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
     }
     setMarketOverlaySnapshotSummary(summaryByMode[marketOverlayMode])
     setMarketOverlaySnapshotAt(new Date().toISOString())
   }, [
     lastFetchedCandlesCount,
+    marketOverlayAnnotationSummary.feedCount,
+    marketOverlayAnnotationSummary.riskCount,
+    marketOverlayAnnotationSummary.tradeCount,
     marketOverlayChartLens,
     marketOverlayChartPoints.length,
     marketOverlayMode,
@@ -3107,6 +3213,12 @@ function App() {
             />
             <p aria-label="Overlay Chart Summary" className="market-overlay-chart-summary">
               Chart: {marketOverlayChartSummary}
+            </p>
+            <p aria-label="Overlay Marker Summary" className="market-overlay-marker-summary">
+              Markers: trade:{marketOverlayAnnotationSummary.tradeCount} · risk:
+              {marketOverlayAnnotationSummary.riskCount} · feed:
+              {marketOverlayAnnotationSummary.feedCount} · latest:
+              {marketOverlayAnnotationSummary.latestLabel}
             </p>
             <p
               aria-label="Overlay Chart Runtime"
@@ -3157,6 +3269,20 @@ function App() {
               >
                 feed
               </span>
+            </div>
+            <div className="market-overlay-annotation-list" aria-label="Overlay Markers">
+              {marketOverlayAnnotations.length === 0 ? (
+                <span className="overlay-marker-chip overlay-marker-none">none</span>
+              ) : (
+                marketOverlayAnnotations.map((annotation) => (
+                  <span
+                    key={annotation.id}
+                    className={`overlay-marker-chip overlay-marker-${annotation.kind} overlay-marker-tone-${annotation.tone}`}
+                  >
+                    {annotation.kind}:{annotation.label}
+                  </span>
+                ))
+              )}
             </div>
             <p aria-label="Overlay Live Summary">Live: {marketOverlayLiveSummary}</p>
             <p aria-label="Overlay Window Summary">Window: {marketOverlayWindowSummary}</p>

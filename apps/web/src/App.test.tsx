@@ -42,6 +42,10 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Chart Summary')).toHaveTextContent(
       'Chart: points:none · lens:price-only',
     )
+    expect(screen.getByLabelText('Overlay Marker Summary')).toHaveTextContent(
+      'Markers: trade:0 · risk:0 · feed:0 · latest:none',
+    )
+    expect(screen.getByLabelText('Overlay Markers')).toHaveTextContent('none')
     expect(screen.getByLabelText('Overlay Chart Runtime')).toBeInTheDocument()
     expect(screen.getByLabelText('Overlay Live Summary')).toHaveTextContent('Live: candles:0')
     expect(screen.getByLabelText('Overlay Window Summary')).toHaveTextContent('Window: closes:none')
@@ -282,7 +286,7 @@ describe('Dashboard shell', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Refresh Overlay Snapshot' }))
     expect(screen.getByLabelText('Overlay Snapshot Summary')).toHaveTextContent(
-      'Summary: candles:0 · chartPoints:0 · chartLens:price-only · trend:neutral · vol:n/a · pulse:quiet(0) · regime:observe',
+      'Summary: candles:0 · chartPoints:0 · chartLens:price-only · markers:t0/r0/f0 · trend:neutral · vol:n/a · pulse:quiet(0) · regime:observe',
     )
     expect(screen.getByLabelText('Overlay Snapshot Time')).not.toHaveTextContent('Snapshot: never')
 
@@ -291,7 +295,7 @@ describe('Dashboard shell', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: 'Refresh Overlay Snapshot' }))
     expect(screen.getByLabelText('Overlay Snapshot Summary')).toHaveTextContent(
-      'Summary: candles:0 · tradeEvents:0 · chartPoints:0 · chartLens:price-only · trend:neutral · vol:n/a · pulse:quiet(0) · regime:observe',
+      'Summary: candles:0 · tradeEvents:0 · chartPoints:0 · chartLens:price-only · markers:t0/r0/f0 · trend:neutral · vol:n/a · pulse:quiet(0) · regime:observe',
     )
 
     fireEvent.change(screen.getByLabelText('Overlay Mode'), {
@@ -299,7 +303,7 @@ describe('Dashboard shell', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: 'Refresh Overlay Snapshot' }))
     expect(screen.getByLabelText('Overlay Snapshot Summary')).toHaveTextContent(
-      'Summary: candles:0 · tradeEvents:0 · riskAlerts:0 · chartPoints:0 · chartLens:price-only · trend:neutral · vol:n/a · pulse:quiet(0) · regime:observe',
+      'Summary: candles:0 · tradeEvents:0 · riskAlerts:0 · chartPoints:0 · chartLens:price-only · markers:t0/r0/f0 · trend:neutral · vol:n/a · pulse:quiet(0) · regime:observe',
     )
   })
 
@@ -416,6 +420,10 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Chart Summary')).toHaveTextContent(
       'Chart: points:none · lens:price-only',
     )
+    expect(screen.getByLabelText('Overlay Marker Summary')).toHaveTextContent(
+      'Markers: trade:0 · risk:0 · feed:0 · latest:none',
+    )
+    expect(screen.getByLabelText('Overlay Markers')).toHaveTextContent('none')
     expect(screen.getByLabelText('Overlay Trend')).toHaveTextContent('Trend: neutral')
     expect(screen.getByLabelText('Overlay Trend')).toHaveClass('overlay-trend-neutral')
     expect(screen.getByLabelText('Overlay Volatility')).toHaveTextContent('Volatility: n/a')
@@ -446,6 +454,13 @@ describe('Dashboard shell', () => {
       expect(screen.getByLabelText('Overlay Chart Summary')).toHaveTextContent(
         'Chart: points:2 · last:2.00 · lens:price-only',
       )
+      expect(screen.getByLabelText('Overlay Marker Summary')).toHaveTextContent(
+        'Markers: trade:1 · risk:1 · feed:0 · latest:risk:live_trading_disabled:raised',
+      )
+      expect(screen.getByLabelText('Overlay Markers')).toHaveTextContent(
+        'risk:live_trading_disabled:raised',
+      )
+      expect(screen.getByLabelText('Overlay Markers')).toHaveTextContent('trade:closed:queued')
       expect(screen.getByLabelText('Overlay Trend')).toHaveTextContent('Trend: up (+1.00)')
       expect(screen.getByLabelText('Overlay Trend')).toHaveClass('overlay-trend-up')
       expect(screen.getByLabelText('Overlay Volatility')).toHaveTextContent(
@@ -465,7 +480,7 @@ describe('Dashboard shell', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Refresh Overlay Snapshot' }))
     expect(screen.getByLabelText('Overlay Snapshot Summary')).toHaveTextContent(
-      'Summary: candles:2 · tradeEvents:1 · riskAlerts:1 · chartPoints:2 · chartLens:diagnostics · trend:up (+1.00) · vol:1.00 · pulse:intense(5) · regime:risk_on',
+      'Summary: candles:2 · tradeEvents:1 · riskAlerts:1 · chartPoints:2 · chartLens:diagnostics · markers:t1/r1/f0 · trend:up (+1.00) · vol:1.00 · pulse:intense(5) · regime:risk_on',
     )
 
     sendSpy.mockRestore()

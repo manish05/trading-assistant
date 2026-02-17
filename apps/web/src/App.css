@@ -96,10 +96,15 @@
 }
 
 .market-overlay-chart-summary,
+.market-overlay-marker-summary,
 .market-overlay-chart-runtime {
   margin: 0;
   font-size: 0.7rem;
   color: #9fb0cc;
+}
+
+.market-overlay-marker-summary {
+  color: #84d3f8;
 }
 
 .market-overlay-chart-runtime.runtime-ready {
@@ -126,6 +131,52 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.35rem;
+}
+
+.market-overlay-annotation-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.overlay-marker-chip {
+  border-radius: 999px;
+  border: 1px solid #2d4a7e;
+  padding: 0.08rem 0.42rem;
+  font-size: 0.64rem;
+  letter-spacing: 0.01em;
+}
+
+.overlay-marker-none {
+  background: #12213a;
+  color: #7f91b0;
+}
+
+.overlay-marker-trade {
+  background: #17334c;
+  color: #d8ecff;
+}
+
+.overlay-marker-risk {
+  background: #3b2020;
+  color: #ffd3d3;
+}
+
+.overlay-marker-feed {
+  background: #1e2e4a;
+  color: #d7e4ff;
+}
+
+.overlay-marker-tone-positive {
+  border-color: #3f9160;
+}
+
+.overlay-marker-tone-warning {
+  border-color: #995858;
+}
+
+.overlay-marker-tone-neutral {
+  border-color: #2d4a7e;
 }
 
 .overlay-chip {
