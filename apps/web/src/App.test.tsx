@@ -619,6 +619,18 @@ describe('Dashboard shell', () => {
     expect(
       screen.getByText('hintVisible:yes', { selector: '.import-snapshot-badges .import-summary-badge' }),
     ).toBeInTheDocument()
+    expect(window.localStorage.getItem('quick-action-import-helper-diagnostics-mode-v1')).toBe(
+      'verbose',
+    )
+  })
+
+  it('initializes helper diagnostics display mode from localStorage', () => {
+    window.localStorage.setItem('quick-action-import-helper-diagnostics-mode-v1', 'verbose')
+    render(<App />)
+    expect(screen.getByRole('button', { name: 'Use Compact Diagnostics' })).toBeInTheDocument()
+    expect(
+      screen.getByText('expanded:yes', { selector: '.import-snapshot-badges .import-summary-badge' }),
+    ).toBeInTheDocument()
   })
 
   it('copies helper diagnostics summary to clipboard', async () => {

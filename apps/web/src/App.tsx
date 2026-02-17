@@ -83,6 +83,7 @@ const PRESET_IMPORT_REPORT_EXPANDED_STORAGE_KEY = 'quick-action-preset-import-re
 const IMPORT_HINT_VISIBILITY_STORAGE_KEY = 'quick-action-import-hint-visibility-v1'
 const IMPORT_HINT_MODE_STORAGE_KEY = 'quick-action-import-hint-mode-v1'
 const IMPORT_HELPER_DIAGNOSTICS_STORAGE_KEY = 'quick-action-import-helper-diagnostics-v1'
+const IMPORT_HELPER_DIAGNOSTICS_MODE_STORAGE_KEY = 'quick-action-import-helper-diagnostics-mode-v1'
 const STATUS_SHORTCUT_LEGEND_STORAGE_KEY = 'quick-action-status-shortcut-legend-v1'
 const STATUS_SHORTCUT_LEGEND_ORDER_STORAGE_KEY = 'quick-action-status-shortcut-legend-order-v1'
 const STATUS_SHORTCUT_LEGEND_DENSITY_STORAGE_KEY = 'quick-action-status-shortcut-legend-density-v1'
@@ -178,6 +179,14 @@ const readImportHelperDiagnosticsExpandedFromStorage = (): boolean => {
     return true
   }
   return window.localStorage.getItem(IMPORT_HELPER_DIAGNOSTICS_STORAGE_KEY) !== 'collapsed'
+}
+
+const readImportHelperDiagnosticsModeFromStorage = (): HelperDiagnosticsDisplayMode => {
+  if (typeof window === 'undefined') {
+    return 'compact'
+  }
+  const raw = window.localStorage.getItem(IMPORT_HELPER_DIAGNOSTICS_MODE_STORAGE_KEY)
+  return raw === 'verbose' ? 'verbose' : 'compact'
 }
 
 const readStatusShortcutLegendFromStorage = (): boolean => {
@@ -352,7 +361,7 @@ function App() {
     readStatusShortcutLegendDensityFromStorage,
   )
   const [helperDiagnosticsDisplayMode, setHelperDiagnosticsDisplayMode] =
-    useState<HelperDiagnosticsDisplayMode>('compact')
+    useState<HelperDiagnosticsDisplayMode>(readImportHelperDiagnosticsModeFromStorage)
   const [availablePresetNames, setAvailablePresetNames] = useState<string[]>(() =>
     Object.keys(readPresetStoreFromStorage()).sort(),
   )
@@ -1288,6 +1297,13 @@ function App() {
       isImportHelperDiagnosticsExpanded ? 'expanded' : 'collapsed',
     )
   }, [isImportHelperDiagnosticsExpanded])
+
+  useEffect(() => {
+    window.localStorage.setItem(
+      IMPORT_HELPER_DIAGNOSTICS_MODE_STORAGE_KEY,
+      helperDiagnosticsDisplayMode,
+    )
+  }, [helperDiagnosticsDisplayMode])
 
   useEffect(() => {
     window.localStorage.setItem(IMPORT_HINT_MODE_STORAGE_KEY, importHintMode)
