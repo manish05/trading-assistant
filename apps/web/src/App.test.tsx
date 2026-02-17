@@ -97,6 +97,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Delta Coverage Summary')).toHaveTextContent(
       'Delta coverage: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Delta Confidence Summary')).toHaveTextContent(
+      'Delta confidence: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Delta Extremes')).toHaveTextContent(
       'Delta extremes: none',
     )
@@ -593,6 +596,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Delta Coverage Summary')).toHaveTextContent(
       'Delta coverage: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Delta Confidence Summary')).toHaveTextContent(
+      'Delta confidence: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Delta Extremes')).toHaveTextContent(
       'Delta extremes: none',
     )
@@ -713,6 +719,9 @@ describe('Dashboard shell', () => {
       expect(screen.getByLabelText('Overlay Marker Delta Coverage Summary')).toHaveTextContent(
         'Delta coverage: full:1/2 · partial:1 · missing:0 · ready:l2/a2/p1',
       )
+      expect(screen.getByLabelText('Overlay Marker Delta Confidence Summary')).toHaveTextContent(
+        'Delta confidence: agree:1 · conflict:0 · neutral:1 · n/a:0 · fullComparative:2/2',
+      )
       expect(screen.getByLabelText('Overlay Marker Delta Extremes')).toHaveTextContent(
         'Delta extremes: rise:risk:live_trading_disabled:raised:+0.00 (+0.00%) · drop:trade:closed:queued:-1.00 (-50.00%) · spread:1.00',
       )
@@ -829,6 +838,9 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Overlay Marker Delta Coverage Summary')).toHaveTextContent(
       'Delta coverage: full:1/1 · partial:0 · missing:0 · ready:l1/a1/p1',
+    )
+    expect(screen.getByLabelText('Overlay Marker Delta Confidence Summary')).toHaveTextContent(
+      'Delta confidence: agree:0 · conflict:0 · neutral:1 · n/a:0 · fullComparative:1/1',
     )
     expect(screen.getByLabelText('Overlay Marker Delta Extremes')).toHaveTextContent(
       'Delta extremes: rise:risk:live_trading_disabled:raised:+0.00 (+0.00%) · drop:risk:live_trading_disabled:raised:+0.00 (+0.00%) · spread:0.00',

@@ -1944,6 +1944,42 @@ function App() {
     })
     return `full:${fullCoverageCount}/${totalCount} · partial:${partialCoverageCount} · missing:${missingCoverageCount} · ready:l${latestReadyCount}/a${averageReadyCount}/p${previousReadyCount}`
   }, [marketOverlayAverageClose, marketOverlayChartPoints, marketOverlayScopedTimelineAnnotations])
+  const marketOverlayMarkerDeltaConfidenceSummary = useMemo(() => {
+    if (marketOverlayScopedTimelineAnnotations.length === 0 || marketOverlayChartPoints.length === 0) {
+      return 'none'
+    }
+    const baseline = marketOverlayAverageClose
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1]
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    let agreementCount = 0
+    let conflictCount = 0
+    let neutralCount = 0
+    let unavailableCount = 0
+    let fullComparativeCount = 0
+    const totalCount = marketOverlayScopedTimelineAnnotations.length
+    marketOverlayScopedTimelineAnnotations.forEach((annotation) => {
+      const point = pointByTime.get(annotation.time)
+      if (!point || baseline === null) {
+        unavailableCount += 1
+        return
+      }
+      const deltaToLatest = point.value - latestPoint.value
+      const deltaToAverage = point.value - baseline
+      fullComparativeCount += 1
+      const latestSign = Math.sign(deltaToLatest)
+      const averageSign = Math.sign(deltaToAverage)
+      if (latestSign === 0 || averageSign === 0) {
+        neutralCount += 1
+        return
+      }
+      if (latestSign === averageSign) {
+        agreementCount += 1
+        return
+      }
+      conflictCount += 1
+    })
+    return `agree:${agreementCount} · conflict:${conflictCount} · neutral:${neutralCount} · n/a:${unavailableCount} · fullComparative:${fullComparativeCount}/${totalCount}`
+  }, [marketOverlayAverageClose, marketOverlayChartPoints, marketOverlayScopedTimelineAnnotations])
   const marketOverlayMarkerDeltaExtremes = useMemo(() => {
     if (marketOverlayScopedTimelineAnnotations.length === 0 || marketOverlayChartPoints.length === 0) {
       return 'none'
@@ -4971,6 +5007,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Delta Coverage Summary">
               Delta coverage: {marketOverlayMarkerDeltaCoverageSummary}
+            </p>
+            <p aria-label="Overlay Marker Delta Confidence Summary">
+              Delta confidence: {marketOverlayMarkerDeltaConfidenceSummary}
             </p>
             <p aria-label="Overlay Marker Delta Extremes">
               Delta extremes: {marketOverlayMarkerDeltaExtremes}
