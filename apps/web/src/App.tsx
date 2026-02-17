@@ -74,6 +74,7 @@ type MarketOverlayMode = 'price-only' | 'with-trades' | 'with-risk'
 type MarketOverlayChartRuntime = 'loading' | 'ready' | 'fallback' | 'error'
 type MarketOverlayChartLens = 'price-only' | 'price-and-trend' | 'diagnostics'
 type MarketOverlayMarkerFocus = 'all' | 'trade' | 'risk' | 'feed'
+type MarketOverlayMarkerWindow = 3 | 5 | 8
 type MarketOverlayChartPoint = { time: number; value: number }
 type MarketOverlayChartMarker = {
   time: number
@@ -167,6 +168,7 @@ const BLOCK_TELEMETRY_VISIBILITY_STORAGE_KEY = 'quick-action-block-telemetry-vis
 const MARKET_OVERLAY_MODE_STORAGE_KEY = 'quick-action-market-overlay-mode-v1'
 const MARKET_OVERLAY_CHART_LENS_STORAGE_KEY = 'quick-action-market-overlay-chart-lens-v1'
 const MARKET_OVERLAY_MARKER_FOCUS_STORAGE_KEY = 'quick-action-market-overlay-marker-focus-v1'
+const MARKET_OVERLAY_MARKER_WINDOW_STORAGE_KEY = 'quick-action-market-overlay-marker-window-v1'
 const MAX_IMPORT_REPORT_NAMES = 6
 const FEED_CANDLE_FETCH_LIMIT = 50
 const DEVICE_NOTIFY_TEST_MESSAGE = 'Dashboard test notification'
@@ -409,6 +411,17 @@ const readMarketOverlayMarkerFocusFromStorage = (): MarketOverlayMarkerFocus => 
     return raw
   }
   return 'all'
+}
+
+const readMarketOverlayMarkerWindowFromStorage = (): MarketOverlayMarkerWindow => {
+  if (typeof window === 'undefined') {
+    return 5
+  }
+  const raw = window.localStorage.getItem(MARKET_OVERLAY_MARKER_WINDOW_STORAGE_KEY)
+  if (raw === '3' || raw === '8') {
+    return Number.parseInt(raw, 10) as MarketOverlayMarkerWindow
+  }
+  return 5
 }
 
 const sanitizePreset = (value: unknown): QuickActionPreset | null => {
@@ -766,6 +779,8 @@ function App() {
   const [marketOverlayMarkerFocus, setMarketOverlayMarkerFocus] = useState<MarketOverlayMarkerFocus>(
     readMarketOverlayMarkerFocusFromStorage,
   )
+  const [marketOverlayMarkerWindow, setMarketOverlayMarkerWindow] =
+    useState<MarketOverlayMarkerWindow>(readMarketOverlayMarkerWindowFromStorage)
   const [marketOverlaySnapshotAt, setMarketOverlaySnapshotAt] = useState<string | null>(null)
   const [marketOverlaySnapshotSummary, setMarketOverlaySnapshotSummary] = useState<string>('none')
   const [marketOverlayChartRuntime, setMarketOverlayChartRuntime] =
@@ -996,22 +1011,33 @@ function App() {
         : marketOverlayAnnotations.filter((annotation) => annotation.kind === marketOverlayMarkerFocus),
     [marketOverlayAnnotations, marketOverlayMarkerFocus],
   )
+  const marketOverlayVisibleAnnotations = useMemo(
+    () => marketOverlayFilteredAnnotations.slice(0, marketOverlayMarkerWindow),
+    [marketOverlayFilteredAnnotations, marketOverlayMarkerWindow],
+  )
   const marketOverlayMarkerDrilldown = useMemo(() => {
-    const latest = marketOverlayFilteredAnnotations[0]
+    const latest = marketOverlayVisibleAnnotations[0]
     return {
       focus: marketOverlayMarkerFocus,
-      visibleCount: marketOverlayFilteredAnnotations.length,
+      window: marketOverlayMarkerWindow,
+      visibleCount: marketOverlayVisibleAnnotations.length,
       latestLabel: latest ? `${latest.kind}:${latest.label}` : 'none',
     }
-  }, [marketOverlayFilteredAnnotations, marketOverlayMarkerFocus])
+  }, [marketOverlayMarkerFocus, marketOverlayMarkerWindow, marketOverlayVisibleAnnotations])
+  const marketOverlayCorrelationHint = useMemo(() => {
+    if (marketOverlayVisibleAnnotations.length === 0 || marketOverlayChartPoints.length === 0) {
+      return 'none'
+    }
+    const latestAnnotation = marketOverlayVisibleAnnotations[0]
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1]
+    return `${latestAnnotation.kind}:${latestAnnotation.label}@${latestPoint.value.toFixed(2)}(t${latestPoint.time})`
+  }, [marketOverlayChartPoints, marketOverlayVisibleAnnotations])
   const marketOverlayChartMarkers = useMemo(() => {
-    if (marketOverlayChartPoints.length === 0 || marketOverlayFilteredAnnotations.length === 0) {
+    if (marketOverlayChartPoints.length === 0 || marketOverlayVisibleAnnotations.length === 0) {
       return [] as MarketOverlayChartMarker[]
     }
     const latestTime = marketOverlayChartPoints[marketOverlayChartPoints.length - 1].time
-    const source = marketOverlayFilteredAnnotations
-      .slice(0, Math.min(6, marketOverlayFilteredAnnotations.length))
-      .reverse()
+    const source = marketOverlayVisibleAnnotations.slice().reverse()
     return source.map((annotation, index): MarketOverlayChartMarker => {
       const offset = source.length - 1 - index
       const time = Math.max(1, latestTime - offset)
@@ -1041,7 +1067,7 @@ function App() {
         text: `feed:${annotation.label}`,
       }
     })
-  }, [marketOverlayChartPoints, marketOverlayFilteredAnnotations])
+  }, [marketOverlayChartPoints, marketOverlayVisibleAnnotations])
 
   useEffect(() => {
     const container = marketOverlayChartContainerRef.current
@@ -2993,6 +3019,13 @@ function App() {
   }, [marketOverlayMarkerFocus])
 
   useEffect(() => {
+    window.localStorage.setItem(
+      MARKET_OVERLAY_MARKER_WINDOW_STORAGE_KEY,
+      String(marketOverlayMarkerWindow),
+    )
+  }, [marketOverlayMarkerWindow])
+
+  useEffect(() => {
     window.localStorage.setItem(HELPER_RESET_TIMESTAMP_FORMAT_STORAGE_KEY, helperResetTimestampFormat)
   }, [helperResetTimestampFormat])
 
@@ -3206,15 +3239,17 @@ function App() {
     const chartPoints = marketOverlayChartPoints.length
     const chartLens = marketOverlayChartLens
     const markerFocus = marketOverlayMarkerFocus
+    const markerWindow = marketOverlayMarkerWindow
     const markerSummary = `t${marketOverlayAnnotationSummary.tradeCount}/r${marketOverlayAnnotationSummary.riskCount}/f${marketOverlayAnnotationSummary.feedCount}`
+    const correlationHint = marketOverlayCorrelationHint
     const trendLabel = marketOverlayTrend.label
     const volatilitySummary = marketOverlayVolatility.summary
     const pulseSummary = marketOverlayPulse.summary
     const regimeSummary = marketOverlayRegime.summary
     const summaryByMode: Record<MarketOverlayMode, string> = {
-      'price-only': `candles:${candles} · chartPoints:${chartPoints} · chartLens:${chartLens} · markerFocus:${markerFocus} · markers:${markerSummary} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
-      'with-trades': `candles:${candles} · tradeEvents:${tradeEvents} · chartPoints:${chartPoints} · chartLens:${chartLens} · markerFocus:${markerFocus} · markers:${markerSummary} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
-      'with-risk': `candles:${candles} · tradeEvents:${tradeEvents} · riskAlerts:${alerts} · chartPoints:${chartPoints} · chartLens:${chartLens} · markerFocus:${markerFocus} · markers:${markerSummary} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
+      'price-only': `candles:${candles} · chartPoints:${chartPoints} · chartLens:${chartLens} · markerFocus:${markerFocus} · markerWindow:${markerWindow} · markers:${markerSummary} · corr:${correlationHint} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
+      'with-trades': `candles:${candles} · tradeEvents:${tradeEvents} · chartPoints:${chartPoints} · chartLens:${chartLens} · markerFocus:${markerFocus} · markerWindow:${markerWindow} · markers:${markerSummary} · corr:${correlationHint} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
+      'with-risk': `candles:${candles} · tradeEvents:${tradeEvents} · riskAlerts:${alerts} · chartPoints:${chartPoints} · chartLens:${chartLens} · markerFocus:${markerFocus} · markerWindow:${markerWindow} · markers:${markerSummary} · corr:${correlationHint} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
     }
     setMarketOverlaySnapshotSummary(summaryByMode[marketOverlayMode])
     setMarketOverlaySnapshotAt(new Date().toISOString())
@@ -3223,8 +3258,10 @@ function App() {
     marketOverlayAnnotationSummary.feedCount,
     marketOverlayAnnotationSummary.riskCount,
     marketOverlayAnnotationSummary.tradeCount,
+    marketOverlayCorrelationHint,
     marketOverlayChartLens,
     marketOverlayMarkerFocus,
+    marketOverlayMarkerWindow,
     marketOverlayChartPoints.length,
     marketOverlayMode,
     marketOverlayPulse.summary,
@@ -3260,9 +3297,13 @@ function App() {
               {marketOverlayAnnotationSummary.latestLabel}
             </p>
             <p aria-label="Overlay Marker Drilldown" className="market-overlay-marker-drilldown">
-              Marker focus: {marketOverlayMarkerDrilldown.focus} · visible:
+              Marker focus: {marketOverlayMarkerDrilldown.focus} · window:
+              {marketOverlayMarkerDrilldown.window} · visible:
               {marketOverlayMarkerDrilldown.visibleCount} · latest:
               {marketOverlayMarkerDrilldown.latestLabel}
+            </p>
+            <p aria-label="Overlay Correlation Hint" className="market-overlay-correlation-hint">
+              Correlation: {marketOverlayCorrelationHint}
             </p>
             <p
               aria-label="Overlay Chart Runtime"
@@ -3272,6 +3313,21 @@ function App() {
             </p>
           </div>
           <section className="market-overlay-controls">
+            <label>
+              Marker Window
+              <select
+                value={marketOverlayMarkerWindow}
+                onChange={(event) =>
+                  setMarketOverlayMarkerWindow(
+                    Number.parseInt(event.target.value, 10) as MarketOverlayMarkerWindow,
+                  )
+                }
+              >
+                <option value="3">3</option>
+                <option value="5">5</option>
+                <option value="8">8</option>
+              </select>
+            </label>
             <label>
               Marker Focus
               <select
