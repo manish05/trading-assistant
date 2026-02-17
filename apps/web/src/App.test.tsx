@@ -18,6 +18,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByText('Feed Lifecycle')).toBeInTheDocument()
     expect(screen.getByText('Quick Action History')).toBeInTheDocument()
     expect(screen.getByText('Quick Action Timestamps')).toBeInTheDocument()
+    expect(screen.getByLabelText('History Filter')).toBeInTheDocument()
   })
 
   it('renders gateway action buttons for account/feed listing', () => {
@@ -202,7 +203,29 @@ describe('Dashboard shell', () => {
 
     await waitFor(() => {
       expect(screen.getByText('accounts.list')).toBeInTheDocument()
-      expect(screen.getByText('sent')).toBeInTheDocument()
+      expect(screen.getByText('sent', { selector: '.history-status' })).toBeInTheDocument()
     })
+  })
+
+  it('filters quick-action history by status', async () => {
+    render(<App />)
+
+    fireEvent.change(screen.getByLabelText('Min Request Gap (ms)'), {
+      target: { value: '1000' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Accounts' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Accounts' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('debounced', { selector: '.history-status' })).toBeInTheDocument()
+      expect(screen.getByText('sent', { selector: '.history-status' })).toBeInTheDocument()
+    })
+
+    fireEvent.change(screen.getByLabelText('History Filter'), {
+      target: { value: 'debounced' },
+    })
+
+    expect(screen.getByText('debounced', { selector: '.history-status' })).toBeInTheDocument()
+    expect(screen.queryByText('sent', { selector: '.history-status' })).not.toBeInTheDocument()
   })
 })

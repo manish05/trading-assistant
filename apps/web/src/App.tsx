@@ -36,6 +36,8 @@ type QuickActionHistory = {
   timestamp: number
 }
 
+type HistoryFilter = 'all' | QuickActionHistory['status']
+
 type QuickActionPreset = {
   managedAccountId: string
   managedProviderAccountId: string
@@ -116,6 +118,7 @@ function App() {
   const [activeSubscriptionId, setActiveSubscriptionId] = useState<string | null>(null)
   const [feedLifecycle, setFeedLifecycle] = useState<FeedLifecycleBadge[]>([])
   const [quickActionHistory, setQuickActionHistory] = useState<QuickActionHistory[]>([])
+  const [historyFilter, setHistoryFilter] = useState<HistoryFilter>('all')
   const [lastSuccessByMethod, setLastSuccessByMethod] = useState<Record<string, string>>({})
   const [lastErrorByMethod, setLastErrorByMethod] = useState<Record<string, string>>({})
   const [blocks, setBlocks] = useState<BlockItem[]>([])
@@ -706,6 +709,11 @@ function App() {
     }
   }, [appendBlock, websocketUrl])
 
+  const filteredHistory =
+    historyFilter === 'all'
+      ? quickActionHistory
+      : quickActionHistory.filter((entry) => entry.status === historyFilter)
+
   return (
     <div className="dashboard-shell">
       <header className="dashboard-header">
@@ -986,11 +994,25 @@ function App() {
             <div>
               <dt>Quick Action History</dt>
               <dd>
-                {quickActionHistory.length === 0 ? (
+                <label className="history-filter">
+                  History Filter
+                  <select
+                    value={historyFilter}
+                    onChange={(event) => setHistoryFilter(event.target.value as HistoryFilter)}
+                  >
+                    <option value="all">all</option>
+                    <option value="sent">sent</option>
+                    <option value="ok">ok</option>
+                    <option value="error">error</option>
+                    <option value="debounced">debounced</option>
+                    <option value="skipped">skipped</option>
+                  </select>
+                </label>
+                {filteredHistory.length === 0 ? (
                   <span className="history-empty">none</span>
                 ) : (
                   <ul className="history-list">
-                    {quickActionHistory.slice(0, 8).map((entry) => (
+                    {filteredHistory.slice(0, 8).map((entry) => (
                       <li key={entry.id}>
                         <span className="history-method">{entry.method}</span>
                         <span className="history-status">{entry.status}</span>

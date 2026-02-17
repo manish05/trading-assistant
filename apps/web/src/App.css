@@ -267,6 +267,24 @@
   gap: 0.25rem;
 }
 
+.history-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.35rem;
+  font-size: 0.72rem;
+  color: #9fb0cc;
+}
+
+.history-filter select {
+  background: #14223a;
+  border: 1px solid #2d4a7e;
+  color: #e8edf5;
+  border-radius: 6px;
+  padding: 0.18rem 0.28rem;
+  font-size: 0.72rem;
+}
+
 .history-list li {
   display: flex;
   gap: 0.4rem;
