@@ -1565,6 +1565,26 @@ function App() {
               </dd>
             </div>
             <div>
+              <dt>Preset Import Snapshot</dt>
+              <dd className="import-snapshot-badges">
+                {presetImportReport ? (
+                  <>
+                    <span className={`import-mode-badge mode-${presetImportReport.mode}`}>
+                      {presetImportReport.mode}
+                    </span>
+                    <span className="import-summary-badge badge-accepted">
+                      accepted:{presetImportReport.accepted.length}
+                    </span>
+                    <span className="import-summary-badge badge-rejected">
+                      rejected:{presetImportReport.rejected.length}
+                    </span>
+                  </>
+                ) : (
+                  <span className="lifecycle-badge">none</span>
+                )}
+              </dd>
+            </div>
+            <div>
               <dt>Quick Action Timestamps</dt>
               <dd className="timestamp-grid">
                 <label className="timestamp-format">

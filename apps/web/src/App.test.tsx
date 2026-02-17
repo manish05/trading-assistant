@@ -17,6 +17,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByText('Account Status')).toBeInTheDocument()
     expect(screen.getByText('Feed Lifecycle')).toBeInTheDocument()
     expect(screen.getByText('Quick Action History')).toBeInTheDocument()
+    expect(screen.getByText('Preset Import Snapshot')).toBeInTheDocument()
     expect(screen.getByText('Quick Action Timestamps')).toBeInTheDocument()
     expect(screen.getByLabelText('History Filter')).toBeInTheDocument()
     expect(screen.getByLabelText('History Legend')).toBeInTheDocument()
@@ -424,6 +425,12 @@ describe('Dashboard shell', () => {
       const summary = screen.getByLabelText('Import Report Summary Badges')
       expect(within(summary).getByText('accepted:1')).toBeInTheDocument()
       expect(within(summary).getByText('rejected:1')).toBeInTheDocument()
+      expect(
+        screen.getByText('accepted:1', { selector: '.import-snapshot-badges .import-summary-badge' }),
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText('rejected:1', { selector: '.import-snapshot-badges .import-summary-badge' }),
+      ).toBeInTheDocument()
     })
   })
 

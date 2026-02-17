@@ -488,6 +488,12 @@
   color: #9fb0cc;
 }
 
+.import-snapshot-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
 .timestamp-grid {
   display: grid;
   grid-template-columns: 1fr;
