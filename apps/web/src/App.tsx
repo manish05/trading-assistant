@@ -1322,6 +1322,10 @@ function App() {
       `resetLock=${isHelperResetLocked ? 'locked' : 'unlocked'}`,
       `resetBadgeVisible=${isHelperResetBadgeVisible ? 'yes' : 'no'}`,
       `resetBadgeSection=${isHelperResetBadgeSectionExpanded ? 'expanded' : 'collapsed'}`,
+      `lockToggleTotal=${helperResetLockToggleCount}`,
+      `lockToggleAlt+L=${helperResetLockSourceCounts['Alt+L']}`,
+      `lockToggleControls=${helperResetLockSourceCounts.controls}`,
+      `lockToggleSnapshot=${helperResetLockSourceCounts.snapshot}`,
     ].join('\n')
     try {
       if (!navigator.clipboard?.writeText) {
@@ -1347,6 +1351,8 @@ function App() {
   }, [
     appendBlock,
     helperDiagnosticsLastResetAt,
+    helperResetLockSourceCounts,
+    helperResetLockToggleCount,
     isHelperResetBadgeSectionExpanded,
     isHelperResetBadgeVisible,
     isHelperResetLocked,
