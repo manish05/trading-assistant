@@ -10,6 +10,7 @@ from starlette.websockets import WebSocketDisconnect
 
 from app.audit.store import AuditStore
 from app.backtesting.simulator import BacktestCandle, BacktestSimulator, TradeSignal
+from app.devices.registry import DeviceRegistry
 from app.gateway.models import GatewayConnectParams
 from app.memory.index import MemoryIndex
 from app.protocol.frames import RequestFrame, parse_gateway_frame
@@ -79,6 +80,22 @@ class BacktestsRunParams(BaseModel):
     signals: list[BacktestSignalInput] = Field(min_length=1)
 
 
+class DevicePairParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    deviceId: str = Field(min_length=1)
+    platform: str = Field(min_length=1)
+    label: str = Field(min_length=1)
+    pushToken: str = Field(min_length=1)
+
+
+class DeviceNotifyParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    deviceId: str = Field(min_length=1)
+    message: str = Field(min_length=1)
+
+
 def _error_response(
     request_id: str,
     *,
@@ -123,6 +140,7 @@ async def handle_gateway_websocket(
     started_at: datetime,
     agent_queues: dict[str, AgentQueue],
     audit_store: AuditStore,
+    device_registry: DeviceRegistry,
     memory_index: MemoryIndex,
 ) -> None:
     await websocket.accept()
@@ -432,6 +450,68 @@ async def handle_gateway_websocket(
                 },
             )
             await websocket.send_json(_ok_response(frame.id, payload=payload))
+            continue
+
+        if frame.method == "devices.pair":
+            try:
+                params = DevicePairParams.model_validate(frame.params)
+            except ValidationError:
+                await websocket.send_json(
+                    _error_response(
+                        frame.id,
+                        code="INVALID_PARAMS",
+                        message="invalid devices.pair params",
+                    )
+                )
+                continue
+
+            paired = device_registry.pair(
+                device_id=params.deviceId,
+                platform=params.platform,
+                label=params.label,
+                push_token=params.pushToken,
+            )
+            payload = {"device": device_registry.as_public_payload(paired)}
+            audit_store.append(
+                actor="user",
+                action="devices.pair",
+                trace_id=frame.id,
+                data={"deviceId": params.deviceId, "platform": params.platform},
+            )
+            await websocket.send_json(_ok_response(frame.id, payload=payload))
+            continue
+
+        if frame.method == "devices.list":
+            devices = [
+                device_registry.as_public_payload(device) for device in device_registry.list()
+            ]
+            await websocket.send_json(_ok_response(frame.id, payload={"devices": devices}))
+            continue
+
+        if frame.method == "devices.notifyTest":
+            try:
+                params = DeviceNotifyParams.model_validate(frame.params)
+            except ValidationError:
+                await websocket.send_json(
+                    _error_response(
+                        frame.id,
+                        code="INVALID_PARAMS",
+                        message="invalid devices.notifyTest params",
+                    )
+                )
+                continue
+
+            notify_result = device_registry.notify_test(
+                device_id=params.deviceId,
+                message=params.message,
+            )
+            audit_store.append(
+                actor="user",
+                action="devices.notifyTest",
+                trace_id=frame.id,
+                data={"deviceId": params.deviceId, "status": notify_result["status"]},
+            )
+            await websocket.send_json(_ok_response(frame.id, payload=notify_result))
             continue
 
         await websocket.send_json(

@@ -325,3 +325,53 @@ def test_gateway_memory_search_and_backtest_methods(tmp_path) -> None:
 
     assert backtest_response["ok"] is True
     assert backtest_response["payload"]["metrics"]["trades"] == 1
+
+
+def test_gateway_device_pair_and_notify_methods(tmp_path) -> None:
+    client = TestClient(create_app(data_dir=tmp_path))
+
+    with client.websocket_connect("/ws") as websocket:
+        websocket.send_json(_connect_payload())
+        _ = websocket.receive_json()
+
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_device_pair_1",
+                "method": "devices.pair",
+                "params": {
+                    "deviceId": "dev_iphone_1",
+                    "platform": "ios",
+                    "label": "iPhone 17",
+                    "pushToken": "push_abc",
+                },
+            }
+        )
+        pair_response = websocket.receive_json()
+
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_devices_list_1",
+                "method": "devices.list",
+                "params": {},
+            }
+        )
+        list_response = websocket.receive_json()
+
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_notify_test_1",
+                "method": "devices.notifyTest",
+                "params": {"deviceId": "dev_iphone_1", "message": "test ping"},
+            }
+        )
+        notify_response = websocket.receive_json()
+
+    assert pair_response["ok"] is True
+    assert pair_response["payload"]["device"]["deviceId"] == "dev_iphone_1"
+    assert list_response["ok"] is True
+    assert len(list_response["payload"]["devices"]) == 1
+    assert notify_response["ok"] is True
+    assert notify_response["payload"]["status"] == "queued"
