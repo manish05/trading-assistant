@@ -1244,6 +1244,63 @@ function App() {
     !isMarketOverlayNavigationLocked &&
     marketOverlayActiveTimelineIndex >= 0 &&
     marketOverlayActiveTimelineIndex < marketOverlayTimelineCount - 1
+  const { previousSameKindIndex: marketOverlayPreviousSameKindIndex, nextSameKindIndex: marketOverlayNextSameKindIndex } =
+    useMemo(() => {
+      if (
+        isMarketOverlayNavigationLocked ||
+        !marketOverlayActiveTimelineAnnotation ||
+        marketOverlayActiveTimelineIndex < 0
+      ) {
+        return { previousSameKindIndex: -1, nextSameKindIndex: -1 }
+      }
+      const activeKind = marketOverlayActiveTimelineAnnotation.kind
+      let previousSameKindIndex = -1
+      let nextSameKindIndex = -1
+      for (let index = marketOverlayActiveTimelineIndex - 1; index >= 0; index -= 1) {
+        if (marketOverlayScopedTimelineAnnotations[index]?.kind === activeKind) {
+          previousSameKindIndex = index
+          break
+        }
+      }
+      for (
+        let index = marketOverlayActiveTimelineIndex + 1;
+        index < marketOverlayTimelineCount;
+        index += 1
+      ) {
+        if (marketOverlayScopedTimelineAnnotations[index]?.kind === activeKind) {
+          nextSameKindIndex = index
+          break
+        }
+      }
+      if (marketOverlayMarkerWrap === 'wrap' && marketOverlayTimelineCount > 1) {
+        if (previousSameKindIndex < 0) {
+          for (let index = marketOverlayTimelineCount - 1; index > marketOverlayActiveTimelineIndex; index -= 1) {
+            if (marketOverlayScopedTimelineAnnotations[index]?.kind === activeKind) {
+              previousSameKindIndex = index
+              break
+            }
+          }
+        }
+        if (nextSameKindIndex < 0) {
+          for (let index = 0; index < marketOverlayActiveTimelineIndex; index += 1) {
+            if (marketOverlayScopedTimelineAnnotations[index]?.kind === activeKind) {
+              nextSameKindIndex = index
+              break
+            }
+          }
+        }
+      }
+      return { previousSameKindIndex, nextSameKindIndex }
+    }, [
+      isMarketOverlayNavigationLocked,
+      marketOverlayActiveTimelineAnnotation,
+      marketOverlayActiveTimelineIndex,
+      marketOverlayMarkerWrap,
+      marketOverlayScopedTimelineAnnotations,
+      marketOverlayTimelineCount,
+    ])
+  const canSelectPreviousSameKindMarketOverlayMarker = marketOverlayPreviousSameKindIndex >= 0
+  const canSelectNextSameKindMarketOverlayMarker = marketOverlayNextSameKindIndex >= 0
   const canSelectSkipBackwardMarketOverlayMarker =
     isMarketOverlayNavigationLocked || marketOverlayActiveTimelineIndex < 0
       ? false
@@ -1573,6 +1630,36 @@ function App() {
     selectRelativeMarketOverlayMarker(1)
   }, [canSelectNextMarketOverlayMarker, selectRelativeMarketOverlayMarker])
 
+  const selectPreviousSameKindMarketOverlayMarker = useCallback(() => {
+    if (!canSelectPreviousSameKindMarketOverlayMarker) {
+      return
+    }
+    const previousSameKind = marketOverlayScopedTimelineAnnotations[marketOverlayPreviousSameKindIndex]
+    if (!previousSameKind) {
+      return
+    }
+    setMarketOverlaySelectedMarkerId(previousSameKind.id)
+  }, [
+    canSelectPreviousSameKindMarketOverlayMarker,
+    marketOverlayPreviousSameKindIndex,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+
+  const selectNextSameKindMarketOverlayMarker = useCallback(() => {
+    if (!canSelectNextSameKindMarketOverlayMarker) {
+      return
+    }
+    const nextSameKind = marketOverlayScopedTimelineAnnotations[marketOverlayNextSameKindIndex]
+    if (!nextSameKind) {
+      return
+    }
+    setMarketOverlaySelectedMarkerId(nextSameKind.id)
+  }, [
+    canSelectNextSameKindMarketOverlayMarker,
+    marketOverlayNextSameKindIndex,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+
   const selectSkipBackwardMarketOverlayMarker = useCallback(() => {
     if (!canSelectSkipBackwardMarketOverlayMarker) {
       return
@@ -1642,6 +1729,16 @@ function App() {
         selectSkipForwardMarketOverlayMarker()
         return
       }
+      if (event.key === '[') {
+        event.preventDefault()
+        selectPreviousSameKindMarketOverlayMarker()
+        return
+      }
+      if (event.key === ']') {
+        event.preventDefault()
+        selectNextSameKindMarketOverlayMarker()
+        return
+      }
       if (event.key === 'Home') {
         event.preventDefault()
         selectOldestMarketOverlayMarker()
@@ -1654,8 +1751,10 @@ function App() {
     },
     [
       selectLatestMarketOverlayMarker,
+      selectNextSameKindMarketOverlayMarker,
       selectNextMarketOverlayMarker,
       selectOldestMarketOverlayMarker,
+      selectPreviousSameKindMarketOverlayMarker,
       selectPreviousMarketOverlayMarker,
       selectSkipBackwardMarketOverlayMarker,
       selectSkipForwardMarketOverlayMarker,
@@ -4153,10 +4252,24 @@ function App() {
               </button>
               <button
                 type="button"
+                onClick={selectPreviousSameKindMarketOverlayMarker}
+                disabled={!canSelectPreviousSameKindMarketOverlayMarker}
+              >
+                Previous Same Kind
+              </button>
+              <button
+                type="button"
                 onClick={selectNextMarketOverlayMarker}
                 disabled={!canSelectNextMarketOverlayMarker}
               >
                 Next Marker
+              </button>
+              <button
+                type="button"
+                onClick={selectNextSameKindMarketOverlayMarker}
+                disabled={!canSelectNextSameKindMarketOverlayMarker}
+              >
+                Next Same Kind
               </button>
               <button
                 type="button"

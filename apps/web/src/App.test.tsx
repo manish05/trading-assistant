@@ -78,7 +78,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Oldest Marker' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Skip Back 2' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Previous Marker' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Previous Same Kind' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Next Marker' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Next Same Kind' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Skip Forward 2' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Latest Marker' })).toBeDisabled()
     expect(screen.getByLabelText('Overlay Marker Timeline')).toHaveTextContent('none')
@@ -522,7 +524,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Oldest Marker' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Skip Back 2' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Previous Marker' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Previous Same Kind' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Next Marker' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Next Same Kind' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Skip Forward 2' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Latest Marker' })).toBeDisabled()
     expect(screen.getByLabelText('Overlay Marker Timeline')).toHaveTextContent('none')
@@ -626,7 +630,9 @@ describe('Dashboard shell', () => {
       expect(screen.getByRole('button', { name: 'Oldest Marker' })).toBeEnabled()
       expect(screen.getByRole('button', { name: 'Skip Back 2' })).toBeDisabled()
       expect(screen.getByRole('button', { name: 'Previous Marker' })).toBeEnabled()
+      expect(screen.getByRole('button', { name: 'Previous Same Kind' })).toBeDisabled()
       expect(screen.getByRole('button', { name: 'Next Marker' })).toBeDisabled()
+      expect(screen.getByRole('button', { name: 'Next Same Kind' })).toBeDisabled()
       expect(screen.getByRole('button', { name: 'Skip Forward 2' })).toBeDisabled()
       expect(screen.getByRole('button', { name: 'Latest Marker' })).toBeDisabled()
       expect(screen.getByLabelText('Overlay Markers')).toHaveTextContent(
@@ -677,7 +683,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Oldest Marker' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Skip Back 2' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Previous Marker' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Previous Same Kind' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Next Marker' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Next Same Kind' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Skip Forward 2' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Latest Marker' })).toBeEnabled()
     expect(screen.getByLabelText('Overlay Correlation Hint')).toHaveTextContent(
@@ -734,7 +742,9 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByRole('button', { name: 'Skip Back 2' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Previous Marker' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Previous Same Kind' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Next Marker' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Next Same Kind' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Skip Forward 2' })).toBeDisabled()
     fireEvent.click(screen.getByRole('button', { name: 'Previous Marker' }))
     expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
@@ -1144,7 +1154,9 @@ describe('Dashboard shell', () => {
       'Marker behavior: wrap:bounded · selection:follow-latest · nav:locked',
     )
     expect(screen.getByRole('button', { name: 'Previous Marker' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Previous Same Kind' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Next Marker' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Next Same Kind' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Skip Back 2' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Skip Forward 2' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Oldest Marker' })).toBeDisabled()
@@ -1178,6 +1190,8 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByRole('button', { name: 'Previous Marker' })).toBeEnabled()
     expect(screen.getByRole('button', { name: 'Oldest Marker' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Previous Same Kind' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Next Same Kind' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Skip Back 2' })).toBeEnabled()
     expect(screen.getByRole('button', { name: 'Skip Forward 2' })).toBeDisabled()
     screen.getAllByRole('button', { name: 'trade:closed:queued' }).forEach((button) => {
@@ -1188,6 +1202,8 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
       'Marker nav: 2/3 · selected:risk:live_trading_disabled:raised',
     )
+    expect(screen.getByRole('button', { name: 'Previous Same Kind' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Next Same Kind' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Skip Back 2' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Skip Forward 2' })).toBeDisabled()
     expect(screen.getByLabelText('Overlay Marker Scope Summary')).toHaveTextContent(
@@ -1203,8 +1219,22 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Scope Summary')).toHaveTextContent(
       'Scope: visible:t2/r2/f0 · selectedKind:risk',
     )
+    expect(screen.getByRole('button', { name: 'Previous Same Kind' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Next Same Kind' })).toBeEnabled()
     expect(screen.getByRole('button', { name: 'Skip Back 2' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Skip Forward 2' })).toBeEnabled()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Next Same Kind' }))
+    expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
+      'Marker nav: 4/4 · selected:risk:live_trading_disabled:raised',
+    )
+    expect(screen.getByRole('button', { name: 'Previous Same Kind' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Next Same Kind' })).toBeDisabled()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Previous Same Kind' }))
+    expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
+      'Marker nav: 2/4 · selected:risk:live_trading_disabled:raised',
+    )
 
     fireEvent.click(screen.getByRole('button', { name: 'Skip Forward 2' }))
     expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
