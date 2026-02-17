@@ -95,6 +95,7 @@ const HELPER_RESET_STALE_THRESHOLD_HOURS_STORAGE_KEY =
   'quick-action-helper-reset-stale-threshold-hours-v1'
 const HELPER_RESET_BADGE_SECTION_STORAGE_KEY = 'quick-action-helper-reset-badge-section-v1'
 const HELPER_RESET_LOCK_STORAGE_KEY = 'quick-action-helper-reset-lock-v1'
+const HELPER_LOCK_COUNTERS_RESET_AT_STORAGE_KEY = 'quick-action-helper-lock-counters-reset-at-v1'
 const MAX_IMPORT_REPORT_NAMES = 6
 const DEFAULT_PRESET_TEMPLATE: QuickActionPreset = {
   managedAccountId: 'acct_demo_1',
@@ -270,6 +271,17 @@ const readHelperResetLockFromStorage = (): boolean => {
     return true
   }
   return window.localStorage.getItem(HELPER_RESET_LOCK_STORAGE_KEY) !== 'unlocked'
+}
+
+const readHelperLockCountersResetAtFromStorage = (): string | null => {
+  if (typeof window === 'undefined') {
+    return null
+  }
+  const value = window.localStorage.getItem(HELPER_LOCK_COUNTERS_RESET_AT_STORAGE_KEY)
+  if (!value) {
+    return null
+  }
+  return Number.isNaN(Date.parse(value)) ? null : value
 }
 
 const sanitizePreset = (value: unknown): QuickActionPreset | null => {
@@ -455,6 +467,9 @@ function App() {
   const [isHelperResetBadgeSectionExpanded, setIsHelperResetBadgeSectionExpanded] =
     useState<boolean>(readHelperResetBadgeSectionExpandedFromStorage)
   const [isHelperResetLocked, setIsHelperResetLocked] = useState<boolean>(readHelperResetLockFromStorage)
+  const [helperLockCountersLastResetAt, setHelperLockCountersLastResetAt] = useState<string | null>(
+    readHelperLockCountersResetAtFromStorage,
+  )
   const [availablePresetNames, setAvailablePresetNames] = useState<string[]>(() =>
     Object.keys(readPresetStoreFromStorage()).sort(),
   )
@@ -539,6 +554,28 @@ function App() {
   const appendBlock = useCallback((item: BlockItem) => {
     setBlocks((current) => [item, ...current].slice(0, 25))
   }, [])
+
+  const resetHelperLockCounters = useCallback(() => {
+    if (helperResetLockToggleCount === 0) {
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'helper lock counters already empty',
+        content: 'No helper reset lock toggle history to clear.',
+        severity: 'warn',
+      })
+      return
+    }
+    setQuickActionHistory((current) =>
+      current.filter((entry) => !entry.method.startsWith('helper.reset.lock.toggle.')),
+    )
+    setHelperLockCountersLastResetAt(new Date().toISOString())
+    appendBlock({
+      id: `blk_${Date.now()}`,
+      title: 'helper lock counters reset',
+      content: 'Reset helper lock counters.',
+      severity: 'info',
+    })
+  }, [appendBlock, helperResetLockToggleCount])
 
   const pushHistory = useCallback((item: QuickActionHistory) => {
     setQuickActionHistory((current) => [item, ...current].slice(0, 20))
@@ -1284,6 +1321,7 @@ function App() {
       `lockToggleAlt+L=${helperResetLockSourceCounts['Alt+L']}`,
       `lockToggleControls=${helperResetLockSourceCounts.controls}`,
       `lockToggleSnapshot=${helperResetLockSourceCounts.snapshot}`,
+      `lockCounterResetAt=${helperLockCountersLastResetAt ?? 'never'}`,
       `hintVisible=${isImportHintVisible ? 'yes' : 'no'}`,
       `legendVisible=${showShortcutLegendInStatus ? 'yes' : 'no'}`,
       `legendOrder=${shortcutLegendOrder}`,
@@ -1314,6 +1352,7 @@ function App() {
     isImportHelperDiagnosticsExpanded,
     isImportHintVisible,
     helperDiagnosticsLastResetAt,
+    helperLockCountersLastResetAt,
     isHelperResetBadgeSectionExpanded,
     isHelperResetBadgeVisible,
     isHelperResetLocked,
@@ -1341,6 +1380,7 @@ function App() {
       `lockToggleAlt+L=${helperResetLockSourceCounts['Alt+L']}`,
       `lockToggleControls=${helperResetLockSourceCounts.controls}`,
       `lockToggleSnapshot=${helperResetLockSourceCounts.snapshot}`,
+      `lockCounterResetAt=${helperLockCountersLastResetAt ?? 'never'}`,
     ].join('\n')
     try {
       if (!navigator.clipboard?.writeText) {
@@ -1366,6 +1406,7 @@ function App() {
   }, [
     appendBlock,
     helperDiagnosticsLastResetAt,
+    helperLockCountersLastResetAt,
     helperResetLockSourceCounts,
     helperResetLockToggleCount,
     isHelperResetBadgeSectionExpanded,
@@ -1572,6 +1613,17 @@ function App() {
     }
     window.localStorage.removeItem(HELPER_DIAGNOSTICS_RESET_AT_STORAGE_KEY)
   }, [helperDiagnosticsLastResetAt])
+
+  useEffect(() => {
+    if (helperLockCountersLastResetAt) {
+      window.localStorage.setItem(
+        HELPER_LOCK_COUNTERS_RESET_AT_STORAGE_KEY,
+        helperLockCountersLastResetAt,
+      )
+      return
+    }
+    window.localStorage.removeItem(HELPER_LOCK_COUNTERS_RESET_AT_STORAGE_KEY)
+  }, [helperLockCountersLastResetAt])
 
   useEffect(() => {
     window.localStorage.setItem(HELPER_RESET_TIMESTAMP_FORMAT_STORAGE_KEY, helperResetTimestampFormat)
@@ -2521,6 +2573,12 @@ function App() {
                 <span className={`import-summary-badge badge-hint-mode ${helperResetLockToggleToneClass}`}>
                   diagLockToggles:{helperResetLockToggleCount}
                 </span>
+                <span className="import-summary-badge badge-hint-mode">
+                  counterReset:
+                  {helperLockCountersLastResetAt
+                    ? formatTimestamp(helperLockCountersLastResetAt, 'relative')
+                    : 'never'}
+                </span>
                 {helperDiagnosticsDisplayMode === 'verbose' ? (
                   <>
                     <span className="import-summary-badge badge-hint-mode">
@@ -2579,6 +2637,19 @@ function App() {
                   onClick={() => toggleHelperResetLock('controls')}
                 >
                   {isHelperResetLocked ? 'Unlock Reset' : 'Lock Reset'}
+                </button>
+                <button
+                  type="button"
+                  className="summary-copy-button"
+                  onClick={resetHelperLockCounters}
+                  disabled={helperResetLockToggleCount === 0}
+                  title={
+                    helperResetLockToggleCount === 0
+                      ? 'No lock toggles recorded yet.'
+                      : 'Clear helper reset lock toggle counters.'
+                  }
+                >
+                  Reset Lock Counters
                 </button>
                 <label className="helper-reset-format">
                   Reset TS

@@ -135,11 +135,15 @@ describe('Dashboard shell', () => {
     expect(
       screen.getByText('diagLockToggles:0', { selector: '.import-snapshot-badges .import-summary-badge' }),
     ).toBeInTheDocument()
+    expect(
+      screen.getByText('counterReset:never', { selector: '.import-snapshot-badges .import-summary-badge' }),
+    ).toBeInTheDocument()
     expect(screen.getByLabelText('Reset TS')).toHaveValue('absolute')
     expect(screen.getByLabelText('Stale After')).toHaveValue('24')
     expect(screen.getByRole('button', { name: 'Copy Helper Summary' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Reset Helper Prefs' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Unlock Reset' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Reset Lock Counters' })).toBeDisabled()
     expect(screen.getByText('Last import: none')).toBeInTheDocument()
     expect(screen.getByText('Alt+L:0')).toBeInTheDocument()
     expect(screen.getByText('controls:0')).toBeInTheDocument()
@@ -772,6 +776,28 @@ describe('Dashboard shell', () => {
     expect(screen.getByText('diagLockToggles:3')).toHaveClass('counter-tone-high')
   })
 
+  it('resets helper lock counters and persists reset timestamp', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Unlock Reset' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Lock Reset' }))
+    expect(screen.getByText('lockToggles:2')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Reset Lock Counters' })).toBeEnabled()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reset Lock Counters' }))
+
+    expect(screen.getByText('Reset helper lock counters.')).toBeInTheDocument()
+    expect(screen.getByText('lockToggles:0')).toBeInTheDocument()
+    expect(screen.getByText('srcControls:0')).toBeInTheDocument()
+    expect(screen.getByText('diagLockToggles:0')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Reset Lock Counters' })).toBeDisabled()
+    expect(window.localStorage.getItem('quick-action-helper-lock-counters-reset-at-v1')).toBeTruthy()
+    expect(
+      screen.queryByText('counterReset:never', {
+        selector: '.import-snapshot-badges .import-summary-badge',
+      }),
+    ).not.toBeInTheDocument()
+  })
+
   it('initializes helper reset lock from localStorage', () => {
     window.localStorage.setItem('quick-action-helper-reset-lock-v1', 'unlocked')
     render(<App />)
@@ -954,6 +980,7 @@ describe('Dashboard shell', () => {
       expect(payload).toContain('lockToggleAlt+L=0')
       expect(payload).toContain('lockToggleControls=0')
       expect(payload).toContain('lockToggleSnapshot=0')
+      expect(payload).toContain('lockCounterResetAt=never')
       expect(
         screen.getByText('Copied helper diagnostics summary to clipboard (lock: locked).'),
       ).toBeInTheDocument()
@@ -982,6 +1009,7 @@ describe('Dashboard shell', () => {
       expect(payload).toContain('lockToggleAlt+L=0')
       expect(payload).toContain('lockToggleControls=0')
       expect(payload).toContain('lockToggleSnapshot=0')
+      expect(payload).toContain('lockCounterResetAt=never')
       expect(
         screen.getByText('Copied helper reset badge text to clipboard (lock: locked).'),
       ).toBeInTheDocument()
