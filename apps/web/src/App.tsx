@@ -1390,6 +1390,68 @@ function App() {
         MARKET_OVERLAY_MARKER_SKIP_STEP % marketOverlayTimelineCount !== 0
       : marketOverlayActiveTimelineIndex + MARKET_OVERLAY_MARKER_SKIP_STEP <
         marketOverlayTimelineCount
+  const marketOverlayMarkerNavigationTargets = useMemo(() => {
+    if (isMarketOverlayNavigationLocked) {
+      return 'locked'
+    }
+    if (marketOverlayActiveTimelineIndex < 0 || marketOverlayTimelineCount === 0) {
+      return 'none'
+    }
+    const formatTarget = (index: number) => {
+      if (index < 0) {
+        return 'none'
+      }
+      const annotation = marketOverlayScopedTimelineAnnotations[index]
+      return annotation ? `${annotation.kind}:${annotation.label}` : 'none'
+    }
+    const resolveRelativeIndex = (offset: number, isAllowed: boolean) => {
+      if (!isAllowed) {
+        return -1
+      }
+      const rawTargetIndex = marketOverlayActiveTimelineIndex + offset
+      return marketOverlayMarkerWrap === 'wrap'
+        ? ((rawTargetIndex % marketOverlayTimelineCount) + marketOverlayTimelineCount) %
+            marketOverlayTimelineCount
+        : Math.max(0, Math.min(marketOverlayTimelineCount - 1, rawTargetIndex))
+    }
+    const previousIndex = resolveRelativeIndex(-1, canSelectPreviousMarketOverlayMarker)
+    const nextIndex = resolveRelativeIndex(1, canSelectNextMarketOverlayMarker)
+    const skipBackwardIndex = resolveRelativeIndex(
+      -MARKET_OVERLAY_MARKER_SKIP_STEP,
+      canSelectSkipBackwardMarketOverlayMarker,
+    )
+    const skipForwardIndex = resolveRelativeIndex(
+      MARKET_OVERLAY_MARKER_SKIP_STEP,
+      canSelectSkipForwardMarketOverlayMarker,
+    )
+    const previousKindIndex = canSelectPreviousSameKindMarketOverlayMarker
+      ? marketOverlayPreviousSameKindIndex
+      : -1
+    const nextKindIndex = canSelectNextSameKindMarketOverlayMarker ? marketOverlayNextSameKindIndex : -1
+    const previousBucketIndex = canSelectPreviousBucketMarketOverlayMarker
+      ? marketOverlayPreviousBucketIndex
+      : -1
+    const nextBucketIndex = canSelectNextBucketMarketOverlayMarker ? marketOverlayNextBucketIndex : -1
+    return `prev:${formatTarget(previousIndex)} · next:${formatTarget(nextIndex)} · skipBack:${formatTarget(skipBackwardIndex)} · skipForward:${formatTarget(skipForwardIndex)} · prevKind:${formatTarget(previousKindIndex)} · nextKind:${formatTarget(nextKindIndex)} · prevBucket:${formatTarget(previousBucketIndex)} · nextBucket:${formatTarget(nextBucketIndex)}`
+  }, [
+    canSelectNextBucketMarketOverlayMarker,
+    canSelectNextMarketOverlayMarker,
+    canSelectNextSameKindMarketOverlayMarker,
+    canSelectPreviousBucketMarketOverlayMarker,
+    canSelectPreviousMarketOverlayMarker,
+    canSelectPreviousSameKindMarketOverlayMarker,
+    canSelectSkipBackwardMarketOverlayMarker,
+    canSelectSkipForwardMarketOverlayMarker,
+    isMarketOverlayNavigationLocked,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayMarkerWrap,
+    marketOverlayNextBucketIndex,
+    marketOverlayNextSameKindIndex,
+    marketOverlayPreviousBucketIndex,
+    marketOverlayPreviousSameKindIndex,
+    marketOverlayScopedTimelineAnnotations,
+    marketOverlayTimelineCount,
+  ])
   const marketOverlayMarkerShortcutHint = useMemo(() => {
     if (isMarketOverlayNavigationLocked) {
       return 'locked'
@@ -4483,6 +4545,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Behavior">Marker behavior: {marketOverlayMarkerBehaviorLabel}</p>
             <p aria-label="Overlay Marker Navigation">Marker nav: {marketOverlayMarkerNavigationLabel}</p>
+            <p aria-label="Overlay Marker Navigation Targets">
+              Targets: {marketOverlayMarkerNavigationTargets}
+            </p>
             <p aria-label="Overlay Marker Shortcut Hint">
               Shortcuts: {marketOverlayMarkerShortcutHint}
             </p>
