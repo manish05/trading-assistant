@@ -311,6 +311,38 @@ class CopytradePreviewParams(BaseModel):
     constraints: CopytradeConstraintsParams
 
 
+class MarketplaceFollowParams(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+
+    account_id: str = Field(alias="accountId", min_length=1)
+    strategy_id: str = Field(alias="strategyId", min_length=1)
+
+
+class MarketplaceMyFollowsParams(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+
+    account_id: str = Field(alias="accountId", min_length=1)
+
+
+class CopytradeControlParams(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+
+    account_id: str = Field(alias="accountId", min_length=1)
+    strategy_id: str = Field(alias="strategyId", min_length=1)
+
+
 def _error_response(
     request_id: str,
     *,
@@ -391,6 +423,7 @@ async def handle_gateway_websocket(
     session_id: str | None = None
     risk_engine = RiskEngine()
     backtest_simulator = BacktestSimulator()
+    marketplace_follows: dict[tuple[str, str], dict[str, Any]] = {}
 
     while True:
         try:
@@ -961,6 +994,144 @@ async def handle_gateway_websocket(
             )
             continue
 
+        if frame.method == "marketplace.follow":
+            try:
+                params = MarketplaceFollowParams.model_validate(frame.params)
+            except ValidationError:
+                await websocket.send_json(
+                    _error_response(
+                        frame.id,
+                        code="INVALID_PARAMS",
+                        message="invalid marketplace.follow params",
+                    )
+                )
+                continue
+
+            follow_key = (params.account_id, params.strategy_id)
+            existing = marketplace_follows.get(follow_key)
+            followed_at = datetime.now(UTC).isoformat()
+            paused = (
+                existing["paused"]
+                if existing and isinstance(existing.get("paused"), bool)
+                else False
+            )
+            follow_entry = {
+                "followId": existing["followId"] if existing else f"follow_{uuid4().hex[:8]}",
+                "accountId": params.account_id,
+                "strategyId": params.strategy_id,
+                "paused": paused,
+                "copytradeStatus": "paused" if paused else "active",
+                "updatedAt": followed_at,
+            }
+            marketplace_follows[follow_key] = follow_entry
+            audit_store.append(
+                actor="user",
+                action="marketplace.follow",
+                trace_id=frame.id,
+                data={
+                    "accountId": params.account_id,
+                    "strategyId": params.strategy_id,
+                    "followId": follow_entry["followId"],
+                },
+            )
+            await websocket.send_json(
+                _event_frame(
+                    "event.marketplace.follow",
+                    {"requestId": frame.id, **follow_entry},
+                )
+            )
+            await websocket.send_json(
+                _ok_response(
+                    frame.id,
+                    payload={"status": "following", **follow_entry},
+                )
+            )
+            continue
+
+        if frame.method == "marketplace.unfollow":
+            try:
+                params = MarketplaceFollowParams.model_validate(frame.params)
+            except ValidationError:
+                await websocket.send_json(
+                    _error_response(
+                        frame.id,
+                        code="INVALID_PARAMS",
+                        message="invalid marketplace.unfollow params",
+                    )
+                )
+                continue
+
+            follow_key = (params.account_id, params.strategy_id)
+            existing = marketplace_follows.pop(follow_key, None)
+            unfollowed_at = datetime.now(UTC).isoformat()
+            follow_payload = {
+                "followId": existing["followId"] if existing else None,
+                "accountId": params.account_id,
+                "strategyId": params.strategy_id,
+                "status": "unfollowed",
+                "updatedAt": unfollowed_at,
+                "removed": existing is not None,
+            }
+            audit_store.append(
+                actor="user",
+                action="marketplace.unfollow",
+                trace_id=frame.id,
+                data={
+                    "accountId": params.account_id,
+                    "strategyId": params.strategy_id,
+                    "removed": existing is not None,
+                },
+            )
+            await websocket.send_json(
+                _event_frame(
+                    "event.marketplace.unfollow",
+                    {"requestId": frame.id, **follow_payload},
+                )
+            )
+            await websocket.send_json(
+                _ok_response(
+                    frame.id,
+                    payload=follow_payload,
+                )
+            )
+            continue
+
+        if frame.method == "marketplace.myFollows":
+            try:
+                params = MarketplaceMyFollowsParams.model_validate(frame.params)
+            except ValidationError:
+                await websocket.send_json(
+                    _error_response(
+                        frame.id,
+                        code="INVALID_PARAMS",
+                        message="invalid marketplace.myFollows params",
+                    )
+                )
+                continue
+
+            follows = [
+                follow
+                for follow in marketplace_follows.values()
+                if follow["accountId"] == params.account_id
+            ]
+            follows.sort(key=lambda item: item["strategyId"])
+            audit_store.append(
+                actor="user",
+                action="marketplace.myFollows",
+                trace_id=frame.id,
+                data={
+                    "accountId": params.account_id,
+                    "followCount": len(follows),
+                },
+            )
+            await websocket.send_json(
+                _ok_response(
+                    frame.id,
+                    payload={"follows": follows},
+                )
+            )
+            continue
+
         if frame.method == "copytrade.preview":
             try:
                 params = CopytradePreviewParams.model_validate(frame.params)
@@ -1020,6 +1191,147 @@ async def handle_gateway_websocket(
                 )
             )
             await websocket.send_json(_ok_response(frame.id, payload=result_payload))
+            continue
+
+        if frame.method == "copytrade.status":
+            try:
+                params = CopytradeControlParams.model_validate(frame.params)
+            except ValidationError:
+                await websocket.send_json(
+                    _error_response(
+                        frame.id,
+                        code="INVALID_PARAMS",
+                        message="invalid copytrade.status params",
+                    )
+                )
+                continue
+
+            follow = marketplace_follows.get((params.account_id, params.strategy_id))
+            if follow is None:
+                await websocket.send_json(
+                    _error_response(
+                        frame.id,
+                        code="NOT_FOUND",
+                        message="copytrade follow not found",
+                    )
+                )
+                continue
+
+            status_payload = {
+                "followId": follow["followId"],
+                "accountId": follow["accountId"],
+                "strategyId": follow["strategyId"],
+                "paused": follow["paused"],
+                "status": "paused" if follow["paused"] else "active",
+                "updatedAt": follow["updatedAt"],
+            }
+            audit_store.append(
+                actor="user",
+                action="copytrade.status",
+                trace_id=frame.id,
+                data=status_payload,
+            )
+            await websocket.send_json(_ok_response(frame.id, payload=status_payload))
+            continue
+
+        if frame.method == "copytrade.pause":
+            try:
+                params = CopytradeControlParams.model_validate(frame.params)
+            except ValidationError:
+                await websocket.send_json(
+                    _error_response(
+                        frame.id,
+                        code="INVALID_PARAMS",
+                        message="invalid copytrade.pause params",
+                    )
+                )
+                continue
+
+            follow = marketplace_follows.get((params.account_id, params.strategy_id))
+            if follow is None:
+                await websocket.send_json(
+                    _error_response(
+                        frame.id,
+                        code="NOT_FOUND",
+                        message="copytrade follow not found",
+                    )
+                )
+                continue
+
+            follow["paused"] = True
+            follow["copytradeStatus"] = "paused"
+            follow["updatedAt"] = datetime.now(UTC).isoformat()
+            status_payload = {
+                "followId": follow["followId"],
+                "accountId": follow["accountId"],
+                "strategyId": follow["strategyId"],
+                "paused": True,
+                "status": "paused",
+                "updatedAt": follow["updatedAt"],
+            }
+            audit_store.append(
+                actor="user",
+                action="copytrade.pause",
+                trace_id=frame.id,
+                data=status_payload,
+            )
+            await websocket.send_json(
+                _event_frame(
+                    "event.copytrade.execution",
+                    {"requestId": frame.id, "action": "pause", "status": status_payload},
+                )
+            )
+            await websocket.send_json(_ok_response(frame.id, payload=status_payload))
+            continue
+
+        if frame.method == "copytrade.resume":
+            try:
+                params = CopytradeControlParams.model_validate(frame.params)
+            except ValidationError:
+                await websocket.send_json(
+                    _error_response(
+                        frame.id,
+                        code="INVALID_PARAMS",
+                        message="invalid copytrade.resume params",
+                    )
+                )
+                continue
+
+            follow = marketplace_follows.get((params.account_id, params.strategy_id))
+            if follow is None:
+                await websocket.send_json(
+                    _error_response(
+                        frame.id,
+                        code="NOT_FOUND",
+                        message="copytrade follow not found",
+                    )
+                )
+                continue
+
+            follow["paused"] = False
+            follow["copytradeStatus"] = "active"
+            follow["updatedAt"] = datetime.now(UTC).isoformat()
+            status_payload = {
+                "followId": follow["followId"],
+                "accountId": follow["accountId"],
+                "strategyId": follow["strategyId"],
+                "paused": False,
+                "status": "active",
+                "updatedAt": follow["updatedAt"],
+            }
+            audit_store.append(
+                actor="user",
+                action="copytrade.resume",
+                trace_id=frame.id,
+                data=status_payload,
+            )
+            await websocket.send_json(
+                _event_frame(
+                    "event.copytrade.execution",
+                    {"requestId": frame.id, "action": "resume", "status": status_payload},
+                )
+            )
+            await websocket.send_json(_ok_response(frame.id, payload=status_payload))
             continue
 
         if frame.method == "risk.preview":

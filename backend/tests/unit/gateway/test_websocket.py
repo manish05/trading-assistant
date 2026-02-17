@@ -941,6 +941,141 @@ def test_websocket_copytrade_preview_maps_and_blocks_signals(tmp_path) -> None:
     assert blocked_response["payload"]["blockedReason"] == "DIRECTION_FILTER_BLOCK"
 
 
+def test_websocket_marketplace_follow_lifecycle_updates_copytrade_controls(tmp_path) -> None:
+    client = TestClient(create_app(data_dir=tmp_path))
+
+    with client.websocket_connect("/ws") as websocket:
+        websocket.send_json(_connect_payload())
+        _ = websocket.receive_json()
+
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_marketplace_follow_1",
+                "method": "marketplace.follow",
+                "params": {
+                    "accountId": "acct_demo_1",
+                    "strategyId": "strat_dashboard_1",
+                },
+            }
+        )
+        follow_event, follow_response = _read_event_then_response(websocket)
+
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_copytrade_status_1",
+                "method": "copytrade.status",
+                "params": {
+                    "accountId": "acct_demo_1",
+                    "strategyId": "strat_dashboard_1",
+                },
+            }
+        )
+        status_response = websocket.receive_json()
+
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_copytrade_pause_1",
+                "method": "copytrade.pause",
+                "params": {
+                    "accountId": "acct_demo_1",
+                    "strategyId": "strat_dashboard_1",
+                },
+            }
+        )
+        pause_event, pause_response = _read_event_then_response(websocket)
+
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_copytrade_resume_1",
+                "method": "copytrade.resume",
+                "params": {
+                    "accountId": "acct_demo_1",
+                    "strategyId": "strat_dashboard_1",
+                },
+            }
+        )
+        resume_event, resume_response = _read_event_then_response(websocket)
+
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_marketplace_follows_1",
+                "method": "marketplace.myFollows",
+                "params": {
+                    "accountId": "acct_demo_1",
+                },
+            }
+        )
+        follows_response = websocket.receive_json()
+
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_marketplace_unfollow_1",
+                "method": "marketplace.unfollow",
+                "params": {
+                    "accountId": "acct_demo_1",
+                    "strategyId": "strat_dashboard_1",
+                },
+            }
+        )
+        unfollow_event, unfollow_response = _read_event_then_response(websocket)
+
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_copytrade_status_missing",
+                "method": "copytrade.status",
+                "params": {
+                    "accountId": "acct_demo_1",
+                    "strategyId": "strat_dashboard_1",
+                },
+            }
+        )
+        missing_status_response = websocket.receive_json()
+
+    assert follow_event is not None
+    assert follow_event["event"] == "event.marketplace.follow"
+    assert follow_response["ok"] is True
+    assert follow_response["payload"]["status"] == "following"
+    assert follow_response["payload"]["copytradeStatus"] == "active"
+    assert follow_response["payload"]["paused"] is False
+
+    assert status_response["ok"] is True
+    assert status_response["payload"]["status"] == "active"
+    assert status_response["payload"]["paused"] is False
+
+    assert pause_event is not None
+    assert pause_event["event"] == "event.copytrade.execution"
+    assert pause_response["ok"] is True
+    assert pause_response["payload"]["status"] == "paused"
+    assert pause_response["payload"]["paused"] is True
+
+    assert resume_event is not None
+    assert resume_event["event"] == "event.copytrade.execution"
+    assert resume_response["ok"] is True
+    assert resume_response["payload"]["status"] == "active"
+    assert resume_response["payload"]["paused"] is False
+
+    assert follows_response["ok"] is True
+    assert len(follows_response["payload"]["follows"]) == 1
+    assert follows_response["payload"]["follows"][0]["strategyId"] == "strat_dashboard_1"
+    assert follows_response["payload"]["follows"][0]["paused"] is False
+
+    assert unfollow_event is not None
+    assert unfollow_event["event"] == "event.marketplace.unfollow"
+    assert unfollow_response["ok"] is True
+    assert unfollow_response["payload"]["status"] == "unfollowed"
+    assert unfollow_response["payload"]["removed"] is True
+
+    assert missing_status_response["ok"] is False
+    assert missing_status_response["error"]["code"] == "NOT_FOUND"
+
+
 def test_gateway_trades_place_blocks_when_risk_rejects(tmp_path) -> None:
     client = TestClient(create_app(data_dir=tmp_path))
 
