@@ -35,6 +35,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Agents' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Create Agent' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Run Onboarding Flow' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Marker Focus')).toHaveValue('all')
     expect(screen.getByLabelText('Chart Lens')).toHaveValue('price-only')
     expect(screen.getByLabelText('Overlay Mode')).toHaveValue('price-only')
     expect(screen.getByLabelText('Overlay Legend')).toBeInTheDocument()
@@ -44,6 +45,9 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Overlay Marker Summary')).toHaveTextContent(
       'Markers: trade:0 · risk:0 · feed:0 · latest:none',
+    )
+    expect(screen.getByLabelText('Overlay Marker Drilldown')).toHaveTextContent(
+      'Marker focus: all · visible:0 · latest:none',
     )
     expect(screen.getByLabelText('Overlay Markers')).toHaveTextContent('none')
     expect(screen.getByLabelText('Overlay Chart Runtime')).toBeInTheDocument()
@@ -250,11 +254,15 @@ describe('Dashboard shell', () => {
     fireEvent.change(screen.getByLabelText('Chart Lens'), {
       target: { value: 'diagnostics' },
     })
+    fireEvent.change(screen.getByLabelText('Marker Focus'), {
+      target: { value: 'risk' },
+    })
 
     expect(window.localStorage.getItem('quick-action-market-overlay-mode-v1')).toBe('with-risk')
     expect(window.localStorage.getItem('quick-action-market-overlay-chart-lens-v1')).toBe(
       'diagnostics',
     )
+    expect(window.localStorage.getItem('quick-action-market-overlay-marker-focus-v1')).toBe('risk')
   })
 
   it('shows chart fallback runtime when ResizeObserver is unavailable', async () => {
@@ -286,7 +294,7 @@ describe('Dashboard shell', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Refresh Overlay Snapshot' }))
     expect(screen.getByLabelText('Overlay Snapshot Summary')).toHaveTextContent(
-      'Summary: candles:0 · chartPoints:0 · chartLens:price-only · markers:t0/r0/f0 · trend:neutral · vol:n/a · pulse:quiet(0) · regime:observe',
+      'Summary: candles:0 · chartPoints:0 · chartLens:price-only · markerFocus:all · markers:t0/r0/f0 · trend:neutral · vol:n/a · pulse:quiet(0) · regime:observe',
     )
     expect(screen.getByLabelText('Overlay Snapshot Time')).not.toHaveTextContent('Snapshot: never')
 
@@ -295,7 +303,7 @@ describe('Dashboard shell', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: 'Refresh Overlay Snapshot' }))
     expect(screen.getByLabelText('Overlay Snapshot Summary')).toHaveTextContent(
-      'Summary: candles:0 · tradeEvents:0 · chartPoints:0 · chartLens:price-only · markers:t0/r0/f0 · trend:neutral · vol:n/a · pulse:quiet(0) · regime:observe',
+      'Summary: candles:0 · tradeEvents:0 · chartPoints:0 · chartLens:price-only · markerFocus:all · markers:t0/r0/f0 · trend:neutral · vol:n/a · pulse:quiet(0) · regime:observe',
     )
 
     fireEvent.change(screen.getByLabelText('Overlay Mode'), {
@@ -303,7 +311,7 @@ describe('Dashboard shell', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: 'Refresh Overlay Snapshot' }))
     expect(screen.getByLabelText('Overlay Snapshot Summary')).toHaveTextContent(
-      'Summary: candles:0 · tradeEvents:0 · riskAlerts:0 · chartPoints:0 · chartLens:price-only · markers:t0/r0/f0 · trend:neutral · vol:n/a · pulse:quiet(0) · regime:observe',
+      'Summary: candles:0 · tradeEvents:0 · riskAlerts:0 · chartPoints:0 · chartLens:price-only · markerFocus:all · markers:t0/r0/f0 · trend:neutral · vol:n/a · pulse:quiet(0) · regime:observe',
     )
   })
 
@@ -423,6 +431,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Summary')).toHaveTextContent(
       'Markers: trade:0 · risk:0 · feed:0 · latest:none',
     )
+    expect(screen.getByLabelText('Overlay Marker Drilldown')).toHaveTextContent(
+      'Marker focus: all · visible:0 · latest:none',
+    )
     expect(screen.getByLabelText('Overlay Markers')).toHaveTextContent('none')
     expect(screen.getByLabelText('Overlay Trend')).toHaveTextContent('Trend: neutral')
     expect(screen.getByLabelText('Overlay Trend')).toHaveClass('overlay-trend-neutral')
@@ -457,6 +468,9 @@ describe('Dashboard shell', () => {
       expect(screen.getByLabelText('Overlay Marker Summary')).toHaveTextContent(
         'Markers: trade:1 · risk:1 · feed:0 · latest:risk:live_trading_disabled:raised',
       )
+      expect(screen.getByLabelText('Overlay Marker Drilldown')).toHaveTextContent(
+        'Marker focus: all · visible:2 · latest:risk:live_trading_disabled:raised',
+      )
       expect(screen.getByLabelText('Overlay Markers')).toHaveTextContent(
         'risk:live_trading_disabled:raised',
       )
@@ -473,6 +487,15 @@ describe('Dashboard shell', () => {
       expect(screen.getByLabelText('Overlay Regime')).toHaveClass('overlay-regime-risk-on')
     })
 
+    fireEvent.change(screen.getByLabelText('Marker Focus'), { target: { value: 'risk' } })
+    expect(screen.getByLabelText('Overlay Marker Drilldown')).toHaveTextContent(
+      'Marker focus: risk · visible:1 · latest:risk:live_trading_disabled:raised',
+    )
+    expect(screen.getByLabelText('Overlay Markers')).toHaveTextContent(
+      'risk:live_trading_disabled:raised',
+    )
+    expect(screen.getByLabelText('Overlay Markers')).not.toHaveTextContent('trade:closed:queued')
+
     fireEvent.change(screen.getByLabelText('Chart Lens'), { target: { value: 'diagnostics' } })
     expect(screen.getByLabelText('Overlay Chart Summary')).toHaveTextContent(
       'Chart: points:2 · last:2.00 · trendPoints:0 · baseline:1.50 · lens:diagnostics',
@@ -480,7 +503,7 @@ describe('Dashboard shell', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Refresh Overlay Snapshot' }))
     expect(screen.getByLabelText('Overlay Snapshot Summary')).toHaveTextContent(
-      'Summary: candles:2 · tradeEvents:1 · riskAlerts:1 · chartPoints:2 · chartLens:diagnostics · markers:t1/r1/f0 · trend:up (+1.00) · vol:1.00 · pulse:intense(5) · regime:risk_on',
+      'Summary: candles:2 · tradeEvents:1 · riskAlerts:1 · chartPoints:2 · chartLens:diagnostics · markerFocus:risk · markers:t1/r1/f0 · trend:up (+1.00) · vol:1.00 · pulse:intense(5) · regime:risk_on',
     )
 
     sendSpy.mockRestore()

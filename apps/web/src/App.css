@@ -97,6 +97,7 @@
 
 .market-overlay-chart-summary,
 .market-overlay-marker-summary,
+.market-overlay-marker-drilldown,
 .market-overlay-chart-runtime {
   margin: 0;
   font-size: 0.7rem;
@@ -105,6 +106,10 @@
 
 .market-overlay-marker-summary {
   color: #84d3f8;
+}
+
+.market-overlay-marker-drilldown {
+  color: #c2d7f8;
 }
 
 .market-overlay-chart-runtime.runtime-ready {
