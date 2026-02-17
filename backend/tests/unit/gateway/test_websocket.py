@@ -131,8 +131,10 @@ def test_websocket_risk_preview_returns_decision() -> None:
                 },
             }
         )
-        response = websocket.receive_json()
+        event, response = _read_event_then_response(websocket)
 
+    assert event is not None
+    assert event["event"] == "event.risk.preview"
     assert response["ok"] is True
     assert response["payload"]["allowed"] is False
     assert len(response["payload"]["violations"]) == 2
@@ -324,7 +326,7 @@ def test_gateway_memory_search_and_backtest_methods(tmp_path) -> None:
                 },
             }
         )
-        backtest_response = websocket.receive_json()
+        backtest_event, backtest_response = _read_event_then_response(websocket)
 
     assert memory_response["ok"] is True
     assert len(memory_response["payload"]["results"]) >= 1
@@ -332,6 +334,8 @@ def test_gateway_memory_search_and_backtest_methods(tmp_path) -> None:
 
     assert backtest_response["ok"] is True
     assert backtest_response["payload"]["metrics"]["trades"] == 1
+    assert backtest_event is not None
+    assert backtest_event["event"] == "event.backtests.report"
 
 
 def test_gateway_device_pair_and_notify_methods(tmp_path) -> None:

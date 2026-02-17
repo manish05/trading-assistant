@@ -364,6 +364,15 @@ async def handle_gateway_websocket(
                 },
             )
             await websocket.send_json(
+                _event_frame(
+                    "event.risk.preview",
+                    {
+                        "requestId": frame.id,
+                        "decision": decision_payload,
+                    },
+                )
+            )
+            await websocket.send_json(
                 _ok_response(
                     frame.id,
                     payload=decision_payload,
@@ -528,6 +537,15 @@ async def handle_gateway_websocket(
                     "signals": len(params.signals),
                     "trades": report.metrics.trades,
                 },
+            )
+            await websocket.send_json(
+                _event_frame(
+                    "event.backtests.report",
+                    {
+                        "requestId": frame.id,
+                        "metrics": payload["metrics"],
+                    },
+                )
             )
             await websocket.send_json(_ok_response(frame.id, payload=payload))
             continue
