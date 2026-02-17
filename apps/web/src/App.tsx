@@ -693,7 +693,7 @@ function App() {
         appendBlock({
           id: `blk_${nowMs}`,
           title: `${method} debounced`,
-          content: `Skipped duplicate request within ${minRequestGapMs}ms guard window.`,
+          content: `Skipped duplicate request within ${minRequestGapMs}ms guard window.${lockTelemetryFailureSuffix}`,
           severity: 'warn',
         })
         return null
@@ -1088,7 +1088,7 @@ function App() {
       appendBlock({
         id: `blk_${Date.now()}`,
         title: 'preset load failed',
-        content: `Preset not found: ${selectedPresetName}`,
+        content: `Preset not found: ${selectedPresetName}.${lockTelemetryFailureSuffix}`,
         severity: 'error',
       })
       return
@@ -1126,7 +1126,7 @@ function App() {
       appendBlock({
         id: `blk_${Date.now()}`,
         title: 'presets exported',
-        content: `Copied ${Object.keys(store).length} presets JSON to clipboard.`,
+        content: `Copied ${Object.keys(store).length} presets JSON to clipboard (${lockTelemetryToastDetailsWithLabelAndSources}).`,
         severity: 'info',
       })
     } catch {
@@ -1137,7 +1137,12 @@ function App() {
         severity: 'warn',
       })
     }
-  }, [appendBlock, lockTelemetryFailureSuffix, readPresetStore])
+  }, [
+    appendBlock,
+    lockTelemetryFailureSuffix,
+    lockTelemetryToastDetailsWithLabelAndSources,
+    readPresetStore,
+  ])
 
   const importPresetsJson = useCallback(() => {
     const source = presetImportInput.trim()

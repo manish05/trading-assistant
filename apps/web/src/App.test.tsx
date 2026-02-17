@@ -274,6 +274,11 @@ describe('Dashboard shell', () => {
       const accountListCalls = payloads.filter((payload) => payload.method === 'accounts.list')
       expect(accountListCalls).toHaveLength(1)
     })
+    expect(
+      screen.getByText(
+        'Skipped duplicate request within 1000ms guard window. Lock telemetry: lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0.',
+      ),
+    ).toBeInTheDocument()
 
     sendSpy.mockRestore()
   })
@@ -353,6 +358,31 @@ describe('Dashboard shell', () => {
     expect(
       screen.getByText(
         'Expected a JSON object keyed by preset name. Lock telemetry: lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0.',
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it('shows lock telemetry when selected preset no longer exists', async () => {
+    render(<App />)
+
+    fireEvent.change(screen.getByLabelText('Preset Name'), {
+      target: { value: 'volatile-template' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Save Preset' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('option', { name: 'volatile-template' })).toBeInTheDocument()
+    })
+
+    fireEvent.change(screen.getByLabelText('Saved Presets'), {
+      target: { value: 'volatile-template' },
+    })
+    window.localStorage.setItem('quick-action-presets-v1', JSON.stringify({}))
+    fireEvent.click(screen.getByRole('button', { name: 'Load Preset' }))
+
+    expect(
+      screen.getByText(
+        'Preset not found: volatile-template. Lock telemetry: lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0.',
       ),
     ).toBeInTheDocument()
   })
@@ -513,6 +543,11 @@ describe('Dashboard shell', () => {
       expect(writeText).toHaveBeenCalled()
       const payload = String(writeText.mock.calls[writeText.mock.calls.length - 1][0])
       expect(payload).toContain('export-template')
+      expect(
+        screen.getByText(
+          'Copied 1 presets JSON to clipboard (lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0).',
+        ),
+      ).toBeInTheDocument()
     })
   })
 
