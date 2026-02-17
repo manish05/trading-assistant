@@ -541,6 +541,15 @@ describe('Dashboard shell', () => {
     expect(importTextarea).toHaveValue('')
   })
 
+  it('toggles hint mode via slash shortcut when import input is empty', () => {
+    render(<App />)
+    const importTextarea = screen.getByLabelText('Import Presets JSON')
+    fireEvent.keyDown(importTextarea, { key: '/' })
+
+    expect(screen.getByText(/Shortcuts: Ctrl\/Cmd\+Enter import · Esc clear\./)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Use Detailed Hints' })).toBeInTheDocument()
+  })
+
   it('truncates long import report name lists with overflow counter', async () => {
     render(<App />)
     const manyPresets = Object.fromEntries(
