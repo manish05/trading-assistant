@@ -36,6 +36,43 @@ describe('Dashboard shell', () => {
     const sendSpy = vi.spyOn(WebSocket.prototype, 'send')
     render(<App />)
 
+    fireEvent.change(screen.getByLabelText('Account ID'), {
+      target: { value: 'acct_custom_9' },
+    })
+    fireEvent.change(screen.getByLabelText('Provider Account ID'), {
+      target: { value: 'provider_custom_9' },
+    })
+    fireEvent.change(screen.getByLabelText('Account Label'), {
+      target: { value: 'Swing Account' },
+    })
+    fireEvent.change(screen.getByLabelText('Account Symbols (comma separated)'), {
+      target: { value: 'XAUUSDm, ETHUSDm' },
+    })
+    fireEvent.change(screen.getByLabelText('Device ID'), {
+      target: { value: 'dev_custom_9' },
+    })
+    fireEvent.change(screen.getByLabelText('Device Platform'), {
+      target: { value: 'android' },
+    })
+    fireEvent.change(screen.getByLabelText('Device Label'), {
+      target: { value: 'Pixel' },
+    })
+    fireEvent.change(screen.getByLabelText('Device Pair Push Token'), {
+      target: { value: 'push_pair_custom' },
+    })
+    fireEvent.change(screen.getByLabelText('Device Rotate Push Token'), {
+      target: { value: 'push_rotate_custom' },
+    })
+    fireEvent.change(screen.getByLabelText('Feed Topic'), {
+      target: { value: 'market.tick' },
+    })
+    fireEvent.change(screen.getByLabelText('Feed Symbol'), {
+      target: { value: 'BTCUSDm' },
+    })
+    fireEvent.change(screen.getByLabelText('Feed Timeframe'), {
+      target: { value: '1h' },
+    })
+
     fireEvent.click(screen.getByRole('button', { name: 'Accounts' }))
     fireEvent.click(screen.getByRole('button', { name: 'Connect Account' }))
     fireEvent.click(screen.getByRole('button', { name: 'Disconnect Account' }))
@@ -49,7 +86,7 @@ describe('Dashboard shell', () => {
     await waitFor(() => {
       const payloads = sendSpy.mock.calls.map(([serialized]) =>
         JSON.parse(String(serialized)),
-      ) as Array<{ method?: string }>
+      ) as Array<{ method?: string; params?: Record<string, unknown> }>
       const methods = payloads.map((payload) => payload.method)
 
       expect(methods).toContain('accounts.list')
@@ -61,6 +98,37 @@ describe('Dashboard shell', () => {
       expect(methods).toContain('devices.registerPush')
       expect(methods).toContain('devices.unpair')
       expect(methods).toContain('feeds.subscribe')
+
+      const accountConnect = payloads.find((payload) => payload.method === 'accounts.connect')
+      expect(accountConnect?.params).toMatchObject({
+        accountId: 'acct_custom_9',
+        providerAccountId: 'provider_custom_9',
+        label: 'Swing Account',
+        allowedSymbols: ['XAUUSDm', 'ETHUSDm'],
+      })
+
+      const devicePair = payloads.find((payload) => payload.method === 'devices.pair')
+      expect(devicePair?.params).toMatchObject({
+        deviceId: 'dev_custom_9',
+        platform: 'android',
+        label: 'Pixel',
+        pushToken: 'push_pair_custom',
+      })
+
+      const deviceRegisterPush = payloads.find(
+        (payload) => payload.method === 'devices.registerPush',
+      )
+      expect(deviceRegisterPush?.params).toMatchObject({
+        deviceId: 'dev_custom_9',
+        pushToken: 'push_rotate_custom',
+      })
+
+      const feedSubscribe = payloads.find((payload) => payload.method === 'feeds.subscribe')
+      expect(feedSubscribe?.params).toMatchObject({
+        topics: ['market.tick'],
+        symbols: ['BTCUSDm'],
+        timeframes: ['1h'],
+      })
     })
 
     sendSpy.mockRestore()

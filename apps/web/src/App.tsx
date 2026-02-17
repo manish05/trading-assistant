@@ -40,10 +40,26 @@ function App() {
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [accountCount, setAccountCount] = useState<number | null>(null)
   const [managedAccountId, setManagedAccountId] = useState<string>('acct_demo_1')
+  const [managedProviderAccountId, setManagedProviderAccountId] = useState<string>('provider_demo_1')
+  const [managedAccountLabel, setManagedAccountLabel] = useState<string>('Demo Account')
+  const [managedAccountSymbolsInput, setManagedAccountSymbolsInput] = useState<string>(
+    'ETHUSDm,BTCUSDm',
+  )
   const [accountConnectionStatus, setAccountConnectionStatus] = useState<string>('unknown')
   const [deviceCount, setDeviceCount] = useState<number | null>(null)
   const [managedDeviceId, setManagedDeviceId] = useState<string>('dev_iphone_1')
+  const [managedDevicePlatform, setManagedDevicePlatform] = useState<string>('ios')
+  const [managedDeviceLabel, setManagedDeviceLabel] = useState<string>('Dashboard iPhone')
+  const [managedDevicePairPushToken, setManagedDevicePairPushToken] = useState<string>(
+    'push_dashboard_1',
+  )
+  const [managedDeviceRotatePushToken, setManagedDeviceRotatePushToken] = useState<string>(
+    'push_dashboard_rotated',
+  )
   const [feedCount, setFeedCount] = useState<number | null>(null)
+  const [feedTopic, setFeedTopic] = useState<string>('market.candle.closed')
+  const [feedSymbol, setFeedSymbol] = useState<string>('ETHUSDm')
+  const [feedTimeframe, setFeedTimeframe] = useState<string>('5m')
   const [subscriptionCount, setSubscriptionCount] = useState<number | null>(null)
   const [activeSubscriptionId, setActiveSubscriptionId] = useState<string | null>(null)
   const [feedLifecycle, setFeedLifecycle] = useState<FeedLifecycleBadge[]>([])
@@ -150,13 +166,17 @@ function App() {
   }, [sendRequest])
 
   const sendAccountConnect = useCallback(async () => {
+    const symbols = managedAccountSymbolsInput
+      .split(',')
+      .map((value) => value.trim())
+      .filter((value) => value.length > 0)
     const payload = await sendRequest('accounts.connect', {
       accountId: managedAccountId,
       connectorId: 'metaapi_mcp',
-      providerAccountId: 'provider_demo_1',
+      providerAccountId: managedProviderAccountId,
       mode: 'demo',
-      label: 'Demo Account',
-      allowedSymbols: ['ETHUSDm', 'BTCUSDm'],
+      label: managedAccountLabel,
+      allowedSymbols: symbols,
     })
     const account = payload?.account
     if (account && typeof account === 'object') {
@@ -167,7 +187,13 @@ function App() {
         setAccountConnectionStatus(account.status)
       }
     }
-  }, [managedAccountId, sendRequest])
+  }, [
+    managedAccountId,
+    managedAccountLabel,
+    managedAccountSymbolsInput,
+    managedProviderAccountId,
+    sendRequest,
+  ])
 
   const sendAccountDisconnect = useCallback(async () => {
     if (!managedAccountId) {
@@ -218,9 +244,9 @@ function App() {
   const sendDevicePair = useCallback(async () => {
     const payload = await sendRequest('devices.pair', {
       deviceId: managedDeviceId,
-      platform: 'ios',
-      label: 'Dashboard iPhone',
-      pushToken: 'push_dashboard_1',
+      platform: managedDevicePlatform,
+      label: managedDeviceLabel,
+      pushToken: managedDevicePairPushToken,
     })
     const device = payload?.device
     if (device && typeof device === 'object' && 'deviceId' in device) {
@@ -228,7 +254,13 @@ function App() {
         setManagedDeviceId(device.deviceId)
       }
     }
-  }, [managedDeviceId, sendRequest])
+  }, [
+    managedDeviceId,
+    managedDeviceLabel,
+    managedDevicePairPushToken,
+    managedDevicePlatform,
+    sendRequest,
+  ])
 
   const sendDeviceRegisterPush = useCallback(async () => {
     if (!managedDeviceId) {
@@ -243,7 +275,7 @@ function App() {
 
     const payload = await sendRequest('devices.registerPush', {
       deviceId: managedDeviceId,
-      pushToken: 'push_dashboard_rotated',
+      pushToken: managedDeviceRotatePushToken,
     })
     const device = payload?.device
     if (device && typeof device === 'object' && 'deviceId' in device) {
@@ -251,7 +283,7 @@ function App() {
         setManagedDeviceId(device.deviceId)
       }
     }
-  }, [appendBlock, managedDeviceId, sendRequest])
+  }, [appendBlock, managedDeviceId, managedDeviceRotatePushToken, sendRequest])
 
   const sendDeviceUnpair = useCallback(async () => {
     if (!managedDeviceId) {
@@ -277,9 +309,9 @@ function App() {
 
   const sendFeedSubscribe = useCallback(async () => {
     const payload = await sendRequest('feeds.subscribe', {
-      topics: ['market.candle.closed'],
-      symbols: ['ETHUSDm'],
-      timeframes: ['5m'],
+      topics: [feedTopic],
+      symbols: [feedSymbol],
+      timeframes: [feedTimeframe],
     })
     if (!payload) {
       return
@@ -297,7 +329,7 @@ function App() {
         setActiveSubscriptionId(subscriptionId)
       }
     }
-  }, [sendRequest])
+  }, [feedSymbol, feedTimeframe, feedTopic, sendRequest])
 
   const sendFeedUnsubscribe = useCallback(async () => {
     if (!activeSubscriptionId) {
@@ -481,6 +513,89 @@ function App() {
               </button>
             </div>
           </div>
+          <section className="template-panel">
+            <h3>Quick Action Templates</h3>
+            <div className="template-grid">
+              <label>
+                Account ID
+                <input
+                  value={managedAccountId}
+                  onChange={(event) => setManagedAccountId(event.target.value)}
+                />
+              </label>
+              <label>
+                Provider Account ID
+                <input
+                  value={managedProviderAccountId}
+                  onChange={(event) => setManagedProviderAccountId(event.target.value)}
+                />
+              </label>
+              <label>
+                Account Label
+                <input
+                  value={managedAccountLabel}
+                  onChange={(event) => setManagedAccountLabel(event.target.value)}
+                />
+              </label>
+              <label>
+                Account Symbols (comma separated)
+                <input
+                  value={managedAccountSymbolsInput}
+                  onChange={(event) => setManagedAccountSymbolsInput(event.target.value)}
+                />
+              </label>
+              <label>
+                Device ID
+                <input
+                  value={managedDeviceId}
+                  onChange={(event) => setManagedDeviceId(event.target.value)}
+                />
+              </label>
+              <label>
+                Device Platform
+                <input
+                  value={managedDevicePlatform}
+                  onChange={(event) => setManagedDevicePlatform(event.target.value)}
+                />
+              </label>
+              <label>
+                Device Label
+                <input
+                  value={managedDeviceLabel}
+                  onChange={(event) => setManagedDeviceLabel(event.target.value)}
+                />
+              </label>
+              <label>
+                Device Pair Push Token
+                <input
+                  value={managedDevicePairPushToken}
+                  onChange={(event) => setManagedDevicePairPushToken(event.target.value)}
+                />
+              </label>
+              <label>
+                Device Rotate Push Token
+                <input
+                  value={managedDeviceRotatePushToken}
+                  onChange={(event) => setManagedDeviceRotatePushToken(event.target.value)}
+                />
+              </label>
+              <label>
+                Feed Topic
+                <input value={feedTopic} onChange={(event) => setFeedTopic(event.target.value)} />
+              </label>
+              <label>
+                Feed Symbol
+                <input value={feedSymbol} onChange={(event) => setFeedSymbol(event.target.value)} />
+              </label>
+              <label>
+                Feed Timeframe
+                <input
+                  value={feedTimeframe}
+                  onChange={(event) => setFeedTimeframe(event.target.value)}
+                />
+              </label>
+            </div>
+          </section>
           <div className="block-list">
             {blocks.length === 0 ? (
               <p className="empty-state">No blocks yet. Connect and trigger gateway methods.</p>
