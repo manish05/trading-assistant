@@ -1664,6 +1664,47 @@ function App() {
           : ranked[0]?.key ?? 'none'
     return `up:${upCount} · down:${downCount} · flat:${flatCount} · n/a:${unavailableCount} · dominant:${dominant}`
   }, [marketOverlayChartPoints, marketOverlayScopedTimelineAnnotations])
+  const marketOverlayMarkerDeltaAlignmentSummary = useMemo(() => {
+    if (marketOverlayScopedTimelineAnnotations.length === 0 || marketOverlayChartPoints.length === 0) {
+      return 'none'
+    }
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1]
+    const baseline = marketOverlayAverageClose
+    if (!latestPoint || baseline === null) {
+      return `aligned:+0/-0 · mixed:0 · flat:0 · n/a:${marketOverlayScopedTimelineAnnotations.length}`
+    }
+    const chartPointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    let alignedPositiveCount = 0
+    let alignedNegativeCount = 0
+    let mixedCount = 0
+    let flatCount = 0
+    let unavailableCount = 0
+    marketOverlayScopedTimelineAnnotations.forEach((annotation) => {
+      const point = chartPointByTime.get(annotation.time)
+      if (!point) {
+        unavailableCount += 1
+        return
+      }
+      const deltaToLatest = point.value - latestPoint.value
+      const deltaToAverage = point.value - baseline
+      const deltaToLatestSign = Math.sign(deltaToLatest)
+      const deltaToAverageSign = Math.sign(deltaToAverage)
+      if (deltaToLatestSign === 0 || deltaToAverageSign === 0) {
+        flatCount += 1
+        return
+      }
+      if (deltaToLatestSign === deltaToAverageSign) {
+        if (deltaToLatestSign > 0) {
+          alignedPositiveCount += 1
+          return
+        }
+        alignedNegativeCount += 1
+        return
+      }
+      mixedCount += 1
+    })
+    return `aligned:+${alignedPositiveCount}/-${alignedNegativeCount} · mixed:${mixedCount} · flat:${flatCount} · n/a:${unavailableCount}`
+  }, [marketOverlayAverageClose, marketOverlayChartPoints, marketOverlayScopedTimelineAnnotations])
   const marketOverlayMarkerDeltaExtremes = useMemo(() => {
     if (marketOverlayScopedTimelineAnnotations.length === 0 || marketOverlayChartPoints.length === 0) {
       return 'none'
@@ -4673,6 +4714,9 @@ function App() {
             <p aria-label="Overlay Marker Delta Summary">Delta summary: {marketOverlayMarkerDeltaSummary}</p>
             <p aria-label="Overlay Marker Delta Tone Summary">
               Delta tones: {marketOverlayMarkerDeltaToneSummary}
+            </p>
+            <p aria-label="Overlay Marker Delta Alignment Summary">
+              Delta alignment: {marketOverlayMarkerDeltaAlignmentSummary}
             </p>
             <p aria-label="Overlay Marker Delta Extremes">
               Delta extremes: {marketOverlayMarkerDeltaExtremes}
