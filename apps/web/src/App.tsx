@@ -70,6 +70,7 @@ const PRESETS_STORAGE_KEY = 'quick-action-presets-v1'
 const HISTORY_FILTER_STORAGE_KEY = 'quick-action-history-filter-v1'
 const TIMESTAMP_FORMAT_STORAGE_KEY = 'quick-action-timestamp-format-v1'
 const PRESET_IMPORT_MODE_STORAGE_KEY = 'quick-action-preset-import-mode-v1'
+const PRESET_IMPORT_REPORT_EXPANDED_STORAGE_KEY = 'quick-action-preset-import-report-expanded-v1'
 const MAX_IMPORT_REPORT_NAMES = 6
 const DEFAULT_PRESET_TEMPLATE: QuickActionPreset = {
   managedAccountId: 'acct_demo_1',
@@ -130,6 +131,14 @@ const readPresetImportModeFromStorage = (): PresetImportMode => {
   }
   const raw = window.localStorage.getItem(PRESET_IMPORT_MODE_STORAGE_KEY)
   return raw === 'merge' ? 'merge' : 'overwrite'
+}
+
+const readPresetImportReportExpandedFromStorage = (): boolean => {
+  if (typeof window === 'undefined') {
+    return true
+  }
+  const raw = window.localStorage.getItem(PRESET_IMPORT_REPORT_EXPANDED_STORAGE_KEY)
+  return raw !== 'collapsed'
 }
 
 const sanitizePreset = (value: unknown): QuickActionPreset | null => {
@@ -251,7 +260,9 @@ function App() {
     readPresetImportModeFromStorage,
   )
   const [presetImportReport, setPresetImportReport] = useState<PresetImportReport | null>(null)
-  const [isPresetImportReportExpanded, setIsPresetImportReportExpanded] = useState<boolean>(true)
+  const [isPresetImportReportExpanded, setIsPresetImportReportExpanded] = useState<boolean>(
+    readPresetImportReportExpandedFromStorage,
+  )
   const [availablePresetNames, setAvailablePresetNames] = useState<string[]>(() =>
     Object.keys(readPresetStoreFromStorage()).sort(),
   )
@@ -844,7 +855,6 @@ function App() {
       overwrittenCount,
       importedAt: new Date().toISOString(),
     })
-    setIsPresetImportReportExpanded(true)
     appendBlock({
       id: `blk_${Date.now()}`,
       title: 'presets imported',
@@ -1062,6 +1072,13 @@ function App() {
   useEffect(() => {
     window.localStorage.setItem(PRESET_IMPORT_MODE_STORAGE_KEY, presetImportMode)
   }, [presetImportMode])
+
+  useEffect(() => {
+    window.localStorage.setItem(
+      PRESET_IMPORT_REPORT_EXPANDED_STORAGE_KEY,
+      isPresetImportReportExpanded ? 'expanded' : 'collapsed',
+    )
+  }, [isPresetImportReportExpanded])
 
   const filteredHistory =
     historyFilter === 'all'

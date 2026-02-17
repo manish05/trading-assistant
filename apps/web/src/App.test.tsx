@@ -506,9 +506,31 @@ describe('Dashboard shell', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Collapse Report' }))
     expect(screen.queryByText('Accepted')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Expand Report' })).toBeEnabled()
+    expect(window.localStorage.getItem('quick-action-preset-import-report-expanded-v1')).toBe(
+      'collapsed',
+    )
 
     fireEvent.click(screen.getByRole('button', { name: 'Expand Report' }))
     expect(screen.getByText('Accepted')).toBeInTheDocument()
+    expect(window.localStorage.getItem('quick-action-preset-import-report-expanded-v1')).toBe(
+      'expanded',
+    )
+  })
+
+  it('initializes import report expansion state from localStorage preference', async () => {
+    window.localStorage.setItem('quick-action-preset-import-report-expanded-v1', 'collapsed')
+    render(<App />)
+    fireEvent.change(screen.getByLabelText('Import Presets JSON'), {
+      target: {
+        value: '{"collapsed-template":{"feedSymbol":"ETHUSDm"}}',
+      },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Import Presets JSON' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Expand Report' })).toBeEnabled()
+    })
+    expect(screen.queryByText('Accepted')).not.toBeInTheDocument()
   })
 
   it('copies full accepted and rejected names without truncation', async () => {
