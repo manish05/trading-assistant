@@ -1345,7 +1345,21 @@ function App() {
     store[normalizedName] = collectCurrentPreset()
     writePresetStore(store)
     setSelectedPresetName(normalizedName)
-  }, [appendBlock, collectCurrentPreset, lockTelemetryFailureSuffix, presetNameInput, readPresetStore, writePresetStore])
+    appendBlock({
+      id: `blk_${Date.now()}`,
+      title: 'preset saved',
+      content: `Saved preset: ${normalizedName}.${lockTelemetrySuccessSentence}`,
+      severity: 'info',
+    })
+  }, [
+    appendBlock,
+    collectCurrentPreset,
+    lockTelemetryFailureSuffix,
+    lockTelemetrySuccessSentence,
+    presetNameInput,
+    readPresetStore,
+    writePresetStore,
+  ])
 
   const loadSelectedPreset = useCallback(() => {
     if (!selectedPresetName) {
@@ -1369,7 +1383,20 @@ function App() {
       return
     }
     applyPreset(preset)
-  }, [appendBlock, applyPreset, lockTelemetryFailureSuffix, readPresetStore, selectedPresetName])
+    appendBlock({
+      id: `blk_${Date.now()}`,
+      title: 'preset loaded',
+      content: `Loaded preset: ${selectedPresetName}.${lockTelemetrySuccessSentence}`,
+      severity: 'info',
+    })
+  }, [
+    appendBlock,
+    applyPreset,
+    lockTelemetryFailureSuffix,
+    lockTelemetrySuccessSentence,
+    readPresetStore,
+    selectedPresetName,
+  ])
 
   const deleteSelectedPreset = useCallback(() => {
     if (!selectedPresetName) {
@@ -1387,8 +1414,21 @@ function App() {
     }
     delete store[selectedPresetName]
     writePresetStore(store)
+    appendBlock({
+      id: `blk_${Date.now()}`,
+      title: 'preset deleted',
+      content: `Deleted preset: ${selectedPresetName}.${lockTelemetrySuccessSentence}`,
+      severity: 'info',
+    })
     setSelectedPresetName('')
-  }, [appendBlock, lockTelemetryFailureSuffix, readPresetStore, selectedPresetName, writePresetStore])
+  }, [
+    appendBlock,
+    lockTelemetryFailureSuffix,
+    lockTelemetrySuccessSentence,
+    readPresetStore,
+    selectedPresetName,
+    writePresetStore,
+  ])
 
   const exportPresetsJson = useCallback(async () => {
     const store = readPresetStore()

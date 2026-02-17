@@ -1244,6 +1244,75 @@ describe('Dashboard shell', () => {
     })
   })
 
+  it('shows telemetry-rich preset save/load/delete success toasts when visible', async () => {
+    render(<App />)
+
+    fireEvent.change(screen.getByLabelText('Preset Name'), {
+      target: { value: 'success-template' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Save Preset' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('option', { name: 'success-template' })).toBeInTheDocument()
+    })
+
+    expect(
+      screen.getByText(
+        'Saved preset: success-template. Lock telemetry: lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0.',
+      ),
+    ).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Load Preset' }))
+    expect(
+      screen.getByText(
+        'Loaded preset: success-template. Lock telemetry: lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0.',
+      ),
+    ).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Preset' }))
+    expect(
+      screen.getByText(
+        'Deleted preset: success-template. Lock telemetry: lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0.',
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it('omits preset save/load/delete success telemetry when block telemetry is hidden', async () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Hide Block Telemetry' }))
+
+    fireEvent.change(screen.getByLabelText('Preset Name'), {
+      target: { value: 'hidden-template' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Save Preset' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('option', { name: 'hidden-template' })).toBeInTheDocument()
+    })
+    expect(screen.getByText('Saved preset: hidden-template.')).toBeInTheDocument()
+    expect(
+      screen.queryByText(
+        'Saved preset: hidden-template. Lock telemetry: lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0.',
+      ),
+    ).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Load Preset' }))
+    expect(screen.getByText('Loaded preset: hidden-template.')).toBeInTheDocument()
+    expect(
+      screen.queryByText(
+        'Loaded preset: hidden-template. Lock telemetry: lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0.',
+      ),
+    ).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Preset' }))
+    expect(screen.getByText('Deleted preset: hidden-template.')).toBeInTheDocument()
+    expect(
+      screen.queryByText(
+        'Deleted preset: hidden-template. Lock telemetry: lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0.',
+      ),
+    ).not.toBeInTheDocument()
+  })
+
   it('shows lock telemetry in preset validation warnings', () => {
     render(<App />)
 
