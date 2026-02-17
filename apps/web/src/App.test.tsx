@@ -30,6 +30,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Unpair Device' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Subscribe Feed' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Unsubscribe Feed' })).toBeDisabled()
+    expect(screen.getByLabelText('Refresh Interval (sec)')).toBeInTheDocument()
+    expect(screen.getByLabelText('Min Request Gap (ms)')).toBeInTheDocument()
+    expect(screen.getByLabelText('Enable Auto Refresh')).toBeInTheDocument()
   })
 
   it('sends account and feed management requests', async () => {
@@ -129,6 +132,27 @@ describe('Dashboard shell', () => {
         symbols: ['BTCUSDm'],
         timeframes: ['1h'],
       })
+    })
+
+    sendSpy.mockRestore()
+  })
+
+  it('debounces repeated requests for the same method', async () => {
+    const sendSpy = vi.spyOn(WebSocket.prototype, 'send')
+    render(<App />)
+
+    fireEvent.change(screen.getByLabelText('Min Request Gap (ms)'), {
+      target: { value: '1000' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Accounts' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Accounts' }))
+
+    await waitFor(() => {
+      const payloads = sendSpy.mock.calls.map(([serialized]) =>
+        JSON.parse(String(serialized)),
+      ) as Array<{ method?: string }>
+      const accountListCalls = payloads.filter((payload) => payload.method === 'accounts.list')
+      expect(accountListCalls).toHaveLength(1)
     })
 
     sendSpy.mockRestore()

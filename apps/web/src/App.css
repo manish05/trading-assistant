@@ -147,6 +147,12 @@
   gap: 0.2rem;
 }
 
+.template-grid .template-toggle {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.4rem;
+}
+
 .template-grid input {
   background: #14223a;
   border: 1px solid #2d4a7e;

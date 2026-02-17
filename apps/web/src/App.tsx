@@ -31,6 +31,7 @@ type FeedLifecycleBadge = {
 function App() {
   const wsRef = useRef<WebSocket | null>(null)
   const pendingRequestsRef = useRef<Map<string, (value: GatewayResponse) => void>>(new Map())
+  const requestGuardsRef = useRef<Map<string, number>>(new Map())
   const requestCounter = useRef(0)
 
   const [connectionStatus, setConnectionStatus] = useState<
@@ -56,6 +57,9 @@ function App() {
   const [managedDeviceRotatePushToken, setManagedDeviceRotatePushToken] = useState<string>(
     'push_dashboard_rotated',
   )
+  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState<boolean>(false)
+  const [refreshSecondsInput, setRefreshSecondsInput] = useState<string>('15')
+  const [minRequestGapMsInput, setMinRequestGapMsInput] = useState<string>('400')
   const [feedCount, setFeedCount] = useState<number | null>(null)
   const [feedTopic, setFeedTopic] = useState<string>('market.candle.closed')
   const [feedSymbol, setFeedSymbol] = useState<string>('ETHUSDm')
@@ -87,6 +91,20 @@ function App() {
         })
         return null
       }
+
+      const minRequestGapMs = Math.max(Number.parseInt(minRequestGapMsInput, 10) || 0, 0)
+      const nowMs = Date.now()
+      const lastSentAtMs = requestGuardsRef.current.get(method) ?? 0
+      if (nowMs - lastSentAtMs < minRequestGapMs) {
+        appendBlock({
+          id: `blk_${nowMs}`,
+          title: `${method} debounced`,
+          content: `Skipped duplicate request within ${minRequestGapMs}ms guard window.`,
+          severity: 'warn',
+        })
+        return null
+      }
+      requestGuardsRef.current.set(method, nowMs)
 
       requestCounter.current += 1
       const requestId = `req_${requestCounter.current}`
@@ -122,7 +140,7 @@ function App() {
       })
       return response.payload ?? {}
     },
-    [appendBlock],
+    [appendBlock, minRequestGapMsInput],
   )
 
   const sendPing = useCallback(() => {
@@ -359,6 +377,22 @@ function App() {
   }, [activeSubscriptionId, appendBlock, sendRequest])
 
   useEffect(() => {
+    if (!autoRefreshEnabled) {
+      return
+    }
+    const refreshSeconds = Math.max(Number.parseInt(refreshSecondsInput, 10) || 0, 1)
+    const intervalId = window.setInterval(() => {
+      void sendAccountsList()
+      void sendFeedsList()
+      void sendDevicesList()
+    }, refreshSeconds * 1000)
+
+    return () => {
+      window.clearInterval(intervalId)
+    }
+  }, [autoRefreshEnabled, refreshSecondsInput, sendAccountsList, sendDevicesList, sendFeedsList])
+
+  useEffect(() => {
     const socket = new WebSocket(websocketUrl)
     const pendingMap = pendingRequestsRef.current
     wsRef.current = socket
@@ -593,6 +627,28 @@ function App() {
                   value={feedTimeframe}
                   onChange={(event) => setFeedTimeframe(event.target.value)}
                 />
+              </label>
+              <label>
+                Refresh Interval (sec)
+                <input
+                  value={refreshSecondsInput}
+                  onChange={(event) => setRefreshSecondsInput(event.target.value)}
+                />
+              </label>
+              <label>
+                Min Request Gap (ms)
+                <input
+                  value={minRequestGapMsInput}
+                  onChange={(event) => setMinRequestGapMsInput(event.target.value)}
+                />
+              </label>
+              <label className="template-toggle">
+                <input
+                  type="checkbox"
+                  checked={autoRefreshEnabled}
+                  onChange={(event) => setAutoRefreshEnabled(event.target.checked)}
+                />
+                Enable Auto Refresh
               </label>
             </div>
           </section>
