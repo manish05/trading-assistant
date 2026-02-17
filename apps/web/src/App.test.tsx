@@ -894,6 +894,19 @@ describe('Dashboard shell', () => {
     ).toBeInTheDocument()
   })
 
+  it('omits history skip telemetry when block telemetry is hidden', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Hide Block Telemetry' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Copy History' }))
+
+    expect(screen.getByText('No quick-action history entries available for current filter.')).toBeInTheDocument()
+    expect(
+      screen.queryByText(
+        'No quick-action history entries available for current filter. Lock telemetry: lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0.',
+      ),
+    ).not.toBeInTheDocument()
+  })
+
   it('shows lock telemetry when history copy fails', async () => {
     const writeText = vi.fn().mockRejectedValue(new Error('denied'))
     Object.defineProperty(window.navigator, 'clipboard', {
@@ -1272,6 +1285,19 @@ describe('Dashboard shell', () => {
     ).toBeInTheDocument()
   })
 
+  it('omits import report skip telemetry when block telemetry is hidden', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Hide Block Telemetry' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Copy Import Report' }))
+
+    expect(screen.getByText('No preset import report available yet.')).toBeInTheDocument()
+    expect(
+      screen.queryByText(
+        'No preset import report available yet. Lock telemetry: lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0.',
+      ),
+    ).not.toBeInTheDocument()
+  })
+
   it('shows lock telemetry when last summary copy is skipped', () => {
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: 'Copy Last Summary' }))
@@ -1282,6 +1308,19 @@ describe('Dashboard shell', () => {
     ).toBeInTheDocument()
   })
 
+  it('omits last summary skip telemetry when block telemetry is hidden', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Hide Block Telemetry' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Copy Last Summary' }))
+
+    expect(screen.getByText('No preset import report available yet.')).toBeInTheDocument()
+    expect(
+      screen.queryByText(
+        'No preset import report available yet. Lock telemetry: lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0.',
+      ),
+    ).not.toBeInTheDocument()
+  })
+
   it('shows lock telemetry when full names copy is skipped', () => {
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: 'Copy Full Names' }))
@@ -1290,6 +1329,19 @@ describe('Dashboard shell', () => {
         'No preset import report available yet. Lock telemetry: lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0.',
       ),
     ).toBeInTheDocument()
+  })
+
+  it('omits full names skip telemetry when block telemetry is hidden', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Hide Block Telemetry' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Copy Full Names' }))
+
+    expect(screen.getByText('No preset import report available yet.')).toBeInTheDocument()
+    expect(
+      screen.queryByText(
+        'No preset import report available yet. Lock telemetry: lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0.',
+      ),
+    ).not.toBeInTheDocument()
   })
 
   it('shows lock telemetry when status legend copy fails', async () => {
