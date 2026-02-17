@@ -1254,7 +1254,10 @@ function App() {
       appendBlock({
         id: `blk_${Date.now()}`,
         title: 'import names copied',
-        content: 'Copied full accepted/rejected import names to clipboard.',
+        content: `Copied full accepted/rejected import names to clipboard (lock toggles: ${helperResetLockToggleCount}, tone: ${helperResetLockToggleToneClass.replace(
+          'counter-tone-',
+          '',
+        )}, reset: ${helperLockCountersLastResetAt ?? 'never'}).`,
         severity: 'info',
       })
     } catch {
@@ -1265,7 +1268,14 @@ function App() {
         severity: 'warn',
       })
     }
-  }, [appendBlock, lockTelemetrySummaryLines, presetImportReport])
+  }, [
+    appendBlock,
+    helperLockCountersLastResetAt,
+    helperResetLockToggleCount,
+    helperResetLockToggleToneClass,
+    lockTelemetrySummaryLines,
+    presetImportReport,
+  ])
 
   const copyLastImportSummary = useCallback(async () => {
     if (!presetImportReport) {

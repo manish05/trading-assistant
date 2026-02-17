@@ -1401,6 +1401,11 @@ describe('Dashboard shell', () => {
       expect(payload).toContain('lockCounterResetAt=never')
       expect(payload).toContain('lockToggleTotal=0')
       expect(payload).toContain('lockToggleTone=none')
+      expect(
+        screen.getByText(
+          'Copied full accepted/rejected import names to clipboard (lock toggles: 0, tone: none, reset: never).',
+        ),
+      ).toBeInTheDocument()
     })
   })
 })
