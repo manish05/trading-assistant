@@ -117,6 +117,12 @@ const MAX_IMPORT_REPORT_NAMES = 6
 const FEED_CANDLE_FETCH_LIMIT = 50
 const DEVICE_NOTIFY_TEST_MESSAGE = 'Dashboard test notification'
 const DEFAULT_RISK_EMERGENCY_REASON = 'dashboard emergency stop trigger'
+const DEFAULT_AGENT_ID = 'agent_eth_5m'
+const DEFAULT_AGENT_LABEL = 'ETH Momentum Agent'
+const DEFAULT_AGENT_SOUL_TEMPLATE =
+  '# SOUL\nI am concise and risk-first. I explain decisions in clear, short blocks.'
+const DEFAULT_AGENT_MANUAL_TEMPLATE =
+  '# TRADING MANUAL\nOnly trade with stop loss and defined invalidation.'
 const TRADE_ORDER_REFERENCE_ID = 'order_demo_1'
 const TRADE_POSITION_REFERENCE_ID = 'position_demo_1'
 const COPYTRADE_PREVIEW_SIGNAL_ID = 'sig_dashboard_preview'
@@ -430,9 +436,12 @@ function App() {
   const [protocolVersion, setProtocolVersion] = useState<number | null>(null)
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [accountCount, setAccountCount] = useState<number | null>(null)
+  const [agentCount, setAgentCount] = useState<number | null>(null)
   const [managedAccountId, setManagedAccountId] = useState<string>(
     DEFAULT_PRESET_TEMPLATE.managedAccountId,
   )
+  const [managedAgentId, setManagedAgentId] = useState<string>(DEFAULT_AGENT_ID)
+  const [managedAgentLabel, setManagedAgentLabel] = useState<string>(DEFAULT_AGENT_LABEL)
   const [managedProviderAccountId, setManagedProviderAccountId] = useState<string>(
     DEFAULT_PRESET_TEMPLATE.managedProviderAccountId,
   )
@@ -1031,6 +1040,31 @@ function App() {
       positionId: TRADE_POSITION_REFERENCE_ID,
     })
   }, [managedAccountId, sendRequest])
+
+  const sendAgentsList = useCallback(async () => {
+    const payload = await sendRequest('agents.list', {})
+    const agentsRaw = payload?.agents
+    const agents = Array.isArray(agentsRaw) ? agentsRaw : []
+    setAgentCount(agents.length)
+  }, [sendRequest])
+
+  const sendAgentCreate = useCallback(async () => {
+    const payload = await sendRequest('agents.create', {
+      agentId: managedAgentId.trim() || DEFAULT_AGENT_ID,
+      label: managedAgentLabel.trim() || DEFAULT_AGENT_LABEL,
+      soulTemplate: DEFAULT_AGENT_SOUL_TEMPLATE,
+      manualTemplate: DEFAULT_AGENT_MANUAL_TEMPLATE,
+    })
+    const agent = payload?.agent
+    if (agent && typeof agent === 'object') {
+      if ('agentId' in agent && typeof agent.agentId === 'string') {
+        setManagedAgentId(agent.agentId)
+      }
+      if ('label' in agent && typeof agent.label === 'string') {
+        setManagedAgentLabel(agent.label)
+      }
+    }
+  }, [managedAgentId, managedAgentLabel, sendRequest])
 
   const sendAccountsList = useCallback(async () => {
     const payload = await sendRequest('accounts.list', {})
@@ -1964,6 +1998,7 @@ function App() {
     }
     const refreshSeconds = Math.max(Number.parseInt(refreshSecondsInput, 10) || 0, 1)
     const intervalId = window.setInterval(() => {
+      void sendAgentsList()
       void sendAccountsList()
       void sendFeedsList()
       void sendDevicesList()
@@ -1972,7 +2007,14 @@ function App() {
     return () => {
       window.clearInterval(intervalId)
     }
-  }, [autoRefreshEnabled, refreshSecondsInput, sendAccountsList, sendDevicesList, sendFeedsList])
+  }, [
+    autoRefreshEnabled,
+    refreshSecondsInput,
+    sendAccountsList,
+    sendAgentsList,
+    sendDevicesList,
+    sendFeedsList,
+  ])
 
   useEffect(() => {
     const socket = new WebSocket(websocketUrl)
@@ -2084,6 +2126,18 @@ function App() {
               ...current,
             ].slice(0, 6),
           )
+        }
+        if (parsed.event === 'event.agent.status') {
+          const payload = parsed.payload ?? {}
+          const agent = payload.agent
+          if (agent && typeof agent === 'object') {
+            if ('agentId' in agent && typeof agent.agentId === 'string') {
+              setManagedAgentId(agent.agentId)
+            }
+            if ('label' in agent && typeof agent.label === 'string') {
+              setManagedAgentLabel(agent.label)
+            }
+          }
         }
         if (parsed.event === 'event.feed.event') {
           const payload = parsed.payload ?? {}
@@ -2450,6 +2504,12 @@ function App() {
               <button type="button" onClick={() => void sendAccountsList()}>
                 Accounts
               </button>
+              <button type="button" onClick={() => void sendAgentsList()}>
+                Agents
+              </button>
+              <button type="button" onClick={() => void sendAgentCreate()}>
+                Create Agent
+              </button>
               <button type="button" onClick={() => void sendAccountConnect()}>
                 Connect Account
               </button>
@@ -2524,6 +2584,20 @@ function App() {
                 <input
                   value={managedAccountSymbolsInput}
                   onChange={(event) => setManagedAccountSymbolsInput(event.target.value)}
+                />
+              </label>
+              <label>
+                Agent ID
+                <input
+                  value={managedAgentId}
+                  onChange={(event) => setManagedAgentId(event.target.value)}
+                />
+              </label>
+              <label>
+                Agent Label
+                <input
+                  value={managedAgentLabel}
+                  onChange={(event) => setManagedAgentLabel(event.target.value)}
                 />
               </label>
               <label>
@@ -2975,6 +3049,14 @@ function App() {
             <div>
               <dt>Accounts (last fetch)</dt>
               <dd>{accountCount ?? 'n/a'}</dd>
+            </div>
+            <div>
+              <dt>Agents (last fetch)</dt>
+              <dd>{agentCount ?? 'n/a'}</dd>
+            </div>
+            <div>
+              <dt>Managed Agent</dt>
+              <dd>{managedAgentId}</dd>
             </div>
             <div>
               <dt>Managed Account</dt>

@@ -32,6 +32,8 @@ describe('Dashboard shell', () => {
     render(<App />)
 
     expect(screen.getByRole('button', { name: 'Accounts' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Agents' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Create Agent' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Connect Account' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Disconnect Account' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Feeds' })).toBeInTheDocument()
@@ -40,6 +42,8 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Register Push' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Notify Device' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Unpair Device' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Agent ID')).toHaveValue('agent_eth_5m')
+    expect(screen.getByLabelText('Agent Label')).toHaveValue('ETH Momentum Agent')
     expect(screen.getByLabelText('Device Notify Message')).toHaveValue('Dashboard test notification')
     expect(screen.getByLabelText('Emergency Action')).toHaveValue('pause_trading')
     expect(screen.getByLabelText('Emergency Reason')).toHaveValue('dashboard emergency stop trigger')
@@ -184,6 +188,8 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByText('Trade Controls').closest('div')).toHaveTextContent('none')
     expect(screen.getByText('Risk Alerts').closest('div')).toHaveTextContent('none')
+    expect(screen.getByText('Agents (last fetch)').closest('div')).toHaveTextContent('n/a')
+    expect(screen.getByText('Managed Agent').closest('div')).toHaveTextContent('agent_eth_5m')
     expect(screen.getByText('Marketplace Signals (last fetch)').closest('div')).toHaveTextContent(
       'n/a',
     )
@@ -207,6 +213,12 @@ describe('Dashboard shell', () => {
     })
     fireEvent.change(screen.getByLabelText('Account Symbols (comma separated)'), {
       target: { value: 'XAUUSDm, ETHUSDm' },
+    })
+    fireEvent.change(screen.getByLabelText('Agent ID'), {
+      target: { value: 'agent_custom_9' },
+    })
+    fireEvent.change(screen.getByLabelText('Agent Label'), {
+      target: { value: 'Momentum Scalper' },
     })
     fireEvent.change(screen.getByLabelText('Device ID'), {
       target: { value: 'dev_custom_9' },
@@ -243,6 +255,8 @@ describe('Dashboard shell', () => {
     })
 
     fireEvent.click(screen.getByRole('button', { name: 'Accounts' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Agents' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Create Agent' }))
     fireEvent.click(screen.getByRole('button', { name: 'Risk Status' }))
     fireEvent.click(screen.getByRole('button', { name: 'Emergency Stop' }))
     fireEvent.click(screen.getByRole('button', { name: 'Resume Risk' }))
@@ -270,6 +284,8 @@ describe('Dashboard shell', () => {
       const methods = payloads.map((payload) => payload.method)
 
       expect(methods).toContain('accounts.list')
+      expect(methods).toContain('agents.list')
+      expect(methods).toContain('agents.create')
       expect(methods).toContain('risk.status')
       expect(methods).toContain('risk.emergencyStop')
       expect(methods).toContain('risk.resume')
@@ -296,6 +312,12 @@ describe('Dashboard shell', () => {
         providerAccountId: 'provider_custom_9',
         label: 'Swing Account',
         allowedSymbols: ['XAUUSDm', 'ETHUSDm'],
+      })
+
+      const agentsCreate = payloads.find((payload) => payload.method === 'agents.create')
+      expect(agentsCreate?.params).toMatchObject({
+        agentId: 'agent_custom_9',
+        label: 'Momentum Scalper',
       })
 
       const devicePair = payloads.find((payload) => payload.method === 'devices.pair')
@@ -514,6 +536,103 @@ describe('Dashboard shell', () => {
       const copytradeRow = screen.getByText('Copytrade Preview', { selector: 'dt' }).closest('div')
       expect(copytradeRow).not.toBeNull()
       expect(within(copytradeRow as HTMLElement).getByText('allowed (volume: 0.2)')).toBeInTheDocument()
+    })
+
+    sendSpy.mockRestore()
+  })
+
+  it('updates agent status rows after list and create responses', async () => {
+    const sendSpy = vi
+      .spyOn(WebSocket.prototype, 'send')
+      .mockImplementation(function (
+        this: WebSocket,
+        data: string | ArrayBufferLike | Blob | ArrayBufferView<ArrayBufferLike>,
+      ) {
+        if (typeof data !== 'string') {
+          return
+        }
+        const payload = JSON.parse(data) as {
+          type?: string
+          id?: string
+          method?: string
+        }
+        if (payload.type === 'req' && payload.method === 'agents.list' && payload.id) {
+          queueMicrotask(() => {
+            this.onmessage?.(
+              new MessageEvent('message', {
+                data: JSON.stringify({
+                  type: 'res',
+                  id: payload.id,
+                  ok: true,
+                  payload: {
+                    agents: [{ agentId: 'agent_a' }, { agentId: 'agent_b' }],
+                  },
+                }),
+              }),
+            )
+          })
+          return
+        }
+        if (payload.type === 'req' && payload.method === 'agents.create' && payload.id) {
+          queueMicrotask(() => {
+            this.onmessage?.(
+              new MessageEvent('message', {
+                data: JSON.stringify({
+                  type: 'event',
+                  event: 'event.agent.status',
+                  payload: {
+                    requestId: payload.id,
+                    agent: {
+                      agentId: 'agent_custom_9',
+                      label: 'Momentum Scalper',
+                      status: 'ready',
+                      workspacePath: '/tmp/agents/agent_custom_9',
+                    },
+                  },
+                }),
+              }),
+            )
+          })
+          queueMicrotask(() => {
+            this.onmessage?.(
+              new MessageEvent('message', {
+                data: JSON.stringify({
+                  type: 'res',
+                  id: payload.id,
+                  ok: true,
+                  payload: {
+                    agent: {
+                      agentId: 'agent_custom_9',
+                      label: 'Momentum Scalper',
+                      status: 'ready',
+                      workspacePath: '/tmp/agents/agent_custom_9',
+                    },
+                  },
+                }),
+              }),
+            )
+          })
+        }
+      })
+
+    render(<App />)
+    fireEvent.change(screen.getByLabelText('Agent ID'), {
+      target: { value: 'agent_custom_9' },
+    })
+    fireEvent.change(screen.getByLabelText('Agent Label'), {
+      target: { value: 'Momentum Scalper' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Agents' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Create Agent' }))
+
+    await waitFor(() => {
+      const agentCountRow = screen.getByText('Agents (last fetch)').closest('div')
+      expect(agentCountRow).not.toBeNull()
+      expect(within(agentCountRow as HTMLElement).getByText('2')).toBeInTheDocument()
+
+      const managedAgentRow = screen.getByText('Managed Agent').closest('div')
+      expect(managedAgentRow).not.toBeNull()
+      expect(within(managedAgentRow as HTMLElement).getByText('agent_custom_9')).toBeInTheDocument()
     })
 
     sendSpy.mockRestore()
