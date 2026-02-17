@@ -842,6 +842,46 @@ function App() {
     })
   }, [appendBlock, presetImportInput, presetImportMode, readPresetStore, writePresetStore])
 
+  const copyPresetImportReport = useCallback(async () => {
+    if (!presetImportReport) {
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'import report copy skipped',
+        content: 'No preset import report available yet.',
+        severity: 'warn',
+      })
+      return
+    }
+    const summaryLines = [
+      `mode=${presetImportReport.mode}`,
+      `importedAt=${presetImportReport.importedAt}`,
+      `accepted=${presetImportReport.accepted.join(', ') || 'none'}`,
+      `rejected=${presetImportReport.rejected.join(', ') || 'none'}`,
+      `created=${presetImportReport.createdCount}`,
+      `preserved=${presetImportReport.preservedCount}`,
+      `overwritten=${presetImportReport.overwrittenCount}`,
+    ]
+    try {
+      if (!navigator.clipboard?.writeText) {
+        throw new Error('Clipboard API unavailable')
+      }
+      await navigator.clipboard.writeText(summaryLines.join('\n'))
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'import report copied',
+        content: 'Preset import report copied to clipboard.',
+        severity: 'info',
+      })
+    } catch {
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'import report copy failed',
+        content: 'Clipboard access failed or is unavailable.',
+        severity: 'warn',
+      })
+    }
+  }, [appendBlock, presetImportReport])
+
   useEffect(() => {
     if (!autoRefreshEnabled) {
       return
@@ -1232,6 +1272,15 @@ function App() {
                 placeholder='{"preset_name": { ... }}'
               />
             </label>
+            <div className="preset-import-actions">
+              <button
+                type="button"
+                onClick={() => void copyPresetImportReport()}
+                disabled={!presetImportReport}
+              >
+                Copy Import Report
+              </button>
+            </div>
             {presetImportReport ? (
               <div className="preset-import-report">
                 <div>

@@ -45,6 +45,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Delete Preset' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Export Presets JSON' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Import Presets JSON' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Copy Import Report' })).toBeDisabled()
     expect(screen.getByLabelText('Import Mode')).toBeInTheDocument()
     expect(screen.getByLabelText('Import Mode Badge')).toBeInTheDocument()
   })
@@ -416,6 +417,34 @@ describe('Dashboard shell', () => {
         screen.getByText('bad-template', { selector: '.preset-import-report span' }),
       ).toBeInTheDocument()
       expect(screen.getByText('Rejected')).toBeInTheDocument()
+    })
+  })
+
+  it('copies preset import report summary to clipboard', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(window.navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    })
+
+    render(<App />)
+    fireEvent.change(screen.getByLabelText('Import Presets JSON'), {
+      target: {
+        value: '{"copy-template":{"feedSymbol":"SOLUSDm"}}',
+      },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Import Presets JSON' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Copy Import Report' })).toBeEnabled()
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Copy Import Report' }))
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalled()
+      const payload = String(writeText.mock.calls[writeText.mock.calls.length - 1][0])
+      expect(payload).toContain('accepted=copy-template')
+      expect(payload).toContain('mode=overwrite')
     })
   })
 })

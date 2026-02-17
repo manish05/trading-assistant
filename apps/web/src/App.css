@@ -245,6 +245,24 @@
     'Courier New', monospace;
 }
 
+.preset-import-actions {
+  margin-top: 0.35rem;
+}
+
+.preset-import-actions button {
+  background: #1d335a;
+  color: #e8edf5;
+  border: 1px solid #2d4a7e;
+  border-radius: 8px;
+  padding: 0.28rem 0.5rem;
+  font-size: 0.72rem;
+}
+
+.preset-import-actions button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .preset-import-report {
   margin-top: 0.45rem;
   border: 1px solid #2d4a7e;
