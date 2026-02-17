@@ -1307,7 +1307,10 @@ function App() {
       appendBlock({
         id: `blk_${Date.now()}`,
         title: 'last summary copied',
-        content: 'Copied last import summary to clipboard.',
+        content: `Copied last import summary to clipboard (lock toggles: ${helperResetLockToggleCount}, tone: ${helperResetLockToggleToneClass.replace(
+          'counter-tone-',
+          '',
+        )}, reset: ${helperLockCountersLastResetAt ?? 'never'}).`,
         severity: 'info',
       })
     } catch {
@@ -1318,7 +1321,15 @@ function App() {
         severity: 'warn',
       })
     }
-  }, [appendBlock, lastImportSummaryText, lockTelemetrySummaryLines, presetImportReport])
+  }, [
+    appendBlock,
+    helperLockCountersLastResetAt,
+    helperResetLockToggleCount,
+    helperResetLockToggleToneClass,
+    lastImportSummaryText,
+    lockTelemetrySummaryLines,
+    presetImportReport,
+  ])
 
   const copyImportShortcutCheatSheet = useCallback(async () => {
     const cheatSheet = [
