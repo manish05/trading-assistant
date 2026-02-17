@@ -5851,10 +5851,42 @@ function App() {
               blocks.map((block) => {
                 const blockKind = resolveBlockRenderKind(block)
                 const markdownContent = stripBlockTelemetrySegment(block.content).trim()
+                const structuredPayload = parseStructuredBlockPayload(block.content)
+                const blockRenderSummary =
+                  blockKind === 'BacktestReport'
+                    ? (() => {
+                        const metrics =
+                          structuredPayload &&
+                          'metrics' in structuredPayload &&
+                          structuredPayload.metrics &&
+                          typeof structuredPayload.metrics === 'object'
+                            ? (structuredPayload.metrics as Record<string, unknown>)
+                            : null
+                        const trades =
+                          metrics && 'trades' in metrics && typeof metrics.trades === 'number'
+                            ? metrics.trades
+                            : null
+                        const winRateRaw =
+                          metrics && 'winRate' in metrics && typeof metrics.winRate === 'number'
+                            ? metrics.winRate
+                            : null
+                        const winRateLabel =
+                          winRateRaw === null ? 'n/a' : `${(winRateRaw * 100).toFixed(2)}%`
+                        const equityCurveSource =
+                          structuredPayload && 'equityCurve' in structuredPayload
+                            ? structuredPayload.equityCurve
+                            : metrics && 'equityCurve' in metrics
+                              ? metrics.equityCurve
+                              : null
+                        const equityCurveCount = Array.isArray(equityCurveSource)
+                          ? equityCurveSource.length
+                          : null
+                        return `trades:${trades ?? 'n/a'} · winRate:${winRateLabel} · curve:${equityCurveCount ?? 'n/a'}`
+                      })()
+                    : null
                 const rawPayloadViewerContent =
                   blockKind === 'RawPayload'
                     ? (() => {
-                        const structuredPayload = parseStructuredBlockPayload(block.content)
                         if (structuredPayload) {
                           return JSON.stringify(structuredPayload, null, 2)
                         }
@@ -5875,6 +5907,9 @@ function App() {
                     ) : (
                       <pre>{block.content}</pre>
                     )}
+                    {blockRenderSummary ? (
+                      <p className="block-render-summary">Backtest summary: {blockRenderSummary}</p>
+                    ) : null}
                     {blockKind === 'RawPayload' ? (
                       <>
                         <p className="block-raw-hint">Unknown block type; showing raw payload.</p>

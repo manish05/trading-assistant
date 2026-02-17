@@ -4161,6 +4161,11 @@ describe('Dashboard shell', () => {
     const reportCard = screen.getByText('event.backtests.report').closest('article')
     expect(reportCard).not.toBeNull()
     expect(within(reportCard as HTMLElement).getByText('BacktestReport')).toBeInTheDocument()
+    expect(
+      within(reportCard as HTMLElement).getByText(
+        'Backtest summary: trades:2 · winRate:50.00% · curve:n/a',
+      ),
+    ).toBeInTheDocument()
 
     sendSpy.mockRestore()
   })

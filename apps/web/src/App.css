@@ -788,6 +788,12 @@
   line-height: 1.4;
 }
 
+.block-render-summary {
+  margin: 0.4rem 0 0;
+  font-size: 0.72rem;
+  color: #bfd0ee;
+}
+
 .block-raw-hint {
   margin: 0.45rem 0 0;
   font-size: 0.69rem;
