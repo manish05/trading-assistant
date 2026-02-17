@@ -143,9 +143,15 @@ describe('Dashboard shell', () => {
     expect(
       screen.getByText('counterReset:never', { selector: '.import-snapshot-badges .import-summary-badge' }),
     ).toBeInTheDocument()
+    expect(
+      screen.getByText('blockTelemetry:visible', {
+        selector: '.import-snapshot-badges .import-summary-badge',
+      }),
+    ).toBeInTheDocument()
     expect(screen.getByLabelText('Reset TS')).toHaveValue('absolute')
     expect(screen.getByLabelText('Stale After')).toHaveValue('24')
     expect(screen.getByRole('button', { name: 'Copy Helper Summary' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Hide Block Telemetry' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Reset Helper Prefs' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Unlock Reset' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Reset Lock Counters' })).toBeEnabled()
@@ -362,6 +368,17 @@ describe('Dashboard shell', () => {
     ).toBeInTheDocument()
   })
 
+  it('initializes block telemetry visibility from localStorage', () => {
+    window.localStorage.setItem('quick-action-block-telemetry-visibility-v1', 'hidden')
+    render(<App />)
+    expect(screen.getByRole('button', { name: 'Show Block Telemetry' })).toBeInTheDocument()
+    expect(
+      screen.getByText('blockTelemetry:hidden', {
+        selector: '.import-snapshot-badges .import-summary-badge',
+      }),
+    ).toBeInTheDocument()
+  })
+
   it('shows lock telemetry when selected preset no longer exists', async () => {
     render(<App />)
 
@@ -489,6 +506,63 @@ describe('Dashboard shell', () => {
           /\[LockTelemetry\] lock toggles: 0, tone: none, reset: never; sources: Alt\+L=0, controls=0, snapshot=0/,
         ),
       ).toBeInTheDocument()
+    })
+
+    sendSpy.mockRestore()
+  })
+
+  it('hides block payload telemetry when block telemetry is toggled off', async () => {
+    const sendSpy = vi
+      .spyOn(WebSocket.prototype, 'send')
+      .mockImplementation(function (
+        this: WebSocket,
+        data: string | ArrayBufferLike | Blob | ArrayBufferView<ArrayBufferLike>,
+      ) {
+        if (typeof data !== 'string') {
+          return
+        }
+        const payload = JSON.parse(data) as {
+          type?: string
+          id?: string
+          method?: string
+        }
+        if (payload.type === 'req' && payload.method === 'gateway.status' && payload.id) {
+          queueMicrotask(() => {
+            this.onmessage?.(
+              new MessageEvent('message', {
+                data: JSON.stringify({
+                  type: 'res',
+                  id: payload.id,
+                  ok: true,
+                  payload: {
+                    status: 'ok',
+                    connection: 'healthy',
+                  },
+                }),
+              }),
+            )
+          })
+        }
+      })
+
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Hide Block Telemetry' }))
+    expect(window.localStorage.getItem('quick-action-block-telemetry-visibility-v1')).toBe('hidden')
+    expect(
+      screen.getByText('blockTelemetry:hidden', {
+        selector: '.import-snapshot-badges .import-summary-badge',
+      }),
+    ).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Status' }))
+
+    await waitFor(() => {
+      expect(screen.getByText(/"connection": "healthy"/)).toBeInTheDocument()
+      expect(
+        screen.queryByText(
+          /\[LockTelemetry\] lock toggles: 0, tone: none, reset: never; sources: Alt\+L=0, controls=0, snapshot=0/,
+        ),
+      ).not.toBeInTheDocument()
     })
 
     sendSpy.mockRestore()
@@ -1386,6 +1460,7 @@ describe('Dashboard shell', () => {
       expect(payload).toContain('resetBadgeSection=expanded')
       expect(payload).toContain('resetLock=locked')
       expect(payload).toContain('resetStaleAfterHours=24')
+      expect(payload).toContain('blockTelemetry=visible')
       expect(payload).toContain('lockToggleTotal=0')
       expect(payload).toContain('lockToggleTone=none')
       expect(payload).toContain('lockToggleAlt+L=0')
@@ -1476,6 +1551,7 @@ describe('Dashboard shell', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Use Verbose Diagnostics' }))
     fireEvent.click(screen.getByRole('button', { name: 'Hide Reset Badge Tools' }))
     fireEvent.click(screen.getByRole('button', { name: 'Hide Reset Badge' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Hide Block Telemetry' }))
     fireEvent.click(screen.getByRole('button', { name: 'Hide Quick Toggles' }))
 
     fireEvent.click(screen.getByRole('button', { name: 'Reset Helper Prefs' }))
@@ -1487,6 +1563,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Hide Quick Toggles' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Hide Reset Badge Tools' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Hide Reset Badge' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Hide Block Telemetry' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Lock Reset' })).toBeInTheDocument()
     expect(screen.getByLabelText('Helper Reset Badge')).toBeInTheDocument()
     expect(screen.getByLabelText('Stale After')).toHaveValue('24')
@@ -1498,6 +1575,12 @@ describe('Dashboard shell', () => {
     expect(screen.getByText(/resetAge:/)).toBeInTheDocument()
     expect(screen.getByLabelText('Helper Reset Badge')).not.toHaveTextContent('last reset: never')
     expect(screen.getByLabelText('Helper Reset Badge')).toHaveClass('tone-fresh')
+    expect(
+      screen.getByText('blockTelemetry:visible', {
+        selector: '.import-snapshot-badges .import-summary-badge',
+      }),
+    ).toBeInTheDocument()
+    expect(window.localStorage.getItem('quick-action-block-telemetry-visibility-v1')).toBe('visible')
     expect(
       screen.getByText(
           'Reset helper diagnostics preferences to defaults (lock toggles: 1, tone: active, reset: never; sources: Alt+L=0, controls=1, snapshot=0).',

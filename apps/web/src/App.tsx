@@ -96,6 +96,7 @@ const HELPER_RESET_STALE_THRESHOLD_HOURS_STORAGE_KEY =
 const HELPER_RESET_BADGE_SECTION_STORAGE_KEY = 'quick-action-helper-reset-badge-section-v1'
 const HELPER_RESET_LOCK_STORAGE_KEY = 'quick-action-helper-reset-lock-v1'
 const HELPER_LOCK_COUNTERS_RESET_AT_STORAGE_KEY = 'quick-action-helper-lock-counters-reset-at-v1'
+const BLOCK_TELEMETRY_VISIBILITY_STORAGE_KEY = 'quick-action-block-telemetry-visibility-v1'
 const MAX_IMPORT_REPORT_NAMES = 6
 const DEFAULT_PRESET_TEMPLATE: QuickActionPreset = {
   managedAccountId: 'acct_demo_1',
@@ -284,6 +285,13 @@ const readHelperLockCountersResetAtFromStorage = (): string | null => {
   return Number.isNaN(Date.parse(value)) ? null : value
 }
 
+const readBlockTelemetryVisibilityFromStorage = (): boolean => {
+  if (typeof window === 'undefined') {
+    return true
+  }
+  return window.localStorage.getItem(BLOCK_TELEMETRY_VISIBILITY_STORAGE_KEY) !== 'hidden'
+}
+
 const sanitizePreset = (value: unknown): QuickActionPreset | null => {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     return null
@@ -470,6 +478,9 @@ function App() {
   const [helperLockCountersLastResetAt, setHelperLockCountersLastResetAt] = useState<string | null>(
     readHelperLockCountersResetAtFromStorage,
   )
+  const [isBlockTelemetryVisible, setIsBlockTelemetryVisible] = useState<boolean>(
+    readBlockTelemetryVisibilityFromStorage,
+  )
   const [availablePresetNames, setAvailablePresetNames] = useState<string[]>(() =>
     Object.keys(readPresetStoreFromStorage()).sort(),
   )
@@ -592,10 +603,23 @@ function App() {
   )
 
   const eventBlockLockTelemetryRef = useRef(lockTelemetryToastDetailsWithLabelAndSources)
+  const eventBlockTelemetryVisibleRef = useRef(isBlockTelemetryVisible)
 
   useEffect(() => {
     eventBlockLockTelemetryRef.current = lockTelemetryToastDetailsWithLabelAndSources
   }, [lockTelemetryToastDetailsWithLabelAndSources])
+
+  useEffect(() => {
+    eventBlockTelemetryVisibleRef.current = isBlockTelemetryVisible
+  }, [isBlockTelemetryVisible])
+
+  const appendLockTelemetryToBlockPayload = useCallback(
+    (baseContent: string): string =>
+      isBlockTelemetryVisible
+        ? `${baseContent}\n\n[LockTelemetry] ${lockTelemetryToastDetailsWithLabelAndSources}`
+        : baseContent,
+    [isBlockTelemetryVisible, lockTelemetryToastDetailsWithLabelAndSources],
+  )
 
   const withLockTelemetrySection = useCallback(
     (lines: string[]): string[] => [...lines, '[LockTelemetry]', ...lockTelemetrySummaryLines],
@@ -763,17 +787,15 @@ function App() {
       appendBlock({
         id: `blk_${Date.now()}`,
         title: `${method} response`,
-        content:
-          `${JSON.stringify(response.payload ?? {}, null, 2)}\n\n` +
-          `[LockTelemetry] ${lockTelemetryToastDetailsWithLabelAndSources}`,
+        content: appendLockTelemetryToBlockPayload(JSON.stringify(response.payload ?? {}, null, 2)),
         severity: 'info',
       })
       return response.payload ?? {}
     },
     [
       appendBlock,
+      appendLockTelemetryToBlockPayload,
       lockTelemetryFailureSuffix,
-      lockTelemetryToastDetailsWithLabelAndSources,
       minRequestGapMsInput,
       patchHistory,
       pushHistory,
@@ -1453,6 +1475,7 @@ function App() {
       `resetBadgeSection=${isHelperResetBadgeSectionExpanded ? 'expanded' : 'collapsed'}`,
       `resetLock=${isHelperResetLocked ? 'locked' : 'unlocked'}`,
       `resetStaleAfterHours=${helperResetStaleThresholdHours}`,
+      `blockTelemetry=${isBlockTelemetryVisible ? 'visible' : 'hidden'}`,
       `hintVisible=${isImportHintVisible ? 'yes' : 'no'}`,
       `legendVisible=${showShortcutLegendInStatus ? 'yes' : 'no'}`,
       `legendOrder=${shortcutLegendOrder}`,
@@ -1488,6 +1511,7 @@ function App() {
     isHelperResetLocked,
     helperResetStaleThresholdHours,
     helperResetTimestampFormat,
+    isBlockTelemetryVisible,
     lockTelemetryFailureSuffix,
     lockTelemetrySourceToastDetails,
     lockTelemetryToastDetails,
@@ -1565,6 +1589,7 @@ function App() {
     setIsHelperResetBadgeVisible(true)
     setIsHelperResetBadgeSectionExpanded(true)
     setHelperResetStaleThresholdHours(24)
+    setIsBlockTelemetryVisible(true)
     setHelperDiagnosticsLastResetAt(new Date().toISOString())
     appendBlock({
       id: `blk_${Date.now()}`,
@@ -1687,8 +1712,10 @@ function App() {
           id: `blk_${Date.now()}`,
           title: parsed.event,
           content:
-            `${JSON.stringify(parsed.payload ?? {}, null, 2)}\n\n` +
-            `[LockTelemetry] ${eventBlockLockTelemetryRef.current}`,
+            eventBlockTelemetryVisibleRef.current
+              ? `${JSON.stringify(parsed.payload ?? {}, null, 2)}\n\n` +
+                `[LockTelemetry] ${eventBlockLockTelemetryRef.current}`
+              : JSON.stringify(parsed.payload ?? {}, null, 2),
           severity: 'info',
         })
       }
@@ -1759,6 +1786,13 @@ function App() {
     }
     window.localStorage.removeItem(HELPER_LOCK_COUNTERS_RESET_AT_STORAGE_KEY)
   }, [helperLockCountersLastResetAt])
+
+  useEffect(() => {
+    window.localStorage.setItem(
+      BLOCK_TELEMETRY_VISIBILITY_STORAGE_KEY,
+      isBlockTelemetryVisible ? 'visible' : 'hidden',
+    )
+  }, [isBlockTelemetryVisible])
 
   useEffect(() => {
     window.localStorage.setItem(HELPER_RESET_TIMESTAMP_FORMAT_STORAGE_KEY, helperResetTimestampFormat)
@@ -2774,6 +2808,9 @@ function App() {
                     ? formatTimestamp(helperLockCountersLastResetAt, 'relative')
                     : 'never'}
                 </span>
+                <span className="import-summary-badge badge-hint-mode">
+                  blockTelemetry:{isBlockTelemetryVisible ? 'visible' : 'hidden'}
+                </span>
                 {helperDiagnosticsDisplayMode === 'verbose' ? (
                   <>
                     <span className="import-summary-badge badge-hint-mode">
@@ -2812,6 +2849,13 @@ function App() {
                   onClick={() => void copyHelperDiagnosticsSummary()}
                 >
                   Copy Helper Summary
+                </button>
+                <button
+                  type="button"
+                  className="summary-copy-button"
+                  onClick={() => setIsBlockTelemetryVisible((current) => !current)}
+                >
+                  {isBlockTelemetryVisible ? 'Hide Block Telemetry' : 'Show Block Telemetry'}
                 </button>
                 <button
                   type="button"
