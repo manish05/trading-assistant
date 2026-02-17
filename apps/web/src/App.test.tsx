@@ -633,6 +633,73 @@ describe('Dashboard shell', () => {
     sendSpy.mockRestore()
   })
 
+  it('avoids duplicate block-key warnings when timestamps collide', async () => {
+    const dateSpy = vi.spyOn(Date, 'now').mockReturnValue(1_777_777_777_777)
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const sendSpy = vi
+      .spyOn(WebSocket.prototype, 'send')
+      .mockImplementation(function (
+        this: WebSocket,
+        data: string | ArrayBufferLike | Blob | ArrayBufferView<ArrayBufferLike>,
+      ) {
+        if (typeof data !== 'string') {
+          return
+        }
+        const payload = JSON.parse(data) as {
+          type?: string
+          id?: string
+          method?: string
+        }
+        if (payload.type === 'req' && payload.method === 'gateway.status' && payload.id) {
+          queueMicrotask(() => {
+            this.onmessage?.(
+              new MessageEvent('message', {
+                data: JSON.stringify({
+                  type: 'event',
+                  event: 'event.feed.event',
+                  payload: {
+                    action: 'subscribed',
+                    subscriptionId: 'sub_collision',
+                  },
+                }),
+              }),
+            )
+          })
+          queueMicrotask(() => {
+            this.onmessage?.(
+              new MessageEvent('message', {
+                data: JSON.stringify({
+                  type: 'res',
+                  id: payload.id,
+                  ok: true,
+                  payload: {
+                    status: 'ok',
+                  },
+                }),
+              }),
+            )
+          })
+        }
+      })
+
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Status' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('event.feed.event')).toBeInTheDocument()
+      expect(screen.getByText('gateway.status response')).toBeInTheDocument()
+    })
+
+    const duplicateKeyWarnings = consoleErrorSpy.mock.calls.filter(([message]) =>
+      String(message).includes('Encountered two children with the same key'),
+    )
+    expect(duplicateKeyWarnings).toHaveLength(0)
+
+    sendSpy.mockRestore()
+    consoleErrorSpy.mockRestore()
+    dateSpy.mockRestore()
+  })
+
   it('filters quick-action history by status', async () => {
     render(<App />)
 

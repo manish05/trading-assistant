@@ -386,6 +386,7 @@ function App() {
   const pendingRequestsRef = useRef<Map<string, (value: GatewayResponse) => void>>(new Map())
   const requestGuardsRef = useRef<Map<string, number>>(new Map())
   const requestCounter = useRef(0)
+  const blockIdCounterRef = useRef(0)
 
   const [connectionStatus, setConnectionStatus] = useState<
     'connecting' | 'connected' | 'disconnected'
@@ -646,7 +647,14 @@ function App() {
   }, [])
 
   const appendBlock = useCallback((item: BlockItem) => {
-    setBlocks((current) => [item, ...current].slice(0, 25))
+    setBlocks((current) => {
+      blockIdCounterRef.current += 1
+      const dedupedItem: BlockItem = {
+        ...item,
+        id: `${item.id}_${blockIdCounterRef.current}`,
+      }
+      return [dedupedItem, ...current].slice(0, 25)
+    })
   }, [])
 
   const resetHelperLockCounters = useCallback(() => {
