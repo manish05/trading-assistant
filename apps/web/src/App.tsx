@@ -2324,14 +2324,12 @@ function App() {
               <button
                 type="button"
                 onClick={() => void copyPresetImportReport()}
-                disabled={!presetImportReport}
               >
                 Copy Import Report
               </button>
               <button
                 type="button"
                 onClick={() => void copyLastImportSummary()}
-                disabled={!presetImportReport}
               >
                 Copy Last Summary
               </button>
@@ -2341,7 +2339,6 @@ function App() {
               <button
                 type="button"
                 onClick={() => void copyPresetImportNames()}
-                disabled={!presetImportReport}
               >
                 Copy Full Names
               </button>
@@ -2508,7 +2505,6 @@ function App() {
                   <button
                     type="button"
                     onClick={() => void copyHistoryToClipboard()}
-                    disabled={filteredHistory.length === 0}
                   >
                     Copy History
                   </button>

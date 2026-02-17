@@ -23,7 +23,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('History Legend')).toBeInTheDocument()
     expect(screen.getByLabelText('Lock Toggle Source Legend')).toBeInTheDocument()
     expect(screen.getByLabelText('Timestamp Format')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Copy History' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Copy History' })).toBeEnabled()
   })
 
   it('renders gateway action buttons for account/feed listing', () => {
@@ -48,10 +48,10 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Export Presets JSON' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Import Presets JSON' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Clear Import JSON' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: 'Copy Import Report' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: 'Copy Last Summary' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Copy Import Report' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Copy Last Summary' })).toBeEnabled()
     expect(screen.getByRole('button', { name: 'Clear Import Report' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: 'Copy Full Names' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Copy Full Names' })).toBeEnabled()
     expect(screen.getByRole('button', { name: 'Expand Report' })).toBeDisabled()
     expect(screen.getByLabelText('Import Mode')).toBeInTheDocument()
     expect(screen.getByLabelText('Import Mode Badge')).toBeInTheDocument()
@@ -412,6 +412,16 @@ describe('Dashboard shell', () => {
     })
   })
 
+  it('shows lock telemetry when history copy is skipped', async () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Copy History' }))
+    expect(
+      screen.getByText(
+        'No quick-action history entries available for current filter. Lock telemetry: lock toggles: 0, tone: none, reset: never.',
+      ),
+    ).toBeInTheDocument()
+  })
+
   it('shows lock telemetry when history copy fails', async () => {
     const writeText = vi.fn().mockRejectedValue(new Error('denied'))
     Object.defineProperty(window.navigator, 'clipboard', {
@@ -670,6 +680,36 @@ describe('Dashboard shell', () => {
         ),
       ).toBeInTheDocument()
     })
+  })
+
+  it('shows lock telemetry when import report copy is skipped', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Copy Import Report' }))
+    expect(
+      screen.getByText(
+        'No preset import report available yet. Lock telemetry: lock toggles: 0, tone: none, reset: never.',
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it('shows lock telemetry when last summary copy is skipped', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Copy Last Summary' }))
+    expect(
+      screen.getByText(
+        'No preset import report available yet. Lock telemetry: lock toggles: 0, tone: none, reset: never.',
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it('shows lock telemetry when full names copy is skipped', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Copy Full Names' }))
+    expect(
+      screen.getByText(
+        'No preset import report available yet. Lock telemetry: lock toggles: 0, tone: none, reset: never.',
+      ),
+    ).toBeInTheDocument()
   })
 
   it('shows lock telemetry when status legend copy fails', async () => {
@@ -1420,7 +1460,7 @@ describe('Dashboard shell', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Clear Import Report' }))
 
     expect(screen.queryByText('Accepted')).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Copy Import Report' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Copy Import Report' })).toBeEnabled()
     expect(screen.getByRole('button', { name: 'Clear Import Report' })).toBeDisabled()
     expect(
       screen.getByText(
