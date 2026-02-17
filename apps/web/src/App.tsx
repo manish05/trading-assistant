@@ -652,6 +652,30 @@ function App() {
     setSelectedPresetName('')
   }, [appendBlock, readPresetStore, selectedPresetName, writePresetStore])
 
+  const exportPresetsJson = useCallback(async () => {
+    const store = readPresetStore()
+    const serialized = JSON.stringify(store, null, 2)
+    try {
+      if (!navigator.clipboard?.writeText) {
+        throw new Error('Clipboard API unavailable')
+      }
+      await navigator.clipboard.writeText(serialized)
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'presets exported',
+        content: `Copied ${Object.keys(store).length} presets JSON to clipboard.`,
+        severity: 'info',
+      })
+    } catch {
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'presets export failed',
+        content: 'Clipboard access failed or is unavailable.',
+        severity: 'warn',
+      })
+    }
+  }, [appendBlock, readPresetStore])
+
   useEffect(() => {
     if (!autoRefreshEnabled) {
       return
@@ -1007,6 +1031,9 @@ function App() {
               </button>
               <button type="button" onClick={deleteSelectedPreset}>
                 Delete Preset
+              </button>
+              <button type="button" onClick={() => void exportPresetsJson()}>
+                Export Presets JSON
               </button>
             </div>
           </section>

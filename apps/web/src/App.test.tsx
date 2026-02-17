@@ -43,6 +43,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Save Preset' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Load Preset' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Delete Preset' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Export Presets JSON' })).toBeInTheDocument()
   })
 
   it('sends account and feed management requests', async () => {
@@ -284,6 +285,27 @@ describe('Dashboard shell', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Copy History' }))
     await waitFor(() => {
       expect(writeText).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  it('exports presets as JSON to clipboard', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(window.navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    })
+
+    render(<App />)
+    fireEvent.change(screen.getByLabelText('Preset Name'), {
+      target: { value: 'export-template' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Save Preset' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Export Presets JSON' }))
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalled()
+      const payload = String(writeText.mock.calls[writeText.mock.calls.length - 1][0])
+      expect(payload).toContain('export-template')
     })
   })
 })
