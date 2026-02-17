@@ -484,9 +484,12 @@ describe('Dashboard shell', () => {
     fireEvent.change(screen.getByLabelText('Overlay Mode'), {
       target: { value: 'with-trades' },
     })
+    fireEvent.change(screen.getByLabelText('Delta Basis'), {
+      target: { value: 'average' },
+    })
     fireEvent.click(screen.getByRole('button', { name: 'Refresh Overlay Snapshot' }))
     expect(screen.getByLabelText('Overlay Snapshot Summary')).toHaveTextContent(
-      'Summary: candles:0 · tradeEvents:0 · chartPoints:0 · chartLens:price-only · markerFocus:all · markerWindow:5 · markerAge:all · markerDelta:all · markerDeltaBasis:latest · markerDeltaMatched:0/0 · markerBucket:none · bucketScope:all-buckets · timelineOrder:newest-first · markerWrap:bounded · markerSelection:sticky · markerNav:0/0|selected:none · markers:t0/r0/f0 · corr:none · trend:neutral · vol:n/a · pulse:quiet(0) · regime:observe',
+      'Summary: candles:0 · tradeEvents:0 · chartPoints:0 · chartLens:price-only · markerFocus:all · markerWindow:5 · markerAge:all · markerDelta:all · markerDeltaBasis:average · markerDeltaMatched:0/0 · markerBucket:none · bucketScope:all-buckets · timelineOrder:newest-first · markerWrap:bounded · markerSelection:sticky · markerNav:0/0|selected:none · markers:t0/r0/f0 · corr:none · trend:neutral · vol:n/a · pulse:quiet(0) · regime:observe',
     )
 
     fireEvent.change(screen.getByLabelText('Overlay Mode'), {
@@ -494,7 +497,7 @@ describe('Dashboard shell', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: 'Refresh Overlay Snapshot' }))
     expect(screen.getByLabelText('Overlay Snapshot Summary')).toHaveTextContent(
-      'Summary: candles:0 · tradeEvents:0 · riskAlerts:0 · chartPoints:0 · chartLens:price-only · markerFocus:all · markerWindow:5 · markerAge:all · markerDelta:all · markerDeltaBasis:latest · markerDeltaMatched:0/0 · markerBucket:none · bucketScope:all-buckets · timelineOrder:newest-first · markerWrap:bounded · markerSelection:sticky · markerNav:0/0|selected:none · markers:t0/r0/f0 · corr:none · trend:neutral · vol:n/a · pulse:quiet(0) · regime:observe',
+      'Summary: candles:0 · tradeEvents:0 · riskAlerts:0 · chartPoints:0 · chartLens:price-only · markerFocus:all · markerWindow:5 · markerAge:all · markerDelta:all · markerDeltaBasis:average · markerDeltaMatched:0/0 · markerBucket:none · bucketScope:all-buckets · timelineOrder:newest-first · markerWrap:bounded · markerSelection:sticky · markerNav:0/0|selected:none · markers:t0/r0/f0 · corr:none · trend:neutral · vol:n/a · pulse:quiet(0) · regime:observe',
     )
   })
 
@@ -1416,6 +1419,9 @@ describe('Dashboard shell', () => {
       { key: 'h' },
     )
     expect(screen.getByLabelText('Delta Basis')).toHaveValue('latest')
+    expect(window.localStorage.getItem('quick-action-market-overlay-marker-delta-basis-v1')).toBe(
+      'latest',
+    )
     expect(screen.getByLabelText('Overlay Marker Mode Shortcut Summary')).toHaveTextContent(
       'Mode shortcuts: focus:a/t/r/d=all · age:y=all · window:v=5 · bucket:b=none · order:o/l=newest-first · scope:g=all-buckets · wrap:w=bounded · selection:s=sticky · basis:k=latest · delta:u/j/f/n/0/+/-=all · nav:manual',
     )
@@ -1426,6 +1432,9 @@ describe('Dashboard shell', () => {
       { key: 'm' },
     )
     expect(screen.getByLabelText('Delta Basis')).toHaveValue('average')
+    expect(window.localStorage.getItem('quick-action-market-overlay-marker-delta-basis-v1')).toBe(
+      'average',
+    )
     expect(screen.getByLabelText('Overlay Marker Mode Shortcut Summary')).toHaveTextContent(
       'Mode shortcuts: focus:a/t/r/d=all · age:y=all · window:v=5 · bucket:b=none · order:o/l=newest-first · scope:g=all-buckets · wrap:w=bounded · selection:s=sticky · basis:k=average · delta:u/j/f/n/0/+/-=all · nav:manual',
     )
@@ -1436,6 +1445,9 @@ describe('Dashboard shell', () => {
       { key: 'k' },
     )
     expect(screen.getByLabelText('Delta Basis')).toHaveValue('latest')
+    expect(window.localStorage.getItem('quick-action-market-overlay-marker-delta-basis-v1')).toBe(
+      'latest',
+    )
     expect(screen.getByLabelText('Overlay Marker Delta Filter Summary')).toHaveTextContent(
       'Delta filter: basis:latest · mode:all · matched:2/2 · up:0 · down:1 · flat:1 · n/a:0',
     )
