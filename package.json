@@ -11,6 +11,6 @@
     "web:lint": "cd apps/web && bun run lint",
     "backend:test": "cd backend && python3 -m pytest",
     "backend:lint": "cd backend && python3 -m ruff check .",
-    "check": "bun run backend:test && bun run web:build"
+    "check": "bun run backend:lint && bun run backend:test && bun run web:lint && bun run web:test && bun run web:build"
   }
 }
