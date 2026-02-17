@@ -76,12 +76,16 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Quick Hide Hints' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Quick Show Legend' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Quick Hide Reset Badge' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Quick Unlock Reset' })).toBeInTheDocument()
     expect(screen.getByText('Helper Diagnostics')).toBeInTheDocument()
     expect(
       screen.getByText('diag:compact', { selector: '.import-snapshot-badges .import-summary-badge' }),
     ).toBeInTheDocument()
     expect(
       screen.getByText('resetAge:never', { selector: '.import-snapshot-badges .import-summary-badge' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText('resetLock:locked', { selector: '.import-snapshot-badges .import-summary-badge' }),
     ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Use Verbose Diagnostics' })).toBeInTheDocument()
     expect(
@@ -604,6 +608,10 @@ describe('Dashboard shell', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Quick Hide Reset Badge' }))
     expect(screen.getByRole('button', { name: 'Quick Show Reset Badge' })).toBeInTheDocument()
     expect(screen.queryByLabelText('Helper Reset Badge')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Quick Unlock Reset' }))
+    expect(screen.getByRole('button', { name: 'Quick Lock Reset' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Reset Helper Prefs' })).toBeEnabled()
   })
 
   it('toggles helper reset badge visibility and persists preference', () => {

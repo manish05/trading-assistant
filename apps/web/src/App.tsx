@@ -2252,6 +2252,9 @@ function App() {
                     ? formatTimestamp(helperDiagnosticsLastResetAt, 'relative')
                     : 'never'}
                 </span>
+                <span className="import-summary-badge badge-hint-mode">
+                  resetLock:{isHelperResetLocked ? 'locked' : 'unlocked'}
+                </span>
                 <div className="import-snapshot-toggles" aria-label="Import Snapshot Toggles">
                   <button
                     type="button"
@@ -2280,6 +2283,12 @@ function App() {
                         {isHelperResetBadgeVisible
                           ? 'Quick Hide Reset Badge'
                           : 'Quick Show Reset Badge'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setIsHelperResetLocked((current) => !current)}
+                      >
+                        {isHelperResetLocked ? 'Quick Unlock Reset' : 'Quick Lock Reset'}
                       </button>
                     </>
                   ) : null}
