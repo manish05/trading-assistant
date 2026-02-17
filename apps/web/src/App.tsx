@@ -2319,6 +2319,9 @@ function App() {
                   <button
                     type="button"
                     onClick={() => setIsImportSnapshotTogglesExpanded((current) => !current)}
+                    title={`Quick toggles ${
+                      isImportSnapshotTogglesExpanded ? 'expanded' : 'collapsed'
+                    }; reset lock is ${isHelperResetLocked ? 'locked' : 'unlocked'}.`}
                   >
                     {isImportSnapshotTogglesExpanded ? 'Hide Quick Toggles' : 'Show Quick Toggles'}
                     <span className="quick-toggle-lock-state" aria-hidden="true">
