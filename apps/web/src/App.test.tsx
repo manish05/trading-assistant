@@ -40,6 +40,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByText('price', { selector: '.overlay-chip' })).toHaveClass('active')
     expect(screen.getByLabelText('Overlay Live Summary')).toHaveTextContent('Live: candles:0')
     expect(screen.getByLabelText('Overlay Window Summary')).toHaveTextContent('Window: closes:none')
+    expect(screen.getByLabelText('Overlay Trend')).toHaveTextContent('Trend: neutral')
     expect(screen.getByRole('button', { name: 'Refresh Overlay Snapshot' })).toBeInTheDocument()
     expect(screen.getByLabelText('Overlay Snapshot Time')).toHaveTextContent('Snapshot: never')
     expect(screen.getByLabelText('Overlay Snapshot Summary')).toHaveTextContent('Summary: none')
@@ -372,6 +373,8 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Window Summary')).toHaveTextContent(
       'Window: closes:none · trades:0',
     )
+    expect(screen.getByLabelText('Overlay Trend')).toHaveTextContent('Trend: neutral')
+    expect(screen.getByLabelText('Overlay Trend')).toHaveClass('overlay-trend-neutral')
 
     fireEvent.change(screen.getByLabelText('Overlay Mode'), { target: { value: 'with-risk' } })
     expect(within(legend).getByText('risk', { selector: '.overlay-chip' })).toHaveClass('active')
@@ -391,6 +394,8 @@ describe('Dashboard shell', () => {
       expect(screen.getByLabelText('Overlay Window Summary')).toHaveTextContent(
         'Window: closes:1,2 · trades:1 · risk:1 · feed:0',
       )
+      expect(screen.getByLabelText('Overlay Trend')).toHaveTextContent('Trend: up (+1.00)')
+      expect(screen.getByLabelText('Overlay Trend')).toHaveClass('overlay-trend-up')
     })
 
     sendSpy.mockRestore()

@@ -119,6 +119,27 @@
   color: #7f91b0;
 }
 
+.overlay-trend {
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.overlay-trend-neutral {
+  color: #9fb0cc;
+}
+
+.overlay-trend-up {
+  color: #71d48c;
+}
+
+.overlay-trend-down {
+  color: #ee8d8d;
+}
+
+.overlay-trend-flat {
+  color: #e9cf7a;
+}
+
 .market-overlay-controls label {
   display: inline-flex;
   align-items: center;

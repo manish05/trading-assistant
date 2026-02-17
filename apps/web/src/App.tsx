@@ -728,6 +728,29 @@ function App() {
     riskAlerts.length,
     tradeControlEvents.length,
   ])
+  const marketOverlayTrend = useMemo(() => {
+    if (marketOverlayRecentCloses.length < 2) {
+      return {
+        label: 'neutral',
+        className: 'overlay-trend-neutral',
+      }
+    }
+
+    const firstClose = marketOverlayRecentCloses[0]
+    const lastClose = marketOverlayRecentCloses[marketOverlayRecentCloses.length - 1]
+    const delta = lastClose - firstClose
+    if (Math.abs(delta) < 0.000001) {
+      return {
+        label: 'flat (±0.00)',
+        className: 'overlay-trend-flat',
+      }
+    }
+
+    return {
+      label: `${delta > 0 ? 'up' : 'down'} (${delta > 0 ? '+' : ''}${delta.toFixed(2)})`,
+      className: delta > 0 ? 'overlay-trend-up' : 'overlay-trend-down',
+    }
+  }, [marketOverlayRecentCloses])
 
   const websocketUrl = useMemo(() => {
     const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws'
@@ -2774,6 +2797,9 @@ function App() {
             </div>
             <p aria-label="Overlay Live Summary">Live: {marketOverlayLiveSummary}</p>
             <p aria-label="Overlay Window Summary">Window: {marketOverlayWindowSummary}</p>
+            <p aria-label="Overlay Trend" className={`overlay-trend ${marketOverlayTrend.className}`}>
+              Trend: {marketOverlayTrend.label}
+            </p>
             <button type="button" onClick={refreshMarketOverlaySnapshot}>
               Refresh Overlay Snapshot
             </button>
