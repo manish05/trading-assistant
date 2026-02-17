@@ -93,6 +93,7 @@ const HELPER_RESET_TIMESTAMP_FORMAT_STORAGE_KEY = 'quick-action-helper-reset-tim
 const HELPER_RESET_BADGE_VISIBILITY_STORAGE_KEY = 'quick-action-helper-reset-badge-visibility-v1'
 const HELPER_RESET_STALE_THRESHOLD_HOURS_STORAGE_KEY =
   'quick-action-helper-reset-stale-threshold-hours-v1'
+const HELPER_RESET_BADGE_SECTION_STORAGE_KEY = 'quick-action-helper-reset-badge-section-v1'
 const MAX_IMPORT_REPORT_NAMES = 6
 const DEFAULT_PRESET_TEMPLATE: QuickActionPreset = {
   managedAccountId: 'acct_demo_1',
@@ -254,6 +255,13 @@ const readHelperResetStaleThresholdHoursFromStorage = (): number => {
   const raw = window.localStorage.getItem(HELPER_RESET_STALE_THRESHOLD_HOURS_STORAGE_KEY)
   const parsed = raw ? Number.parseInt(raw, 10) : NaN
   return parsed === 72 ? 72 : 24
+}
+
+const readHelperResetBadgeSectionExpandedFromStorage = (): boolean => {
+  if (typeof window === 'undefined') {
+    return true
+  }
+  return window.localStorage.getItem(HELPER_RESET_BADGE_SECTION_STORAGE_KEY) !== 'collapsed'
 }
 
 const sanitizePreset = (value: unknown): QuickActionPreset | null => {
@@ -426,6 +434,8 @@ function App() {
   const [helperResetStaleThresholdHours, setHelperResetStaleThresholdHours] = useState<number>(
     readHelperResetStaleThresholdHoursFromStorage,
   )
+  const [isHelperResetBadgeSectionExpanded, setIsHelperResetBadgeSectionExpanded] =
+    useState<boolean>(readHelperResetBadgeSectionExpandedFromStorage)
   const [availablePresetNames, setAvailablePresetNames] = useState<string[]>(() =>
     Object.keys(readPresetStoreFromStorage()).sort(),
   )
@@ -1187,6 +1197,7 @@ function App() {
       `resetAt=${helperDiagnosticsLastResetAt ?? 'never'}`,
       `resetFormat=${helperResetTimestampFormat}`,
       `resetBadgeVisible=${isHelperResetBadgeVisible ? 'yes' : 'no'}`,
+      `resetBadgeSection=${isHelperResetBadgeSectionExpanded ? 'expanded' : 'collapsed'}`,
       `resetStaleAfterHours=${helperResetStaleThresholdHours}`,
       `hintVisible=${isImportHintVisible ? 'yes' : 'no'}`,
       `legendVisible=${showShortcutLegendInStatus ? 'yes' : 'no'}`,
@@ -1216,6 +1227,7 @@ function App() {
     isImportHelperDiagnosticsExpanded,
     isImportHintVisible,
     helperDiagnosticsLastResetAt,
+    isHelperResetBadgeSectionExpanded,
     isHelperResetBadgeVisible,
     helperResetStaleThresholdHours,
     helperResetTimestampFormat,
@@ -1264,6 +1276,7 @@ function App() {
     setShortcutLegendDensity('chips')
     setHelperDiagnosticsDisplayMode('compact')
     setIsHelperResetBadgeVisible(true)
+    setIsHelperResetBadgeSectionExpanded(true)
     setHelperResetStaleThresholdHours(24)
     setHelperDiagnosticsLastResetAt(new Date().toISOString())
     appendBlock({
@@ -1452,6 +1465,13 @@ function App() {
       isHelperResetBadgeVisible ? 'visible' : 'hidden',
     )
   }, [isHelperResetBadgeVisible])
+
+  useEffect(() => {
+    window.localStorage.setItem(
+      HELPER_RESET_BADGE_SECTION_STORAGE_KEY,
+      isHelperResetBadgeSectionExpanded ? 'expanded' : 'collapsed',
+    )
+  }, [isHelperResetBadgeSectionExpanded])
 
   useEffect(() => {
     window.localStorage.setItem(
@@ -1833,7 +1853,17 @@ function App() {
                   ? 'Collapse Helper Diagnostics'
                   : 'Expand Helper Diagnostics'}
               </button>
-              {isHelperResetBadgeVisible ? (
+              <button
+                type="button"
+                onClick={() =>
+                  setIsHelperResetBadgeSectionExpanded((current) => !current)
+                }
+              >
+                {isHelperResetBadgeSectionExpanded
+                  ? 'Hide Reset Badge Tools'
+                  : 'Show Reset Badge Tools'}
+              </button>
+              {isHelperResetBadgeSectionExpanded && isHelperResetBadgeVisible ? (
                 <span
                   className={`helper-reset-badge ${helperResetToneClass}`}
                   aria-label="Helper Reset Badge"
@@ -1844,7 +1874,7 @@ function App() {
                     : 'never'}
                 </span>
               ) : null}
-              {isHelperResetBadgeVisible ? (
+              {isHelperResetBadgeSectionExpanded && isHelperResetBadgeVisible ? (
                 <button
                   type="button"
                   className="summary-copy-button"
