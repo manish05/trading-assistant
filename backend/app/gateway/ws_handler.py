@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from pydantic.alias_generators import to_camel
 from starlette.websockets import WebSocketDisconnect
 
+from app.accounts.registry import AccountRegistry
 from app.audit.store import AuditStore
 from app.backtesting.simulator import BacktestCandle, BacktestSimulator, TradeSignal
 from app.config.loader import AppConfig
@@ -144,6 +145,31 @@ class TradesClosePositionParams(BaseModel):
     position_id: str = Field(alias="positionId", min_length=1)
 
 
+class AccountsConnectParams(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+
+    account_id: str = Field(alias="accountId", min_length=1)
+    connector_id: str = Field(alias="connectorId", min_length=1)
+    provider_account_id: str = Field(alias="providerAccountId", min_length=1)
+    mode: str = Field(min_length=1)
+    label: str = Field(min_length=1)
+    allowed_symbols: list[str] = Field(alias="allowedSymbols", default_factory=list)
+
+
+class AccountIdParams(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+
+    account_id: str = Field(alias="accountId", min_length=1)
+
+
 def _error_response(
     request_id: str,
     *,
@@ -197,6 +223,7 @@ async def handle_gateway_websocket(
     agent_queues: dict[str, AgentQueue],
     queue_snapshot_store: QueueSnapshotStore,
     audit_store: AuditStore,
+    account_registry: AccountRegistry,
     app_config: AppConfig,
     device_registry: DeviceRegistry,
     memory_index: MemoryIndex,
@@ -335,6 +362,129 @@ async def handle_gateway_websocket(
                     },
                 )
             )
+            continue
+
+        if frame.method == "accounts.connect":
+            try:
+                params = AccountsConnectParams.model_validate(frame.params)
+            except ValidationError:
+                await websocket.send_json(
+                    _error_response(
+                        frame.id,
+                        code="INVALID_PARAMS",
+                        message="invalid accounts.connect params",
+                    )
+                )
+                continue
+
+            account = account_registry.connect(
+                account_id=params.account_id,
+                connector_id=params.connector_id,
+                provider_account_id=params.provider_account_id,
+                mode=params.mode,
+                label=params.label,
+                allowed_symbols=params.allowed_symbols,
+            )
+            payload = {"account": account_registry.as_public_payload(account)}
+            audit_store.append(
+                actor="user",
+                action="accounts.connect",
+                trace_id=frame.id,
+                data={
+                    "accountId": params.account_id,
+                    "connectorId": params.connector_id,
+                    "mode": params.mode,
+                },
+            )
+            await websocket.send_json(
+                _event_frame(
+                    "event.account.status",
+                    {"requestId": frame.id, "account": payload["account"]},
+                )
+            )
+            await websocket.send_json(_ok_response(frame.id, payload=payload))
+            continue
+
+        if frame.method == "accounts.list":
+            payload = {
+                "accounts": [
+                    account_registry.as_public_payload(account)
+                    for account in account_registry.list()
+                ]
+            }
+            await websocket.send_json(_ok_response(frame.id, payload=payload))
+            continue
+
+        if frame.method in {"accounts.get", "accounts.status"}:
+            try:
+                params = AccountIdParams.model_validate(frame.params)
+            except ValidationError:
+                await websocket.send_json(
+                    _error_response(
+                        frame.id,
+                        code="INVALID_PARAMS",
+                        message=f"invalid {frame.method} params",
+                    )
+                )
+                continue
+
+            account = account_registry.get(account_id=params.account_id)
+            if account is None:
+                await websocket.send_json(
+                    _error_response(
+                        frame.id,
+                        code="NOT_FOUND",
+                        message=f"account not found: {params.account_id}",
+                    )
+                )
+                continue
+
+            await websocket.send_json(
+                _ok_response(
+                    frame.id,
+                    payload={"account": account_registry.as_public_payload(account)},
+                )
+            )
+            continue
+
+        if frame.method == "accounts.disconnect":
+            try:
+                params = AccountIdParams.model_validate(frame.params)
+            except ValidationError:
+                await websocket.send_json(
+                    _error_response(
+                        frame.id,
+                        code="INVALID_PARAMS",
+                        message="invalid accounts.disconnect params",
+                    )
+                )
+                continue
+
+            account = account_registry.disconnect(account_id=params.account_id)
+            if account is None:
+                await websocket.send_json(
+                    _error_response(
+                        frame.id,
+                        code="NOT_FOUND",
+                        message=f"account not found: {params.account_id}",
+                    )
+                )
+                continue
+
+            payload = {"account": account_registry.as_public_payload(account)}
+            audit_store.append(
+                actor="user",
+                action="accounts.disconnect",
+                trace_id=frame.id,
+                data={"accountId": params.account_id},
+            )
+            await websocket.send_json(
+                _event_frame(
+                    "event.account.status",
+                    {"requestId": frame.id, "account": payload["account"]},
+                )
+            )
+            await websocket.send_json(_ok_response(frame.id, payload=payload))
             continue
 
         if frame.method == "risk.preview":

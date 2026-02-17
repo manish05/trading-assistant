@@ -3,6 +3,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, WebSocket
 
+from app.accounts.registry import AccountRegistry
 from app.audit.store import AuditStore
 from app.config.loader import AppConfig, default_config, load_config
 from app.devices.registry import DeviceRegistry
@@ -56,6 +57,7 @@ def create_app(
     app.state.agent_queues: dict[str, AgentQueue] = queue_snapshot_store.load()
     app.state.queue_snapshot_store = queue_snapshot_store
     app.state.audit_store = AuditStore(data_dir=data_dir)
+    app.state.account_registry = AccountRegistry(state_path=state_dir / "accounts.json")
     app.state.device_registry = DeviceRegistry(state_path=state_dir / "devices.json")
     app.state.memory_index = MemoryIndex(db_path=Path(data_dir) / "memory.db")
     app.state.resolved_plugins = resolved_plugins
@@ -73,6 +75,7 @@ def create_app(
             agent_queues=app.state.agent_queues,
             queue_snapshot_store=app.state.queue_snapshot_store,
             audit_store=app.state.audit_store,
+            account_registry=app.state.account_registry,
             app_config=app.state.app_config,
             device_registry=app.state.device_registry,
             memory_index=app.state.memory_index,

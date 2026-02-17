@@ -662,3 +662,87 @@ def test_gateway_trade_lifecycle_methods(tmp_path) -> None:
     assert close_event["event"] == "event.trade.closed"
     assert close_response["ok"] is True
     assert close_response["payload"]["execution"]["status"] == "closed"
+
+
+def test_gateway_accounts_namespace_methods(tmp_path) -> None:
+    client = TestClient(create_app(data_dir=tmp_path))
+
+    with client.websocket_connect("/ws") as websocket:
+        websocket.send_json(_connect_payload())
+        _ = websocket.receive_json()
+
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_accounts_connect_1",
+                "method": "accounts.connect",
+                "params": {
+                    "accountId": "acct_demo_1",
+                    "connectorId": "metaapi_mcp",
+                    "providerAccountId": "provider_1",
+                    "mode": "demo",
+                    "label": "Demo MT5",
+                    "allowedSymbols": ["ETHUSDm", "BTCUSDm"],
+                },
+            }
+        )
+        connect_event, connect_response = _read_event_then_response(websocket)
+
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_accounts_list_1",
+                "method": "accounts.list",
+                "params": {},
+            }
+        )
+        list_response = websocket.receive_json()
+
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_accounts_status_1",
+                "method": "accounts.status",
+                "params": {"accountId": "acct_demo_1"},
+            }
+        )
+        status_response = websocket.receive_json()
+
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_accounts_disconnect_1",
+                "method": "accounts.disconnect",
+                "params": {"accountId": "acct_demo_1"},
+            }
+        )
+        disconnect_event, disconnect_response = _read_event_then_response(websocket)
+
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_accounts_get_1",
+                "method": "accounts.get",
+                "params": {"accountId": "acct_demo_1"},
+            }
+        )
+        get_response = websocket.receive_json()
+
+    assert connect_event is not None
+    assert connect_event["event"] == "event.account.status"
+    assert connect_response["ok"] is True
+    assert connect_response["payload"]["account"]["status"] == "connected"
+
+    assert list_response["ok"] is True
+    assert list_response["payload"]["accounts"][0]["accountId"] == "acct_demo_1"
+
+    assert status_response["ok"] is True
+    assert status_response["payload"]["account"]["status"] == "connected"
+
+    assert disconnect_event is not None
+    assert disconnect_event["event"] == "event.account.status"
+    assert disconnect_response["ok"] is True
+    assert disconnect_response["payload"]["account"]["status"] == "disconnected"
+
+    assert get_response["ok"] is True
+    assert get_response["payload"]["account"]["status"] == "disconnected"
