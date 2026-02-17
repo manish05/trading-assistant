@@ -71,6 +71,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Quick Hide Hints' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Quick Show Legend' })).toBeInTheDocument()
     expect(screen.getByText('Helper Diagnostics')).toBeInTheDocument()
+    expect(
+      screen.getByText('diag:compact', { selector: '.import-snapshot-badges .import-summary-badge' }),
+    ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Use Verbose Diagnostics' })).toBeInTheDocument()
     expect(
       screen.getByText('enabled:1/2', { selector: '.import-snapshot-badges .import-summary-badge' }),
@@ -619,6 +622,9 @@ describe('Dashboard shell', () => {
     ).toBeInTheDocument()
     expect(
       screen.getByText('hintVisible:yes', { selector: '.import-snapshot-badges .import-summary-badge' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText('diag:verbose', { selector: '.import-snapshot-badges .import-summary-badge' }),
     ).toBeInTheDocument()
     expect(window.localStorage.getItem('quick-action-import-helper-diagnostics-mode-v1')).toBe(
       'verbose',

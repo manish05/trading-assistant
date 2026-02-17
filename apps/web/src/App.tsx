@@ -2022,6 +2022,9 @@ function App() {
                 ) : (
                   <span className="lifecycle-badge">none</span>
                 )}
+                <span className="import-summary-badge badge-hint-mode">
+                  diag:{helperDiagnosticsDisplayMode}
+                </span>
                 <div className="import-snapshot-toggles" aria-label="Import Snapshot Toggles">
                   <button
                     type="button"
