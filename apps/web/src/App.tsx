@@ -60,6 +60,7 @@ type PresetImportMode = 'overwrite' | 'merge'
 const PRESETS_STORAGE_KEY = 'quick-action-presets-v1'
 const HISTORY_FILTER_STORAGE_KEY = 'quick-action-history-filter-v1'
 const TIMESTAMP_FORMAT_STORAGE_KEY = 'quick-action-timestamp-format-v1'
+const PRESET_IMPORT_MODE_STORAGE_KEY = 'quick-action-preset-import-mode-v1'
 const DEFAULT_PRESET_TEMPLATE: QuickActionPreset = {
   managedAccountId: 'acct_demo_1',
   managedProviderAccountId: 'provider_demo_1',
@@ -111,6 +112,14 @@ const readTimestampFormatFromStorage = (): TimestampFormat => {
   }
   const raw = window.localStorage.getItem(TIMESTAMP_FORMAT_STORAGE_KEY)
   return raw === 'relative' ? 'relative' : 'absolute'
+}
+
+const readPresetImportModeFromStorage = (): PresetImportMode => {
+  if (typeof window === 'undefined') {
+    return 'overwrite'
+  }
+  const raw = window.localStorage.getItem(PRESET_IMPORT_MODE_STORAGE_KEY)
+  return raw === 'merge' ? 'merge' : 'overwrite'
 }
 
 const sanitizePreset = (value: unknown): QuickActionPreset | null => {
@@ -217,7 +226,9 @@ function App() {
   const [presetNameInput, setPresetNameInput] = useState<string>('default')
   const [selectedPresetName, setSelectedPresetName] = useState<string>('')
   const [presetImportInput, setPresetImportInput] = useState<string>('')
-  const [presetImportMode, setPresetImportMode] = useState<PresetImportMode>('overwrite')
+  const [presetImportMode, setPresetImportMode] = useState<PresetImportMode>(
+    readPresetImportModeFromStorage,
+  )
   const [availablePresetNames, setAvailablePresetNames] = useState<string[]>(() =>
     Object.keys(readPresetStoreFromStorage()).sort(),
   )
@@ -919,6 +930,10 @@ function App() {
   useEffect(() => {
     window.localStorage.setItem(TIMESTAMP_FORMAT_STORAGE_KEY, timestampFormat)
   }, [timestampFormat])
+
+  useEffect(() => {
+    window.localStorage.setItem(PRESET_IMPORT_MODE_STORAGE_KEY, presetImportMode)
+  }, [presetImportMode])
 
   const filteredHistory =
     historyFilter === 'all'

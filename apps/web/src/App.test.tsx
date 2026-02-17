@@ -359,6 +359,7 @@ describe('Dashboard shell', () => {
     fireEvent.change(screen.getByLabelText('Import Mode'), {
       target: { value: 'merge' },
     })
+    expect(window.localStorage.getItem('quick-action-preset-import-mode-v1')).toBe('merge')
     fireEvent.change(screen.getByLabelText('Import Presets JSON'), {
       target: {
         value: '{"conflict-template":{"feedSymbol":"BTCUSDm"}}',
