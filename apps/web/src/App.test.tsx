@@ -513,6 +513,7 @@ describe('Dashboard shell', () => {
       expect(payload).toContain('Import Shortcuts')
       expect(payload).toContain('Ctrl/Cmd+Enter')
       expect(payload).toContain('Active mode: overwrite')
+      expect(payload).toContain('Helper reset format: absolute')
     })
   })
 

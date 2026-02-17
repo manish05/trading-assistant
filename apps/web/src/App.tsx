@@ -1110,6 +1110,7 @@ function App() {
       '- Import mode overwrite: incoming presets replace conflicts',
       '- Import mode merge: existing presets keep conflicts',
       `- Active mode: ${presetImportMode}`,
+      `- Helper reset format: ${helperResetTimestampFormat}`,
     ].join('\n')
     try {
       if (!navigator.clipboard?.writeText) {
@@ -1130,7 +1131,7 @@ function App() {
         severity: 'warn',
       })
     }
-  }, [appendBlock, presetImportMode])
+  }, [appendBlock, helperResetTimestampFormat, presetImportMode])
 
   const copyHelperDiagnosticsSummary = useCallback(async () => {
     const summary = [
