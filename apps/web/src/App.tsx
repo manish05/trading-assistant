@@ -1558,6 +1558,11 @@ function App() {
               title: 'Toggle compact/detailed hints (empty input only)',
               inlineLabel: '/=mode',
             },
+            {
+              label: 'Alt+L',
+              title: 'Toggle helper reset lock',
+              inlineLabel: 'Alt+L=lock',
+            },
           ]
         : [
             {
@@ -1574,6 +1579,11 @@ function App() {
               label: '/',
               title: 'Toggle compact/detailed hints (empty input only)',
               inlineLabel: '/=mode',
+            },
+            {
+              label: 'Alt+L',
+              title: 'Toggle helper reset lock',
+              inlineLabel: 'Alt+L=lock',
             },
           ],
     [shortcutLegendOrder],

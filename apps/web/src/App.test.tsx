@@ -573,6 +573,10 @@ describe('Dashboard shell', () => {
       'title',
       'Run preset JSON import',
     )
+    expect(within(legendRow).getByText('Alt+L')).toHaveAttribute(
+      'title',
+      'Toggle helper reset lock',
+    )
 
     fireEvent.change(screen.getByLabelText('Legend Order'), {
       target: { value: 'clear-first' },
@@ -587,6 +591,7 @@ describe('Dashboard shell', () => {
     })
     expect(within(legendRow).queryByText('Esc', { selector: '.hotkey-chip' })).not.toBeInTheDocument()
     expect(within(legendRow).getByText(/Esc=clear/)).toBeInTheDocument()
+    expect(within(legendRow).getByText(/Alt\+L=lock/)).toBeInTheDocument()
     expect(window.localStorage.getItem('quick-action-status-shortcut-legend-density-v1')).toBe(
       'inline',
     )
@@ -606,6 +611,7 @@ describe('Dashboard shell', () => {
       .nextElementSibling as HTMLElement
     expect(within(legendRow).getAllByText(/Ctrl\/Cmd\+Enter|Esc|\//)[0]).toHaveTextContent('Esc')
     expect(within(legendRow).getByText(/Esc=clear/)).toBeInTheDocument()
+    expect(within(legendRow).getByText(/Alt\+L=lock/)).toBeInTheDocument()
   })
 
   it('supports helper quick toggles from status snapshot row', () => {
