@@ -74,6 +74,7 @@ const PRESET_IMPORT_MODE_STORAGE_KEY = 'quick-action-preset-import-mode-v1'
 const PRESET_IMPORT_REPORT_EXPANDED_STORAGE_KEY = 'quick-action-preset-import-report-expanded-v1'
 const IMPORT_HINT_VISIBILITY_STORAGE_KEY = 'quick-action-import-hint-visibility-v1'
 const IMPORT_HINT_MODE_STORAGE_KEY = 'quick-action-import-hint-mode-v1'
+const STATUS_SHORTCUT_LEGEND_STORAGE_KEY = 'quick-action-status-shortcut-legend-v1'
 const MAX_IMPORT_REPORT_NAMES = 6
 const DEFAULT_PRESET_TEMPLATE: QuickActionPreset = {
   managedAccountId: 'acct_demo_1',
@@ -158,6 +159,13 @@ const readImportHintModeFromStorage = (): ImportHintMode => {
   }
   const raw = window.localStorage.getItem(IMPORT_HINT_MODE_STORAGE_KEY)
   return raw === 'compact' ? 'compact' : 'detailed'
+}
+
+const readStatusShortcutLegendFromStorage = (): boolean => {
+  if (typeof window === 'undefined') {
+    return false
+  }
+  return window.localStorage.getItem(STATUS_SHORTCUT_LEGEND_STORAGE_KEY) === 'visible'
 }
 
 const sanitizePreset = (value: unknown): QuickActionPreset | null => {
@@ -287,7 +295,9 @@ function App() {
   )
   const [importHintMode, setImportHintMode] = useState<ImportHintMode>(readImportHintModeFromStorage)
   const [hintModeLiveNote, setHintModeLiveNote] = useState<string>('')
-  const [showShortcutLegendInStatus, setShowShortcutLegendInStatus] = useState<boolean>(false)
+  const [showShortcutLegendInStatus, setShowShortcutLegendInStatus] = useState<boolean>(
+    readStatusShortcutLegendFromStorage,
+  )
   const [availablePresetNames, setAvailablePresetNames] = useState<string[]>(() =>
     Object.keys(readPresetStoreFromStorage()).sort(),
   )
@@ -1183,6 +1193,13 @@ function App() {
   useEffect(() => {
     window.localStorage.setItem(IMPORT_HINT_MODE_STORAGE_KEY, importHintMode)
   }, [importHintMode])
+
+  useEffect(() => {
+    window.localStorage.setItem(
+      STATUS_SHORTCUT_LEGEND_STORAGE_KEY,
+      showShortcutLegendInStatus ? 'visible' : 'hidden',
+    )
+  }, [showShortcutLegendInStatus])
 
   const filteredHistory =
     historyFilter === 'all'

@@ -480,6 +480,14 @@ describe('Dashboard shell', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Show Legend in Status' }))
     expect(screen.getByText('Import Shortcut Legend')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Hide Legend in Status' })).toBeInTheDocument()
+    expect(window.localStorage.getItem('quick-action-status-shortcut-legend-v1')).toBe('visible')
+  })
+
+  it('initializes status shortcut legend visibility from localStorage', () => {
+    window.localStorage.setItem('quick-action-status-shortcut-legend-v1', 'visible')
+    render(<App />)
+    expect(screen.getByText('Import Shortcut Legend')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Hide Legend in Status' })).toBeInTheDocument()
   })
 
   it('reports accepted and rejected preset names after import', async () => {
