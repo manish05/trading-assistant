@@ -658,6 +658,7 @@ function App() {
   const [feedSymbol, setFeedSymbol] = useState<string>(DEFAULT_PRESET_TEMPLATE.feedSymbol)
   const [feedTimeframe, setFeedTimeframe] = useState<string>(DEFAULT_PRESET_TEMPLATE.feedTimeframe)
   const [lastFetchedCandlesCount, setLastFetchedCandlesCount] = useState<number | null>(null)
+  const [marketOverlayRecentCloses, setMarketOverlayRecentCloses] = useState<number[]>([])
   const [subscriptionCount, setSubscriptionCount] = useState<number | null>(null)
   const [activeSubscriptionId, setActiveSubscriptionId] = useState<string | null>(null)
   const [feedLifecycle, setFeedLifecycle] = useState<FeedLifecycleBadge[]>([])
@@ -708,6 +709,25 @@ function App() {
     }
     return `candles:${candles} · tradeEvents:${tradeEvents} · riskAlerts:${alerts}`
   }, [lastFetchedCandlesCount, marketOverlayMode, riskAlerts.length, tradeControlEvents.length])
+  const marketOverlayWindowSummary = useMemo(() => {
+    const closesSummary =
+      marketOverlayRecentCloses.length > 0
+        ? `closes:${marketOverlayRecentCloses.join(',')}`
+        : 'closes:none'
+    if (marketOverlayMode === 'price-only') {
+      return closesSummary
+    }
+    if (marketOverlayMode === 'with-trades') {
+      return `${closesSummary} · trades:${tradeControlEvents.length}`
+    }
+    return `${closesSummary} · trades:${tradeControlEvents.length} · risk:${riskAlerts.length} · feed:${feedLifecycle.length}`
+  }, [
+    feedLifecycle.length,
+    marketOverlayMode,
+    marketOverlayRecentCloses,
+    riskAlerts.length,
+    tradeControlEvents.length,
+  ])
 
   const websocketUrl = useMemo(() => {
     const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws'
@@ -1489,7 +1509,28 @@ function App() {
       limit: FEED_CANDLE_FETCH_LIMIT,
     })
     const candlesRaw = payload?.candles
-    setLastFetchedCandlesCount(Array.isArray(candlesRaw) ? candlesRaw.length : 0)
+    if (!Array.isArray(candlesRaw)) {
+      setLastFetchedCandlesCount(0)
+      setMarketOverlayRecentCloses([])
+      return
+    }
+    setLastFetchedCandlesCount(candlesRaw.length)
+    setMarketOverlayRecentCloses(
+      candlesRaw
+        .map((candle) => {
+          if (
+            candle &&
+            typeof candle === 'object' &&
+            'close' in candle &&
+            typeof candle.close === 'number'
+          ) {
+            return candle.close
+          }
+          return null
+        })
+        .filter((close): close is number => close !== null)
+        .slice(-5),
+    )
   }, [feedSymbol, feedTimeframe, sendRequest])
 
   const sendMarketplaceSignals = useCallback(async () => {
@@ -2732,6 +2773,7 @@ function App() {
               </span>
             </div>
             <p aria-label="Overlay Live Summary">Live: {marketOverlayLiveSummary}</p>
+            <p aria-label="Overlay Window Summary">Window: {marketOverlayWindowSummary}</p>
             <button type="button" onClick={refreshMarketOverlaySnapshot}>
               Refresh Overlay Snapshot
             </button>

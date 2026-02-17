@@ -39,6 +39,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Legend')).toBeInTheDocument()
     expect(screen.getByText('price', { selector: '.overlay-chip' })).toHaveClass('active')
     expect(screen.getByLabelText('Overlay Live Summary')).toHaveTextContent('Live: candles:0')
+    expect(screen.getByLabelText('Overlay Window Summary')).toHaveTextContent('Window: closes:none')
     expect(screen.getByRole('button', { name: 'Refresh Overlay Snapshot' })).toBeInTheDocument()
     expect(screen.getByLabelText('Overlay Snapshot Time')).toHaveTextContent('Snapshot: never')
     expect(screen.getByLabelText('Overlay Snapshot Summary')).toHaveTextContent('Summary: none')
@@ -368,10 +369,16 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Live Summary')).toHaveTextContent(
       'Live: candles:0 · tradeEvents:0',
     )
+    expect(screen.getByLabelText('Overlay Window Summary')).toHaveTextContent(
+      'Window: closes:none · trades:0',
+    )
 
     fireEvent.change(screen.getByLabelText('Overlay Mode'), { target: { value: 'with-risk' } })
     expect(within(legend).getByText('risk', { selector: '.overlay-chip' })).toHaveClass('active')
     expect(within(legend).getByText('feed', { selector: '.overlay-chip' })).toHaveClass('active')
+    expect(screen.getByLabelText('Overlay Window Summary')).toHaveTextContent(
+      'Window: closes:none · trades:0 · risk:0 · feed:0',
+    )
 
     fireEvent.click(screen.getByRole('button', { name: 'Get Candles' }))
     fireEvent.click(screen.getByRole('button', { name: 'Close All Now' }))
@@ -380,6 +387,9 @@ describe('Dashboard shell', () => {
     await waitFor(() => {
       expect(screen.getByLabelText('Overlay Live Summary')).toHaveTextContent(
         'Live: candles:2 · tradeEvents:1 · riskAlerts:1',
+      )
+      expect(screen.getByLabelText('Overlay Window Summary')).toHaveTextContent(
+        'Window: closes:1,2 · trades:1 · risk:1 · feed:0',
       )
     })
 
