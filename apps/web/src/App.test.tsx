@@ -79,7 +79,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Quick Unlock Reset' })).toBeInTheDocument()
     expect(screen.getByLabelText('Quick Toggle Lock Summary')).toHaveTextContent('quickLock:locked')
     expect(screen.getByLabelText('Quick Toggle Lock Summary')).toHaveClass('quick-lock-locked')
-    expect(screen.getByText('Helper Diagnostics')).toBeInTheDocument()
+    expect(screen.getByText('Helper Diagnostics', { selector: 'dt' })).toHaveTextContent(
+      'Helper Diagnostics (lock:locked)',
+    )
     expect(
       screen.getByText('diag:compact', { selector: '.import-snapshot-badges .import-summary-badge' }),
     ).toBeInTheDocument()
@@ -689,6 +691,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Reset Helper Prefs' })).toBeEnabled()
     expect(screen.getByText('Helper reset lock unlocked via controls.')).toBeInTheDocument()
     expect(window.localStorage.getItem('quick-action-helper-reset-lock-v1')).toBe('unlocked')
+    expect(screen.getByText('Helper Diagnostics', { selector: 'dt' })).toHaveTextContent(
+      'Helper Diagnostics (lock:unlocked)',
+    )
     expect(
       screen.getByText('lock:unlocked', { selector: '.import-snapshot-badges .import-summary-badge' }),
     ).toHaveClass('helper-reset-lock-badge', 'lock-unlocked')
@@ -699,6 +704,9 @@ describe('Dashboard shell', () => {
     render(<App />)
     expect(screen.getByRole('button', { name: 'Lock Reset' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Reset Helper Prefs' })).toBeEnabled()
+    expect(screen.getByText('Helper Diagnostics', { selector: 'dt' })).toHaveTextContent(
+      'Helper Diagnostics (lock:unlocked)',
+    )
     expect(
       screen.getByText('lock:unlocked', { selector: '.import-snapshot-badges .import-summary-badge' }),
     ).toHaveClass('helper-reset-lock-badge', 'lock-unlocked')

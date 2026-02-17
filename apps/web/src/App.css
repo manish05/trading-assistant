@@ -602,6 +602,11 @@
   font-weight: 500;
 }
 
+.helper-lock-indicator {
+  color: #9fb0cc;
+  font-weight: 500;
+}
+
 .status-legend-inline {
   color: #cdd8eb;
   font-size: 0.74rem;

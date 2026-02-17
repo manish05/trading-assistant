@@ -2356,7 +2356,10 @@ function App() {
               </dd>
             </div>
             <div>
-              <dt>Helper Diagnostics</dt>
+              <dt>
+                Helper Diagnostics{' '}
+                <span className="helper-lock-indicator">(lock:{isHelperResetLocked ? 'locked' : 'unlocked'})</span>
+              </dt>
               <dd className="import-snapshot-badges">
                 <span className="import-summary-badge badge-hint-mode">
                   enabled:{Number(isImportHintVisible) + Number(showShortcutLegendInStatus)}/2
