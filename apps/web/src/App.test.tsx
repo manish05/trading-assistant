@@ -420,6 +420,9 @@ describe('Dashboard shell', () => {
         screen.getByText('bad-template', { selector: '.preset-import-report span' }),
       ).toBeInTheDocument()
       expect(screen.getByText('Rejected')).toBeInTheDocument()
+      const summary = screen.getByLabelText('Import Report Summary Badges')
+      expect(within(summary).getByText('accepted:1')).toBeInTheDocument()
+      expect(within(summary).getByText('rejected:1')).toBeInTheDocument()
     })
   })
 

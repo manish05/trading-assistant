@@ -1378,6 +1378,25 @@ function App() {
                 {presetImportReport && isPresetImportReportExpanded ? 'Collapse Report' : 'Expand Report'}
               </button>
             </div>
+            {presetImportReport ? (
+              <div className="preset-import-mini" aria-label="Import Report Summary Badges">
+                <span className="import-summary-badge badge-accepted">
+                  accepted:{presetImportReport.accepted.length}
+                </span>
+                <span className="import-summary-badge badge-rejected">
+                  rejected:{presetImportReport.rejected.length}
+                </span>
+                <span className="import-summary-badge badge-created">
+                  created:{presetImportReport.createdCount}
+                </span>
+                <span className="import-summary-badge badge-preserved">
+                  preserved:{presetImportReport.preservedCount}
+                </span>
+                <span className="import-summary-badge badge-overwritten">
+                  overwritten:{presetImportReport.overwrittenCount}
+                </span>
+              </div>
+            ) : null}
             {presetImportReport && isPresetImportReportExpanded ? (
               <div className="preset-import-report">
                 <div>

@@ -266,6 +266,37 @@
   cursor: not-allowed;
 }
 
+.preset-import-mini {
+  margin-top: 0.35rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.import-summary-badge {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #2d4a7e;
+  border-radius: 999px;
+  padding: 0.08rem 0.36rem;
+  font-size: 0.68rem;
+  background: #162744;
+  color: #dbe7fb;
+}
+
+.import-summary-badge.badge-accepted,
+.import-summary-badge.badge-created,
+.import-summary-badge.badge-preserved {
+  border-color: #20673f;
+  background: #123822;
+}
+
+.import-summary-badge.badge-rejected,
+.import-summary-badge.badge-overwritten {
+  border-color: #8a2f3e;
+  background: #3b1720;
+}
+
 .preset-import-report {
   margin-top: 0.45rem;
   border: 1px solid #2d4a7e;
