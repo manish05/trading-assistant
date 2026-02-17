@@ -561,6 +561,20 @@ function App() {
     ],
   )
 
+  const lockTelemetryToastDetails = useMemo(
+    () =>
+      `toggles: ${helperResetLockToggleCount}, tone: ${helperResetLockToggleToneClass.replace(
+        'counter-tone-',
+        '',
+      )}, reset: ${helperLockCountersLastResetAt ?? 'never'}`,
+    [helperLockCountersLastResetAt, helperResetLockToggleCount, helperResetLockToggleToneClass],
+  )
+
+  const lockTelemetryToastDetailsWithLabel = useMemo(
+    () => `lock ${lockTelemetryToastDetails}`,
+    [lockTelemetryToastDetails],
+  )
+
   const toggleHelperResetLock = useCallback((source: 'Alt+L' | 'controls' | 'snapshot') => {
     const now = Date.now()
     const lockEntry: QuickActionHistory = {
@@ -1209,10 +1223,7 @@ function App() {
       appendBlock({
         id: `blk_${Date.now()}`,
         title: 'import report copied',
-        content: `Preset import report copied to clipboard (lock toggles: ${helperResetLockToggleCount}, tone: ${helperResetLockToggleToneClass.replace(
-          'counter-tone-',
-          '',
-        )}, reset: ${helperLockCountersLastResetAt ?? 'never'}).`,
+        content: `Preset import report copied to clipboard (${lockTelemetryToastDetailsWithLabel}).`,
         severity: 'info',
       })
     } catch {
@@ -1225,10 +1236,8 @@ function App() {
     }
   }, [
     appendBlock,
-    helperLockCountersLastResetAt,
-    helperResetLockToggleCount,
-    helperResetLockToggleToneClass,
     lockTelemetrySummaryLines,
+    lockTelemetryToastDetailsWithLabel,
     presetImportReport,
   ])
 
@@ -1264,10 +1273,7 @@ function App() {
       appendBlock({
         id: `blk_${Date.now()}`,
         title: 'import names copied',
-        content: `Copied full accepted/rejected import names to clipboard (lock toggles: ${helperResetLockToggleCount}, tone: ${helperResetLockToggleToneClass.replace(
-          'counter-tone-',
-          '',
-        )}, reset: ${helperLockCountersLastResetAt ?? 'never'}).`,
+        content: `Copied full accepted/rejected import names to clipboard (${lockTelemetryToastDetailsWithLabel}).`,
         severity: 'info',
       })
     } catch {
@@ -1280,10 +1286,8 @@ function App() {
     }
   }, [
     appendBlock,
-    helperLockCountersLastResetAt,
-    helperResetLockToggleCount,
-    helperResetLockToggleToneClass,
     lockTelemetrySummaryLines,
+    lockTelemetryToastDetailsWithLabel,
     presetImportReport,
   ])
 
@@ -1307,10 +1311,7 @@ function App() {
       appendBlock({
         id: `blk_${Date.now()}`,
         title: 'last summary copied',
-        content: `Copied last import summary to clipboard (lock toggles: ${helperResetLockToggleCount}, tone: ${helperResetLockToggleToneClass.replace(
-          'counter-tone-',
-          '',
-        )}, reset: ${helperLockCountersLastResetAt ?? 'never'}).`,
+        content: `Copied last import summary to clipboard (${lockTelemetryToastDetailsWithLabel}).`,
         severity: 'info',
       })
     } catch {
@@ -1323,11 +1324,9 @@ function App() {
     }
   }, [
     appendBlock,
-    helperLockCountersLastResetAt,
-    helperResetLockToggleCount,
-    helperResetLockToggleToneClass,
     lastImportSummaryText,
     lockTelemetrySummaryLines,
+    lockTelemetryToastDetailsWithLabel,
     presetImportReport,
   ])
 
@@ -1361,10 +1360,7 @@ function App() {
         title: 'shortcut cheat-sheet copied',
         content: `Copied import shortcut cheat-sheet to clipboard (lock: ${
           isHelperResetLocked ? 'locked' : 'unlocked'
-        }, toggles: ${helperResetLockToggleCount}, tone: ${helperResetLockToggleToneClass.replace(
-          'counter-tone-',
-          '',
-        )}, reset: ${helperLockCountersLastResetAt ?? 'never'}).`,
+        }, ${lockTelemetryToastDetails}).`,
         severity: 'info',
       })
     } catch {
@@ -1384,6 +1380,7 @@ function App() {
     helperResetLockToggleToneClass,
     helperResetTimestampFormat,
     isHelperResetLocked,
+    lockTelemetryToastDetails,
     presetImportMode,
   ])
 
@@ -1432,10 +1429,7 @@ function App() {
         title: 'helper summary copied',
         content: `Copied helper diagnostics summary to clipboard (lock: ${
           isHelperResetLocked ? 'locked' : 'unlocked'
-        }, toggles: ${helperResetLockToggleCount}, tone: ${helperResetLockToggleToneClass.replace(
-          'counter-tone-',
-          '',
-        )}, reset: ${helperLockCountersLastResetAt ?? 'never'}).`,
+        }, ${lockTelemetryToastDetails}).`,
         severity: 'info',
       })
     } catch {
@@ -1460,6 +1454,7 @@ function App() {
     helperResetLockToggleToneClass,
     helperResetStaleThresholdHours,
     helperResetTimestampFormat,
+    lockTelemetryToastDetails,
     shortcutLegendDensity,
     shortcutLegendOrder,
     showShortcutLegendInStatus,
@@ -1507,10 +1502,7 @@ function App() {
         title: 'helper reset badge copied',
         content: `Copied helper reset badge text to clipboard (lock: ${
           isHelperResetLocked ? 'locked' : 'unlocked'
-        }, toggles: ${helperResetLockToggleCount}, tone: ${helperResetLockToggleToneClass.replace(
-          'counter-tone-',
-          '',
-        )}, reset: ${helperLockCountersLastResetAt ?? 'never'}).`,
+        }, ${lockTelemetryToastDetails}).`,
         severity: 'info',
       })
     } catch {
@@ -1531,6 +1523,7 @@ function App() {
     isHelperResetBadgeSectionExpanded,
     isHelperResetBadgeVisible,
     isHelperResetLocked,
+    lockTelemetryToastDetails,
     helperResetStaleThresholdHours,
     helperResetTimestampFormat,
   ])
@@ -1884,10 +1877,7 @@ function App() {
         title: 'status legend copied',
         content: `Copied status shortcut legend to clipboard (lock: ${
           isHelperResetLocked ? 'locked' : 'unlocked'
-        }, toggles: ${helperResetLockToggleCount}, tone: ${helperResetLockToggleToneClass.replace(
-          'counter-tone-',
-          '',
-        )}, reset: ${helperLockCountersLastResetAt ?? 'never'}).`,
+        }, ${lockTelemetryToastDetails}).`,
         severity: 'info',
       })
     } catch {
@@ -1906,6 +1896,7 @@ function App() {
     helperResetLockToggleToneClass,
     importHintMode,
     isHelperResetLocked,
+    lockTelemetryToastDetails,
     shortcutLegendDensity,
     shortcutLegendOrder,
     showShortcutLegendInStatus,
@@ -1945,13 +1936,7 @@ function App() {
       appendBlock({
         id: `blk_${Date.now()}`,
         title: 'history copied',
-        content: `Copied ${Math.min(
-          filteredHistory.length,
-          10,
-        )} history entries (lock toggles: ${helperResetLockToggleCount}, tone: ${helperResetLockToggleToneClass.replace(
-          'counter-tone-',
-          '',
-        )}, reset: ${helperLockCountersLastResetAt ?? 'never'}).`,
+        content: `Copied ${Math.min(filteredHistory.length, 10)} history entries (${lockTelemetryToastDetailsWithLabel}).`,
         severity: 'info',
       })
     } catch {
@@ -1968,8 +1953,8 @@ function App() {
     helperLockCountersLastResetAt,
     helperResetLockSourceCounts,
     helperResetLockToggleCount,
-    helperResetLockToggleToneClass,
     historyFilter,
+    lockTelemetryToastDetailsWithLabel,
   ])
 
   return (
