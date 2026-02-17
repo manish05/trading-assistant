@@ -73,6 +73,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Legend Density')).toHaveValue('chips')
     expect(screen.getByRole('button', { name: 'Copy Shortcut Cheat Sheet' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Hide Quick Toggles' })).toBeInTheDocument()
+    expect(screen.getByText('(lock:locked)', { selector: '.quick-toggle-lock-state' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Quick Hide Hints' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Quick Show Legend' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Quick Hide Reset Badge' })).toBeInTheDocument()
@@ -646,6 +647,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByText('Helper reset lock unlocked via snapshot.')).toBeInTheDocument()
     expect(screen.getByLabelText('Quick Toggle Lock Summary')).toHaveTextContent('quickLock:unlocked')
     expect(screen.getByLabelText('Quick Toggle Lock Summary')).toHaveClass('quick-lock-unlocked')
+    expect(screen.getByText('(lock:unlocked)', { selector: '.quick-toggle-lock-state' })).toBeInTheDocument()
   })
 
   it('toggles helper reset badge visibility and persists preference', () => {

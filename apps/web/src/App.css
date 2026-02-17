@@ -638,6 +638,11 @@
   color: #ccf2dc;
 }
 
+.quick-toggle-lock-state {
+  color: #9fb0cc;
+  font-size: 0.64rem;
+}
+
 .import-snapshot-toggles button {
   background: #1d335a;
   color: #e8edf5;

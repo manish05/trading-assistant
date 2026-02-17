@@ -2321,6 +2321,10 @@ function App() {
                     onClick={() => setIsImportSnapshotTogglesExpanded((current) => !current)}
                   >
                     {isImportSnapshotTogglesExpanded ? 'Hide Quick Toggles' : 'Show Quick Toggles'}
+                    <span className="quick-toggle-lock-state" aria-hidden="true">
+                      {' '}
+                      (lock:{isHelperResetLocked ? 'locked' : 'unlocked'})
+                    </span>
                   </button>
                   {isImportSnapshotTogglesExpanded ? (
                     <>
