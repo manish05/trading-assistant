@@ -1233,11 +1233,12 @@ function App() {
       marketOverlayChartPoints[marketOverlayChartPoints.length - 1]
     const baseline = marketOverlayAverageClose ?? point.value
     const deltaFromAverage = point.value - baseline
+    const deltaFromAveragePct = baseline === 0 ? 0 : (deltaFromAverage / baseline) * 100
     const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1]
     const deltaToLatest = point.value - latestPoint.value
     const deltaToLatestPct = latestPoint.value === 0 ? 0 : (deltaToLatest / latestPoint.value) * 100
     const ageLabel = formatElapsedMs(Date.now() - marketOverlayActiveTimelineAnnotation.timestamp)
-    return `${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · t${point.time} · close:${point.value.toFixed(2)} · Δavg:${deltaFromAverage >= 0 ? '+' : ''}${deltaFromAverage.toFixed(2)} · Δlatest:${deltaToLatest >= 0 ? '+' : ''}${deltaToLatest.toFixed(2)} (${deltaToLatestPct >= 0 ? '+' : ''}${deltaToLatestPct.toFixed(2)}%) · age:${ageLabel} · tone:${marketOverlayActiveTimelineAnnotation.tone}`
+    return `${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · t${point.time} · close:${point.value.toFixed(2)} · Δavg:${deltaFromAverage >= 0 ? '+' : ''}${deltaFromAverage.toFixed(2)} (${deltaFromAveragePct >= 0 ? '+' : ''}${deltaFromAveragePct.toFixed(2)}%) · Δlatest:${deltaToLatest >= 0 ? '+' : ''}${deltaToLatest.toFixed(2)} (${deltaToLatestPct >= 0 ? '+' : ''}${deltaToLatestPct.toFixed(2)}%) · age:${ageLabel} · tone:${marketOverlayActiveTimelineAnnotation.tone}`
   }, [marketOverlayActiveTimelineAnnotation, marketOverlayAverageClose, marketOverlayChartPoints])
   const marketOverlayMarkerTimelineRows = useMemo(() => {
     if (marketOverlayScopedVisibleAnnotations.length === 0) {
@@ -1254,6 +1255,10 @@ function App() {
         ? marketOverlayChartPoints.find((candidate) => candidate.time === timelineAnnotation.time)
         : null
       const deltaFromAverage = point && baseline !== null ? point.value - baseline : null
+      const deltaFromAveragePct =
+        deltaFromAverage !== null && baseline !== null && baseline !== 0
+          ? (deltaFromAverage / baseline) * 100
+          : null
       const deltaToLatest = point && latestPoint ? point.value - latestPoint.value : null
       const deltaToLatestPct =
         deltaToLatest !== null && latestPoint && latestPoint.value !== 0
@@ -1262,7 +1267,7 @@ function App() {
       const ageLabel = formatElapsedMs(Date.now() - annotation.timestamp)
       return {
         id: annotation.id,
-        text: `${annotation.kind}:${annotation.label} · t${timelineAnnotation?.time ?? 'n/a'} · close:${point ? point.value.toFixed(2) : 'n/a'} · Δlatest:${deltaToLatest === null ? 'n/a' : `${deltaToLatest >= 0 ? '+' : ''}${deltaToLatest.toFixed(2)} (${deltaToLatestPct !== null ? `${deltaToLatestPct >= 0 ? '+' : ''}${deltaToLatestPct.toFixed(2)}%` : 'n/a'})`} · Δavg:${deltaFromAverage === null ? 'n/a' : `${deltaFromAverage >= 0 ? '+' : ''}${deltaFromAverage.toFixed(2)}`} · age:${ageLabel}`,
+        text: `${annotation.kind}:${annotation.label} · t${timelineAnnotation?.time ?? 'n/a'} · close:${point ? point.value.toFixed(2) : 'n/a'} · Δlatest:${deltaToLatest === null ? 'n/a' : `${deltaToLatest >= 0 ? '+' : ''}${deltaToLatest.toFixed(2)} (${deltaToLatestPct !== null ? `${deltaToLatestPct >= 0 ? '+' : ''}${deltaToLatestPct.toFixed(2)}%` : 'n/a'})`} · Δavg:${deltaFromAverage === null ? 'n/a' : `${deltaFromAverage >= 0 ? '+' : ''}${deltaFromAverage.toFixed(2)} (${deltaFromAveragePct !== null ? `${deltaFromAveragePct >= 0 ? '+' : ''}${deltaFromAveragePct.toFixed(2)}%` : 'n/a'})`} · age:${ageLabel}`,
         isSelected: annotation.id === marketOverlaySelectedMarkerId,
       }
     })
