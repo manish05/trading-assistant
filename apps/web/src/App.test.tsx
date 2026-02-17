@@ -20,16 +20,20 @@ describe('Dashboard shell', () => {
     render(<App />)
 
     expect(screen.getByRole('button', { name: 'Accounts' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Connect Account' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Disconnect Account' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Feeds' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Subscribe Feed' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Unsubscribe Feed' })).toBeDisabled()
   })
 
-  it('sends accounts.list, feeds.list, and feeds.subscribe requests', async () => {
+  it('sends account and feed management requests', async () => {
     const sendSpy = vi.spyOn(WebSocket.prototype, 'send')
     render(<App />)
 
     fireEvent.click(screen.getByRole('button', { name: 'Accounts' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Connect Account' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Disconnect Account' }))
     fireEvent.click(screen.getByRole('button', { name: 'Feeds' }))
     fireEvent.click(screen.getByRole('button', { name: 'Subscribe Feed' }))
 
@@ -40,6 +44,8 @@ describe('Dashboard shell', () => {
       const methods = payloads.map((payload) => payload.method)
 
       expect(methods).toContain('accounts.list')
+      expect(methods).toContain('accounts.connect')
+      expect(methods).toContain('accounts.disconnect')
       expect(methods).toContain('feeds.list')
       expect(methods).toContain('feeds.subscribe')
     })

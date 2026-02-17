@@ -33,6 +33,8 @@ function App() {
   const [protocolVersion, setProtocolVersion] = useState<number | null>(null)
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [accountCount, setAccountCount] = useState<number | null>(null)
+  const [managedAccountId, setManagedAccountId] = useState<string>('acct_demo_1')
+  const [accountConnectionStatus, setAccountConnectionStatus] = useState<string>('unknown')
   const [feedCount, setFeedCount] = useState<number | null>(null)
   const [subscriptionCount, setSubscriptionCount] = useState<number | null>(null)
   const [activeSubscriptionId, setActiveSubscriptionId] = useState<string | null>(null)
@@ -137,6 +139,45 @@ function App() {
     const accounts = Array.isArray(accountsRaw) ? accountsRaw : []
     setAccountCount(accounts.length)
   }, [sendRequest])
+
+  const sendAccountConnect = useCallback(async () => {
+    const payload = await sendRequest('accounts.connect', {
+      accountId: managedAccountId,
+      connectorId: 'metaapi_mcp',
+      providerAccountId: 'provider_demo_1',
+      mode: 'demo',
+      label: 'Demo Account',
+      allowedSymbols: ['ETHUSDm', 'BTCUSDm'],
+    })
+    const account = payload?.account
+    if (account && typeof account === 'object') {
+      if ('accountId' in account && typeof account.accountId === 'string') {
+        setManagedAccountId(account.accountId)
+      }
+      if ('status' in account && typeof account.status === 'string') {
+        setAccountConnectionStatus(account.status)
+      }
+    }
+  }, [managedAccountId, sendRequest])
+
+  const sendAccountDisconnect = useCallback(async () => {
+    if (!managedAccountId) {
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'accounts.disconnect skipped',
+        content: 'No managed account id available.',
+        severity: 'warn',
+      })
+      return
+    }
+    const payload = await sendRequest('accounts.disconnect', { accountId: managedAccountId })
+    const account = payload?.account
+    if (account && typeof account === 'object' && 'status' in account) {
+      if (typeof account.status === 'string') {
+        setAccountConnectionStatus(account.status)
+      }
+    }
+  }, [appendBlock, managedAccountId, sendRequest])
 
   const sendFeedsList = useCallback(async () => {
     const payload = await sendRequest('feeds.list', {})
@@ -311,6 +352,12 @@ function App() {
               <button type="button" onClick={() => void sendAccountsList()}>
                 Accounts
               </button>
+              <button type="button" onClick={() => void sendAccountConnect()}>
+                Connect Account
+              </button>
+              <button type="button" onClick={() => void sendAccountDisconnect()}>
+                Disconnect Account
+              </button>
               <button type="button" onClick={() => void sendFeedsList()}>
                 Feeds
               </button>
@@ -358,6 +405,14 @@ function App() {
             <div>
               <dt>Accounts (last fetch)</dt>
               <dd>{accountCount ?? 'n/a'}</dd>
+            </div>
+            <div>
+              <dt>Managed Account</dt>
+              <dd>{managedAccountId}</dd>
+            </div>
+            <div>
+              <dt>Account Connection</dt>
+              <dd>{accountConnectionStatus}</dd>
             </div>
             <div>
               <dt>Feeds (last fetch)</dt>
