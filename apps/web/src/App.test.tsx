@@ -443,6 +443,102 @@ describe('Dashboard shell', () => {
     expect(screen.queryByText(/Lock telemetry:/)).not.toBeInTheDocument()
   })
 
+  it('shows gateway-disconnected telemetry when block telemetry is visible', () => {
+    const OriginalWebSocket = globalThis.WebSocket
+    class ClosedWebSocket {
+      static readonly CONNECTING = 0
+      static readonly OPEN = 1
+      static readonly CLOSING = 2
+      static readonly CLOSED = 3
+
+      readyState = ClosedWebSocket.CLOSED
+      onopen: (() => void) | null = null
+      onclose: (() => void) | null = null
+      onmessage: ((event: MessageEvent<string>) => void) | null = null
+
+      constructor(url: string) {
+        void url
+      }
+
+      send(data: string): void {
+        void data
+      }
+
+      close(): void {
+        this.onclose?.()
+      }
+    }
+    Object.defineProperty(globalThis, 'WebSocket', {
+      value: ClosedWebSocket,
+      configurable: true,
+    })
+
+    try {
+      render(<App />)
+      fireEvent.click(screen.getByRole('button', { name: 'Accounts' }))
+
+      expect(
+        screen.getByText(
+          'Gateway is not connected. Lock telemetry: lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0.',
+        ),
+      ).toBeInTheDocument()
+    } finally {
+      Object.defineProperty(globalThis, 'WebSocket', {
+        value: OriginalWebSocket,
+        configurable: true,
+      })
+    }
+  })
+
+  it('omits gateway-disconnected telemetry when block telemetry is hidden', () => {
+    const OriginalWebSocket = globalThis.WebSocket
+    class ClosedWebSocket {
+      static readonly CONNECTING = 0
+      static readonly OPEN = 1
+      static readonly CLOSING = 2
+      static readonly CLOSED = 3
+
+      readyState = ClosedWebSocket.CLOSED
+      onopen: (() => void) | null = null
+      onclose: (() => void) | null = null
+      onmessage: ((event: MessageEvent<string>) => void) | null = null
+
+      constructor(url: string) {
+        void url
+      }
+
+      send(data: string): void {
+        void data
+      }
+
+      close(): void {
+        this.onclose?.()
+      }
+    }
+    Object.defineProperty(globalThis, 'WebSocket', {
+      value: ClosedWebSocket,
+      configurable: true,
+    })
+
+    try {
+      render(<App />)
+      fireEvent.click(screen.getByRole('button', { name: 'Hide Block Telemetry' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Accounts' }))
+
+      expect(screen.getByText('Gateway is not connected.')).toBeInTheDocument()
+      expect(
+        screen.queryByText(
+          'Gateway is not connected. Lock telemetry: lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0.',
+        ),
+      ).not.toBeInTheDocument()
+    } finally {
+      Object.defineProperty(globalThis, 'WebSocket', {
+        value: OriginalWebSocket,
+        configurable: true,
+      })
+    }
+  })
+
   it('shows lock telemetry when selected preset no longer exists', async () => {
     render(<App />)
 
