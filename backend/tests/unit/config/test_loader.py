@@ -52,3 +52,49 @@ def test_loader_raises_on_missing_required_fields(tmp_path: Path) -> None:
 
     with pytest.raises(ConfigValidationError):
         load_config(config_path)
+
+
+def test_loader_parses_accounts_and_feeds_sections(tmp_path: Path) -> None:
+    config_path = tmp_path / "config.json5"
+    config_path.write_text(
+        """
+        {
+          gateway: {
+            host: "0.0.0.0",
+            port: 18789,
+            auth: {
+              mode: "token",
+              token: "dev-token",
+            },
+          },
+          accounts: [
+            {
+              accountId: "acct_demo_1",
+              connectorId: "metaapi_mcp",
+              providerAccountId: "provider_1",
+              mode: "demo",
+              label: "Demo MT5",
+              allowedSymbols: ["ETHUSDm", "BTCUSDm"],
+            },
+          ],
+          feeds: {
+            candles: {
+              enabled: true,
+              pollSecondsByTimeframe: {
+                "5m": 45,
+                "1h": 180,
+              },
+            },
+            priceTicks: { enabled: false },
+          },
+        }
+        """,
+        encoding="utf-8",
+    )
+
+    config = load_config(config_path)
+
+    assert config.accounts[0].account_id == "acct_demo_1"
+    assert config.accounts[0].allowed_symbols == ["ETHUSDm", "BTCUSDm"]
+    assert config.feeds.candles.poll_seconds_by_timeframe["5m"] == 45
+    assert config.feeds.priceTicks.enabled is False

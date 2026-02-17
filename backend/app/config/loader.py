@@ -7,6 +7,7 @@ from typing import Any
 
 import json5
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic.alias_generators import to_camel
 
 
 class ConfigValidationError(ValueError):
@@ -36,11 +37,55 @@ class PluginsConfig(BaseModel):
     slots: dict[str, str] = Field(default_factory=dict)
 
 
+class AccountConfig(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+
+    account_id: str = Field(alias="accountId", min_length=1)
+    connector_id: str = Field(alias="connectorId", min_length=1)
+    provider_account_id: str = Field(alias="providerAccountId", min_length=1)
+    mode: str = Field(min_length=1)
+    label: str = Field(min_length=1)
+    allowed_symbols: list[str] = Field(alias="allowedSymbols", default_factory=list)
+
+
+class FeedCandlesConfig(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+
+    enabled: bool = True
+    poll_seconds_by_timeframe: dict[str, int] = Field(
+        alias="pollSecondsByTimeframe",
+        default_factory=dict,
+    )
+
+
+class FeedPriceTicksConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    enabled: bool = False
+
+
+class FeedsConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    candles: FeedCandlesConfig = Field(default_factory=FeedCandlesConfig)
+    priceTicks: FeedPriceTicksConfig = Field(default_factory=FeedPriceTicksConfig)
+
+
 class AppConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     gateway: GatewayConfig
     plugins: PluginsConfig = Field(default_factory=PluginsConfig)
+    accounts: list[AccountConfig] = Field(default_factory=list)
+    feeds: FeedsConfig = Field(default_factory=FeedsConfig)
 
 
 _ENV_PATTERN = re.compile(r"\$\{([A-Z0-9_]+)\}")
@@ -60,6 +105,14 @@ def default_config() -> AppConfig:
             allow=[],
             deny=[],
             slots={"memory": "sqlite_fts"},
+        ),
+        accounts=[],
+        feeds=FeedsConfig(
+            candles=FeedCandlesConfig(
+                enabled=True,
+                poll_seconds_by_timeframe={"5m": 45, "1h": 180},
+            ),
+            priceTicks=FeedPriceTicksConfig(enabled=False),
         ),
     )
 
