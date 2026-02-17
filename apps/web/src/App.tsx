@@ -825,6 +825,7 @@ function App() {
   )
   const [feedCount, setFeedCount] = useState<number | null>(null)
   const [marketplaceSignalCount, setMarketplaceSignalCount] = useState<number | null>(null)
+  const [marketplaceFollowsSummary, setMarketplaceFollowsSummary] = useState<string>('none')
   const [copytradePreviewSummary, setCopytradePreviewSummary] = useState<string>('none')
   const [feedTopic, setFeedTopic] = useState<string>(DEFAULT_PRESET_TEMPLATE.feedTopic)
   const [feedSymbol, setFeedSymbol] = useState<string>(DEFAULT_PRESET_TEMPLATE.feedSymbol)
@@ -3480,6 +3481,53 @@ function App() {
     setMarketplaceSignalCount(Array.isArray(signalsRaw) ? signalsRaw.length : 0)
   }, [sendRequest])
 
+  const sendMarketplaceFollow = useCallback(async () => {
+    const accountId = managedAccountId.trim() || DEFAULT_PRESET_TEMPLATE.managedAccountId
+    const payload = await sendRequest('marketplace.follow', {
+      accountId,
+      strategyId: COPYTRADE_PREVIEW_STRATEGY_ID,
+    })
+    if (!payload) {
+      return
+    }
+    const status = typeof payload.status === 'string' ? payload.status : 'following'
+    const followId = typeof payload.followId === 'string' ? payload.followId : null
+    setMarketplaceFollowsSummary(
+      `${status}:${COPYTRADE_PREVIEW_STRATEGY_ID}${followId ? `#${followId}` : ''}`,
+    )
+  }, [managedAccountId, sendRequest])
+
+  const sendMarketplaceUnfollow = useCallback(async () => {
+    const accountId = managedAccountId.trim() || DEFAULT_PRESET_TEMPLATE.managedAccountId
+    const payload = await sendRequest('marketplace.unfollow', {
+      accountId,
+      strategyId: COPYTRADE_PREVIEW_STRATEGY_ID,
+    })
+    if (!payload) {
+      return
+    }
+    const status = typeof payload.status === 'string' ? payload.status : 'unfollowed'
+    setMarketplaceFollowsSummary(`${status}:${COPYTRADE_PREVIEW_STRATEGY_ID}`)
+  }, [managedAccountId, sendRequest])
+
+  const sendMarketplaceMyFollows = useCallback(async () => {
+    const accountId = managedAccountId.trim() || DEFAULT_PRESET_TEMPLATE.managedAccountId
+    const payload = await sendRequest('marketplace.myFollows', {
+      accountId,
+    })
+    if (!payload) {
+      return
+    }
+    const follows = Array.isArray(payload.follows) ? payload.follows : []
+    const firstFollow =
+      follows.length > 0 && follows[0] && typeof follows[0] === 'object' ? follows[0] : null
+    const firstStrategyId =
+      firstFollow && 'strategyId' in firstFollow && typeof firstFollow.strategyId === 'string'
+        ? firstFollow.strategyId
+        : 'none'
+    setMarketplaceFollowsSummary(`count:${follows.length} · primary:${firstStrategyId}`)
+  }, [managedAccountId, sendRequest])
+
   const sendCopytradePreview = useCallback(async () => {
     const accountId = managedAccountId.trim() || DEFAULT_PRESET_TEMPLATE.managedAccountId
     const symbol = feedSymbol.trim() || DEFAULT_PRESET_TEMPLATE.feedSymbol
@@ -5209,6 +5257,15 @@ function App() {
               <button type="button" onClick={() => void sendMarketplaceSignals()}>
                 Marketplace Signals
               </button>
+              <button type="button" onClick={() => void sendMarketplaceFollow()}>
+                Marketplace Follow
+              </button>
+              <button type="button" onClick={() => void sendMarketplaceUnfollow()}>
+                Marketplace Unfollow
+              </button>
+              <button type="button" onClick={() => void sendMarketplaceMyFollows()}>
+                Marketplace Follows
+              </button>
               <button type="button" onClick={() => void sendDevicesList()}>
                 Devices
               </button>
@@ -5913,6 +5970,10 @@ function App() {
             <div>
               <dt>Marketplace Signals (last fetch)</dt>
               <dd>{marketplaceSignalCount ?? 'n/a'}</dd>
+            </div>
+            <div>
+              <dt>Marketplace Follows</dt>
+              <dd>{marketplaceFollowsSummary}</dd>
             </div>
             <div>
               <dt>Copytrade Preview</dt>

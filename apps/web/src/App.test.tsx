@@ -36,6 +36,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Agents' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Create Agent' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Run Onboarding Flow' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Marketplace Follow' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Marketplace Unfollow' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Marketplace Follows' })).toBeInTheDocument()
     expect(screen.getByLabelText('Marker Window')).toHaveValue('5')
     expect(screen.getByLabelText('Marker Focus')).toHaveValue('all')
     expect(screen.getByLabelText('Marker Age')).toHaveValue('all')
@@ -1650,6 +1653,9 @@ describe('Dashboard shell', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Subscribe Feed' }))
     fireEvent.click(screen.getByRole('button', { name: 'Get Candles' }))
     fireEvent.click(screen.getByRole('button', { name: 'Marketplace Signals' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Marketplace Follow' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Marketplace Unfollow' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Marketplace Follows' }))
     fireEvent.click(screen.getByRole('button', { name: 'Copytrade Preview' }))
 
     await waitFor(() => {
@@ -1679,6 +1685,9 @@ describe('Dashboard shell', () => {
       expect(methods).toContain('feeds.subscribe')
       expect(methods).toContain('feeds.getCandles')
       expect(methods).toContain('marketplace.signals')
+      expect(methods).toContain('marketplace.follow')
+      expect(methods).toContain('marketplace.unfollow')
+      expect(methods).toContain('marketplace.myFollows')
       expect(methods).toContain('copytrade.preview')
 
       const accountConnect = payloads.find((payload) => payload.method === 'accounts.connect')
@@ -1761,6 +1770,27 @@ describe('Dashboard shell', () => {
         topics: ['market.tick'],
         symbols: ['BTCUSDm'],
         timeframes: ['1h'],
+      })
+
+      const marketplaceFollow = payloads.find((payload) => payload.method === 'marketplace.follow')
+      expect(marketplaceFollow?.params).toMatchObject({
+        accountId: 'acct_custom_9',
+        strategyId: 'strat_dashboard_1',
+      })
+
+      const marketplaceUnfollow = payloads.find(
+        (payload) => payload.method === 'marketplace.unfollow',
+      )
+      expect(marketplaceUnfollow?.params).toMatchObject({
+        accountId: 'acct_custom_9',
+        strategyId: 'strat_dashboard_1',
+      })
+
+      const marketplaceMyFollows = payloads.find(
+        (payload) => payload.method === 'marketplace.myFollows',
+      )
+      expect(marketplaceMyFollows?.params).toMatchObject({
+        accountId: 'acct_custom_9',
       })
 
       const feedCandles = payloads.find((payload) => payload.method === 'feeds.getCandles')
@@ -1896,17 +1926,85 @@ describe('Dashboard shell', () => {
               }),
             )
           })
+          return
+        }
+        if (payload.type === 'req' && payload.method === 'marketplace.follow' && payload.id) {
+          queueMicrotask(() => {
+            this.onmessage?.(
+              new MessageEvent('message', {
+                data: JSON.stringify({
+                  type: 'res',
+                  id: payload.id,
+                  ok: true,
+                  payload: {
+                    status: 'following',
+                    followId: 'follow_demo_1',
+                  },
+                }),
+              }),
+            )
+          })
+          return
+        }
+        if (payload.type === 'req' && payload.method === 'marketplace.unfollow' && payload.id) {
+          queueMicrotask(() => {
+            this.onmessage?.(
+              new MessageEvent('message', {
+                data: JSON.stringify({
+                  type: 'res',
+                  id: payload.id,
+                  ok: true,
+                  payload: {
+                    status: 'unfollowed',
+                  },
+                }),
+              }),
+            )
+          })
+          return
+        }
+        if (payload.type === 'req' && payload.method === 'marketplace.myFollows' && payload.id) {
+          queueMicrotask(() => {
+            this.onmessage?.(
+              new MessageEvent('message', {
+                data: JSON.stringify({
+                  type: 'res',
+                  id: payload.id,
+                  ok: true,
+                  payload: {
+                    follows: [
+                      {
+                        followId: 'follow_demo_1',
+                        strategyId: 'strat_dashboard_1',
+                      },
+                    ],
+                  },
+                }),
+              }),
+            )
+          })
         }
       })
 
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: 'Marketplace Signals' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Marketplace Follow' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Marketplace Follows' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Marketplace Unfollow' }))
     fireEvent.click(screen.getByRole('button', { name: 'Copytrade Preview' }))
 
     await waitFor(() => {
       const marketplaceRow = screen.getByText('Marketplace Signals (last fetch)').closest('div')
       expect(marketplaceRow).not.toBeNull()
       expect(within(marketplaceRow as HTMLElement).getByText('3')).toBeInTheDocument()
+
+      const marketplaceFollowRow = screen
+        .getByText('Marketplace Follows', { selector: 'dt' })
+        .closest('div')
+      expect(marketplaceFollowRow).not.toBeNull()
+      expect(
+        within(marketplaceFollowRow as HTMLElement).getByText('unfollowed:strat_dashboard_1'),
+      ).toBeInTheDocument()
 
       const copytradeRow = screen.getByText('Copytrade Preview', { selector: 'dt' }).closest('div')
       expect(copytradeRow).not.toBeNull()
