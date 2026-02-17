@@ -794,6 +794,14 @@
   color: #a9b8d3;
 }
 
+.block-raw-json-viewer {
+  margin-top: 0.35rem;
+  border: 1px solid #2f4469;
+  border-radius: 8px;
+  padding: 0.45rem;
+  background: #0d1728;
+}
+
 .severity-warn {
   border-color: #8a6d1f;
 }

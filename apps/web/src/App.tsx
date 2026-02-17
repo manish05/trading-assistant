@@ -5851,6 +5851,17 @@ function App() {
               blocks.map((block) => {
                 const blockKind = resolveBlockRenderKind(block)
                 const markdownContent = stripBlockTelemetrySegment(block.content).trim()
+                const rawPayloadViewerContent =
+                  blockKind === 'RawPayload'
+                    ? (() => {
+                        const structuredPayload = parseStructuredBlockPayload(block.content)
+                        if (structuredPayload) {
+                          return JSON.stringify(structuredPayload, null, 2)
+                        }
+                        const telemetryStripped = stripBlockTelemetrySegment(block.content).trim()
+                        return telemetryStripped.length > 0 ? telemetryStripped : block.content
+                      })()
+                    : null
                 return (
                   <article
                     key={block.id}
@@ -5865,7 +5876,10 @@ function App() {
                       <pre>{block.content}</pre>
                     )}
                     {blockKind === 'RawPayload' ? (
-                      <p className="block-raw-hint">Unknown block type; showing raw payload.</p>
+                      <>
+                        <p className="block-raw-hint">Unknown block type; showing raw payload.</p>
+                        <pre className="block-raw-json-viewer">{rawPayloadViewerContent}</pre>
+                      </>
                     ) : null}
                   </article>
                 )

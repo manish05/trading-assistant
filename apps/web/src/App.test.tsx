@@ -3155,7 +3155,11 @@ describe('Dashboard shell', () => {
 
     const eventCard = screen.getByText('event.risk.emergencyStop').closest('article')
     expect(eventCard).not.toBeNull()
-    expect(within(eventCard as HTMLElement).getByText(/"lastReason": "event telemetry hidden"/)).toBeInTheDocument()
+    expect(
+      within(eventCard as HTMLElement).getByText(/"lastReason": "event telemetry hidden"/, {
+        selector: '.block-raw-json-viewer',
+      }),
+    ).toBeInTheDocument()
     expect(
       within(eventCard as HTMLElement).queryByText(
         /\[LockTelemetry\] lock toggles: 0, tone: none, reset: never; sources: Alt\+L=0, controls=0, snapshot=0/,
@@ -4081,6 +4085,16 @@ describe('Dashboard shell', () => {
     expect(within(eventCard as HTMLElement).getByText('RawPayload')).toBeInTheDocument()
     expect(
       within(eventCard as HTMLElement).getByText('Unknown block type; showing raw payload.'),
+    ).toBeInTheDocument()
+    expect(
+      within(eventCard as HTMLElement).getByText(/"action":\s*"subscribed"/, {
+        selector: '.block-raw-json-viewer',
+      }),
+    ).toBeInTheDocument()
+    expect(
+      within(eventCard as HTMLElement).getByText(/"subscriptionId":\s*"sub_simulated_1"/, {
+        selector: '.block-raw-json-viewer',
+      }),
     ).toBeInTheDocument()
 
     sendSpy.mockRestore()
