@@ -14,6 +14,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByText('Market Panel')).toBeInTheDocument()
     expect(screen.getByText('Agent Feed')).toBeInTheDocument()
     expect(screen.getByText('Account Status')).toBeInTheDocument()
+    expect(screen.getByText('Feed Lifecycle')).toBeInTheDocument()
   })
 
   it('renders gateway action buttons for account/feed listing', () => {

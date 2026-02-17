@@ -22,6 +22,12 @@ type BlockItem = {
   severity: 'info' | 'warn' | 'error'
 }
 
+type FeedLifecycleBadge = {
+  id: string
+  action: string
+  subscriptionId?: string
+}
+
 function App() {
   const wsRef = useRef<WebSocket | null>(null)
   const pendingRequestsRef = useRef<Map<string, (value: GatewayResponse) => void>>(new Map())
@@ -40,6 +46,7 @@ function App() {
   const [feedCount, setFeedCount] = useState<number | null>(null)
   const [subscriptionCount, setSubscriptionCount] = useState<number | null>(null)
   const [activeSubscriptionId, setActiveSubscriptionId] = useState<string | null>(null)
+  const [feedLifecycle, setFeedLifecycle] = useState<FeedLifecycleBadge[]>([])
   const [blocks, setBlocks] = useState<BlockItem[]>([])
 
   const websocketUrl = useMemo(() => {
@@ -374,6 +381,26 @@ function App() {
       }
 
       if (parsed.type === 'event') {
+        if (parsed.event === 'event.feed.event') {
+          const payload = parsed.payload ?? {}
+          const action =
+            typeof payload.action === 'string' && payload.action.length > 0
+              ? payload.action
+              : 'unknown'
+          const subscriptionIdRaw = payload.subscriptionId
+          const subscriptionId =
+            typeof subscriptionIdRaw === 'string' ? subscriptionIdRaw : undefined
+          setFeedLifecycle((current) =>
+            [
+              {
+                id: `feed_evt_${Date.now()}`,
+                action,
+                subscriptionId,
+              },
+              ...current,
+            ].slice(0, 6),
+          )
+        }
         appendBlock({
           id: `blk_${Date.now()}`,
           title: parsed.event,
@@ -514,6 +541,21 @@ function App() {
             <div>
               <dt>Active Subscription</dt>
               <dd>{activeSubscriptionId ?? 'none'}</dd>
+            </div>
+            <div>
+              <dt>Feed Lifecycle</dt>
+              <dd className="badge-row">
+                {feedLifecycle.length === 0 ? (
+                  <span className="lifecycle-badge">none</span>
+                ) : (
+                  feedLifecycle.map((item) => (
+                    <span key={item.id} className="lifecycle-badge">
+                      {item.action}
+                      {item.subscriptionId ? `:${item.subscriptionId}` : ''}
+                    </span>
+                  ))
+                )}
+              </dd>
             </div>
           </dl>
         </section>

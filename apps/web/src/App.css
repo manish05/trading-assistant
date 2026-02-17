@@ -163,6 +163,22 @@
   font-size: 0.85rem;
 }
 
+.badge-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.lifecycle-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1rem 0.35rem;
+  border-radius: 999px;
+  border: 1px solid #2d4a7e;
+  background: #162744;
+  font-size: 0.72rem;
+}
+
 .empty-state {
   color: #9aa6be;
   font-size: 0.85rem;
