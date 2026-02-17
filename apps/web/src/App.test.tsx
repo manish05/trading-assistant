@@ -229,5 +229,6 @@ describe('Dashboard shell', () => {
       'status-debounced',
     )
     expect(screen.queryByText('sent', { selector: '.history-status' })).not.toBeInTheDocument()
+    expect(window.localStorage.getItem('quick-action-history-filter-v1')).toBe('debounced')
   })
 })

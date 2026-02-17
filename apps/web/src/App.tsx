@@ -56,6 +56,7 @@ type QuickActionPreset = {
 }
 
 const PRESETS_STORAGE_KEY = 'quick-action-presets-v1'
+const HISTORY_FILTER_STORAGE_KEY = 'quick-action-history-filter-v1'
 
 const readPresetStoreFromStorage = (): Record<string, QuickActionPreset> => {
   if (typeof window === 'undefined') {
@@ -71,6 +72,18 @@ const readPresetStoreFromStorage = (): Record<string, QuickActionPreset> => {
   } catch {
     return {}
   }
+}
+
+const readHistoryFilterFromStorage = (): HistoryFilter => {
+  if (typeof window === 'undefined') {
+    return 'all'
+  }
+  const raw = window.localStorage.getItem(HISTORY_FILTER_STORAGE_KEY)
+  const allowed: HistoryFilter[] = ['all', 'sent', 'ok', 'error', 'debounced', 'skipped']
+  if (raw && allowed.includes(raw as HistoryFilter)) {
+    return raw as HistoryFilter
+  }
+  return 'all'
 }
 
 function App() {
@@ -118,7 +131,7 @@ function App() {
   const [activeSubscriptionId, setActiveSubscriptionId] = useState<string | null>(null)
   const [feedLifecycle, setFeedLifecycle] = useState<FeedLifecycleBadge[]>([])
   const [quickActionHistory, setQuickActionHistory] = useState<QuickActionHistory[]>([])
-  const [historyFilter, setHistoryFilter] = useState<HistoryFilter>('all')
+  const [historyFilter, setHistoryFilter] = useState<HistoryFilter>(readHistoryFilterFromStorage)
   const [lastSuccessByMethod, setLastSuccessByMethod] = useState<Record<string, string>>({})
   const [lastErrorByMethod, setLastErrorByMethod] = useState<Record<string, string>>({})
   const [blocks, setBlocks] = useState<BlockItem[]>([])
@@ -708,6 +721,10 @@ function App() {
       pendingMap.clear()
     }
   }, [appendBlock, websocketUrl])
+
+  useEffect(() => {
+    window.localStorage.setItem(HISTORY_FILTER_STORAGE_KEY, historyFilter)
+  }, [historyFilter])
 
   const filteredHistory =
     historyFilter === 'all'
