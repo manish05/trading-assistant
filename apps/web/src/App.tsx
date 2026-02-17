@@ -57,6 +57,7 @@ type QuickActionPreset = {
 }
 type PresetImportMode = 'overwrite' | 'merge'
 type ImportHintMode = 'detailed' | 'compact'
+type ShortcutLegendOrder = 'import-first' | 'clear-first'
 type PresetImportReport = {
   mode: PresetImportMode
   accepted: string[]
@@ -298,6 +299,8 @@ function App() {
   const [showShortcutLegendInStatus, setShowShortcutLegendInStatus] = useState<boolean>(
     readStatusShortcutLegendFromStorage,
   )
+  const [shortcutLegendOrder, setShortcutLegendOrder] =
+    useState<ShortcutLegendOrder>('import-first')
   const [availablePresetNames, setAvailablePresetNames] = useState<string[]>(() =>
     Object.keys(readPresetStoreFromStorage()).sort(),
   )
@@ -1551,6 +1554,16 @@ function App() {
               >
                 {showShortcutLegendInStatus ? 'Hide Legend in Status' : 'Show Legend in Status'}
               </button>
+              <label>
+                Legend Order
+                <select
+                  value={shortcutLegendOrder}
+                  onChange={(event) => setShortcutLegendOrder(event.target.value as ShortcutLegendOrder)}
+                >
+                  <option value="import-first">import-first</option>
+                  <option value="clear-first">clear-first</option>
+                </select>
+              </label>
               <button type="button" onClick={() => void copyImportShortcutCheatSheet()}>
                 Copy Shortcut Cheat Sheet
               </button>
@@ -1804,10 +1817,15 @@ function App() {
                 <dt>
                   Import Shortcut Legend <span className="legend-mode-indicator">({importHintMode})</span>
                 </dt>
-                <dd className="import-snapshot-badges">
-                  <span className="hotkey-chip">Ctrl/Cmd+Enter</span>
-                  <span className="hotkey-chip">Esc</span>
-                  <span className="hotkey-chip">/</span>
+                <dd className="import-snapshot-badges status-legend-hotkeys">
+                  {(shortcutLegendOrder === 'clear-first'
+                    ? ['Esc', 'Ctrl/Cmd+Enter', '/']
+                    : ['Ctrl/Cmd+Enter', 'Esc', '/']
+                  ).map((shortcut) => (
+                    <span key={shortcut} className="hotkey-chip">
+                      {shortcut}
+                    </span>
+                  ))}
                 </dd>
               </div>
             ) : null}

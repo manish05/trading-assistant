@@ -63,6 +63,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Hide Hints' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Use Compact Hints' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Show Legend in Status' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Legend Order')).toHaveValue('import-first')
     expect(screen.getByRole('button', { name: 'Copy Shortcut Cheat Sheet' })).toBeInTheDocument()
     expect(screen.getByText('Last import: none')).toBeInTheDocument()
   })
@@ -483,6 +484,17 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByRole('button', { name: 'Hide Legend in Status' })).toBeInTheDocument()
     expect(window.localStorage.getItem('quick-action-status-shortcut-legend-v1')).toBe('visible')
+
+    const legendRow = screen.getByText('Import Shortcut Legend', { selector: 'dt' })
+      .nextElementSibling as HTMLElement
+    expect(within(legendRow).getAllByText(/Ctrl\/Cmd\+Enter|Esc|\//)[0]).toHaveTextContent(
+      'Ctrl/Cmd+Enter',
+    )
+
+    fireEvent.change(screen.getByLabelText('Legend Order'), {
+      target: { value: 'clear-first' },
+    })
+    expect(within(legendRow).getAllByText(/Ctrl\/Cmd\+Enter|Esc|\//)[0]).toHaveTextContent('Esc')
   })
 
   it('initializes status shortcut legend visibility from localStorage', () => {
