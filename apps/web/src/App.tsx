@@ -98,6 +98,7 @@ const HELPER_RESET_LOCK_STORAGE_KEY = 'quick-action-helper-reset-lock-v1'
 const HELPER_LOCK_COUNTERS_RESET_AT_STORAGE_KEY = 'quick-action-helper-lock-counters-reset-at-v1'
 const BLOCK_TELEMETRY_VISIBILITY_STORAGE_KEY = 'quick-action-block-telemetry-visibility-v1'
 const MAX_IMPORT_REPORT_NAMES = 6
+const DEVICE_NOTIFY_TEST_MESSAGE = 'Dashboard test notification'
 const DEFAULT_PRESET_TEMPLATE: QuickActionPreset = {
   managedAccountId: 'acct_demo_1',
   managedProviderAccountId: 'provider_demo_1',
@@ -997,6 +998,23 @@ function App() {
       }
     }
   }, [appendBlock, lockTelemetryFailureSuffix, managedDeviceId, managedDeviceRotatePushToken, sendRequest])
+
+  const sendDeviceNotifyTest = useCallback(async () => {
+    if (!managedDeviceId) {
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'devices.notifyTest skipped',
+        content: `No managed device id available.${lockTelemetryFailureSuffix}`,
+        severity: 'warn',
+      })
+      return
+    }
+
+    await sendRequest('devices.notifyTest', {
+      deviceId: managedDeviceId,
+      message: DEVICE_NOTIFY_TEST_MESSAGE,
+    })
+  }, [appendBlock, lockTelemetryFailureSuffix, managedDeviceId, sendRequest])
 
   const sendDeviceUnpair = useCallback(async () => {
     if (!managedDeviceId) {
@@ -2090,6 +2108,9 @@ function App() {
               </button>
               <button type="button" onClick={() => void sendDeviceRegisterPush()}>
                 Register Push
+              </button>
+              <button type="button" onClick={() => void sendDeviceNotifyTest()}>
+                Notify Device
               </button>
               <button type="button" onClick={() => void sendDeviceUnpair()}>
                 Unpair Device

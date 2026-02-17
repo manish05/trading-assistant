@@ -36,6 +36,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Devices' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Pair Device' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Register Push' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Notify Device' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Unpair Device' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Subscribe Feed' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Unsubscribe Feed' })).toBeDisabled()
@@ -209,6 +210,7 @@ describe('Dashboard shell', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Devices' }))
     fireEvent.click(screen.getByRole('button', { name: 'Pair Device' }))
     fireEvent.click(screen.getByRole('button', { name: 'Register Push' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Notify Device' }))
     fireEvent.click(screen.getByRole('button', { name: 'Unpair Device' }))
     fireEvent.click(screen.getByRole('button', { name: 'Subscribe Feed' }))
 
@@ -225,6 +227,7 @@ describe('Dashboard shell', () => {
       expect(methods).toContain('devices.list')
       expect(methods).toContain('devices.pair')
       expect(methods).toContain('devices.registerPush')
+      expect(methods).toContain('devices.notifyTest')
       expect(methods).toContain('devices.unpair')
       expect(methods).toContain('feeds.subscribe')
 
@@ -252,6 +255,12 @@ describe('Dashboard shell', () => {
         pushToken: 'push_rotate_custom',
       })
 
+      const deviceNotifyTest = payloads.find((payload) => payload.method === 'devices.notifyTest')
+      expect(deviceNotifyTest?.params).toMatchObject({
+        deviceId: 'dev_custom_9',
+        message: 'Dashboard test notification',
+      })
+
       const feedSubscribe = payloads.find((payload) => payload.method === 'feeds.subscribe')
       expect(feedSubscribe?.params).toMatchObject({
         topics: ['market.tick'],
@@ -267,6 +276,7 @@ describe('Dashboard shell', () => {
     const sendSpy = vi.spyOn(WebSocket.prototype, 'send')
     render(<App />)
 
+    fireEvent.click(screen.getByLabelText('Enable Auto Refresh'))
     fireEvent.change(screen.getByLabelText('Min Request Gap (ms)'), {
       target: { value: '1000' },
     })
@@ -294,6 +304,7 @@ describe('Dashboard shell', () => {
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: 'Hide Block Telemetry' }))
 
+    fireEvent.click(screen.getByLabelText('Enable Auto Refresh'))
     fireEvent.change(screen.getByLabelText('Min Request Gap (ms)'), {
       target: { value: '1000' },
     })
