@@ -196,6 +196,8 @@ const MARKET_OVERLAY_MARKER_AGE_FILTER_ORDER: MarketOverlayMarkerAgeFilter[] = [
   'last-60s',
   'last-300s',
 ]
+const MARKET_OVERLAY_MARKER_WINDOW_ORDER: MarketOverlayMarkerWindow[] = [3, 5, 8]
+const MARKET_OVERLAY_MARKER_BUCKET_ORDER: MarketOverlayMarkerBucket[] = ['none', '30s', '60s']
 const MARKET_OVERLAY_MARKER_DELTA_FILTER_ORDER: MarketOverlayMarkerDeltaFilter[] = [
   'all',
   'latest-up',
@@ -1311,14 +1313,16 @@ function App() {
   const marketOverlayMarkerModeShortcutSummary = useMemo(
     () => {
       const isLocked = marketOverlaySelectionMode === 'follow-latest'
-      return `focus:${MARKET_OVERLAY_MARKER_FOCUS_SHORTCUTS}=${marketOverlayMarkerFocus} · age:y=${marketOverlayMarkerAgeFilter} · order:o/l=${marketOverlayTimelineOrder} · scope:g=${marketOverlayBucketScope} · wrap:w=${marketOverlayMarkerWrap} · selection:s=${marketOverlaySelectionMode} · delta:u/j/f/n/0/+/-=${marketOverlayMarkerDeltaFilter} · nav:${isLocked ? 'locked' : 'manual'}`
+      return `focus:${MARKET_OVERLAY_MARKER_FOCUS_SHORTCUTS}=${marketOverlayMarkerFocus} · age:y=${marketOverlayMarkerAgeFilter} · window:v=${marketOverlayMarkerWindow} · bucket:b=${marketOverlayMarkerBucket} · order:o/l=${marketOverlayTimelineOrder} · scope:g=${marketOverlayBucketScope} · wrap:w=${marketOverlayMarkerWrap} · selection:s=${marketOverlaySelectionMode} · delta:u/j/f/n/0/+/-=${marketOverlayMarkerDeltaFilter} · nav:${isLocked ? 'locked' : 'manual'}`
     },
     [
       marketOverlayMarkerAgeFilter,
+      marketOverlayMarkerBucket,
       marketOverlayBucketScope,
       marketOverlayMarkerDeltaFilter,
       marketOverlayMarkerFocus,
       marketOverlayMarkerWrap,
+      marketOverlayMarkerWindow,
       marketOverlaySelectionMode,
       marketOverlayTimelineOrder,
     ],
@@ -2663,6 +2667,32 @@ function App() {
           }
           return MARKET_OVERLAY_MARKER_AGE_FILTER_ORDER[
             (currentIndex + 1) % MARKET_OVERLAY_MARKER_AGE_FILTER_ORDER.length
+          ]
+        })
+        return
+      }
+      if (normalizedKey === 'v') {
+        event.preventDefault()
+        setMarketOverlayMarkerWindow((current) => {
+          const currentIndex = MARKET_OVERLAY_MARKER_WINDOW_ORDER.indexOf(current)
+          if (currentIndex < 0) {
+            return 5
+          }
+          return MARKET_OVERLAY_MARKER_WINDOW_ORDER[
+            (currentIndex + 1) % MARKET_OVERLAY_MARKER_WINDOW_ORDER.length
+          ]
+        })
+        return
+      }
+      if (normalizedKey === 'b') {
+        event.preventDefault()
+        setMarketOverlayMarkerBucket((current) => {
+          const currentIndex = MARKET_OVERLAY_MARKER_BUCKET_ORDER.indexOf(current)
+          if (currentIndex < 0) {
+            return 'none'
+          }
+          return MARKET_OVERLAY_MARKER_BUCKET_ORDER[
+            (currentIndex + 1) % MARKET_OVERLAY_MARKER_BUCKET_ORDER.length
           ]
         })
         return
