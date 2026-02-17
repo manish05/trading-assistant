@@ -799,6 +799,45 @@ function App() {
       className: 'overlay-pulse-intense',
     }
   }, [feedLifecycle.length, riskAlerts.length, tradeControlEvents.length])
+  const marketOverlayRegime = useMemo(() => {
+    const trendClass = marketOverlayTrend.className
+    const pulseClass = marketOverlayPulse.className
+    const volatilityClass = marketOverlayVolatility.className
+
+    const isTrendUp = trendClass === 'overlay-trend-up'
+    const isTrendDown = trendClass === 'overlay-trend-down'
+    const isTrendNeutral = trendClass === 'overlay-trend-neutral'
+    const isPulseIntense = pulseClass === 'overlay-pulse-intense'
+    const isPulseQuiet = pulseClass === 'overlay-pulse-quiet'
+    const hasVolatilitySignal = volatilityClass !== 'overlay-volatility-none'
+
+    if (isPulseIntense && isTrendUp && hasVolatilitySignal) {
+      return {
+        label: 'risk-on',
+        summary: 'risk_on',
+        className: 'overlay-regime-risk-on',
+      }
+    }
+    if (isPulseIntense && isTrendDown) {
+      return {
+        label: 'risk-off',
+        summary: 'risk_off',
+        className: 'overlay-regime-risk-off',
+      }
+    }
+    if (isPulseQuiet && isTrendNeutral) {
+      return {
+        label: 'observe',
+        summary: 'observe',
+        className: 'overlay-regime-observe',
+      }
+    }
+    return {
+      label: 'momentum-watch',
+      summary: 'momentum_watch',
+      className: 'overlay-regime-watch',
+    }
+  }, [marketOverlayPulse.className, marketOverlayTrend.className, marketOverlayVolatility.className])
 
   const websocketUrl = useMemo(() => {
     const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws'
@@ -2794,10 +2833,11 @@ function App() {
     const trendLabel = marketOverlayTrend.label
     const volatilitySummary = marketOverlayVolatility.summary
     const pulseSummary = marketOverlayPulse.summary
+    const regimeSummary = marketOverlayRegime.summary
     const summaryByMode: Record<MarketOverlayMode, string> = {
-      'price-only': `candles:${candles} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary}`,
-      'with-trades': `candles:${candles} · tradeEvents:${tradeEvents} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary}`,
-      'with-risk': `candles:${candles} · tradeEvents:${tradeEvents} · riskAlerts:${alerts} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary}`,
+      'price-only': `candles:${candles} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
+      'with-trades': `candles:${candles} · tradeEvents:${tradeEvents} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
+      'with-risk': `candles:${candles} · tradeEvents:${tradeEvents} · riskAlerts:${alerts} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
     }
     setMarketOverlaySnapshotSummary(summaryByMode[marketOverlayMode])
     setMarketOverlaySnapshotAt(new Date().toISOString())
@@ -2805,6 +2845,7 @@ function App() {
     lastFetchedCandlesCount,
     marketOverlayMode,
     marketOverlayPulse.summary,
+    marketOverlayRegime.summary,
     marketOverlayTrend.label,
     marketOverlayVolatility.summary,
     riskAlerts.length,
@@ -2867,6 +2908,9 @@ function App() {
             </p>
             <p aria-label="Overlay Pulse" className={`overlay-pulse ${marketOverlayPulse.className}`}>
               Pulse: {marketOverlayPulse.label}
+            </p>
+            <p aria-label="Overlay Regime" className={`overlay-regime ${marketOverlayRegime.className}`}>
+              Regime: {marketOverlayRegime.label}
             </p>
             <button type="button" onClick={refreshMarketOverlaySnapshot}>
               Refresh Overlay Snapshot
