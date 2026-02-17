@@ -2324,6 +2324,9 @@ describe('Dashboard shell', () => {
         ),
       ).toBeInTheDocument()
     })
+    const responseCard = screen.getByText('gateway.status response').closest('article')
+    expect(responseCard).not.toBeNull()
+    expect(within(responseCard as HTMLElement).getByText('SystemStatus')).toBeInTheDocument()
 
     sendSpy.mockRestore()
   })
@@ -2446,6 +2449,75 @@ describe('Dashboard shell', () => {
         /\[LockTelemetry\] lock toggles: 0, tone: none, reset: never; sources: Alt\+L=0, controls=0, snapshot=0/,
       ),
     ).toBeInTheDocument()
+    expect(within(eventCard as HTMLElement).getByText('RawPayload')).toBeInTheDocument()
+    expect(
+      within(eventCard as HTMLElement).getByText('Unknown block type; showing raw payload.'),
+    ).toBeInTheDocument()
+
+    sendSpy.mockRestore()
+  })
+
+  it('renders backtest-report event blocks with typed backtest renderer label', async () => {
+    const sendSpy = vi
+      .spyOn(WebSocket.prototype, 'send')
+      .mockImplementation(function (
+        this: WebSocket,
+        data: string | ArrayBufferLike | Blob | ArrayBufferView<ArrayBufferLike>,
+      ) {
+        if (typeof data !== 'string') {
+          return
+        }
+        const payload = JSON.parse(data) as {
+          type?: string
+          id?: string
+          method?: string
+        }
+        if (payload.type === 'req' && payload.method === 'gateway.status' && payload.id) {
+          queueMicrotask(() => {
+            this.onmessage?.(
+              new MessageEvent('message', {
+                data: JSON.stringify({
+                  type: 'event',
+                  event: 'event.backtests.report',
+                  payload: {
+                    requestId: payload.id,
+                    metrics: {
+                      trades: 2,
+                      winRate: 0.5,
+                    },
+                  },
+                }),
+              }),
+            )
+          })
+          queueMicrotask(() => {
+            this.onmessage?.(
+              new MessageEvent('message', {
+                data: JSON.stringify({
+                  type: 'res',
+                  id: payload.id,
+                  ok: true,
+                  payload: {
+                    protocolVersion: 1,
+                    server: { name: 'mt5-claude-trader-v2' },
+                  },
+                }),
+              }),
+            )
+          })
+        }
+      })
+
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Status' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('event.backtests.report')).toBeInTheDocument()
+    })
+
+    const reportCard = screen.getByText('event.backtests.report').closest('article')
+    expect(reportCard).not.toBeNull()
+    expect(within(reportCard as HTMLElement).getByText('BacktestReport')).toBeInTheDocument()
 
     sendSpy.mockRestore()
   })

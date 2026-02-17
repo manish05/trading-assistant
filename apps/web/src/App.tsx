@@ -22,6 +22,15 @@ type BlockItem = {
   severity: 'info' | 'warn' | 'error'
 }
 
+type BlockRenderKind =
+  | 'Markdown'
+  | 'SystemStatus'
+  | 'TradeProposal'
+  | 'TradeExecution'
+  | 'RiskAlert'
+  | 'BacktestReport'
+  | 'RawPayload'
+
 type FeedLifecycleBadge = {
   id: string
   action: string
@@ -421,6 +430,87 @@ const resolveLockCounterTone = (count: number): 'counter-tone-none' | 'counter-t
     return 'counter-tone-high'
   }
   return 'counter-tone-active'
+}
+
+const BLOCK_TELEMETRY_SEGMENT_MARKER = '\n\n[LockTelemetry]'
+
+const stripBlockTelemetrySegment = (content: string): string => {
+  const markerIndex = content.indexOf(BLOCK_TELEMETRY_SEGMENT_MARKER)
+  if (markerIndex === -1) {
+    return content
+  }
+  return content.slice(0, markerIndex)
+}
+
+const parseStructuredBlockPayload = (content: string): Record<string, unknown> | null => {
+  const normalized = stripBlockTelemetrySegment(content).trim()
+  if (!normalized.startsWith('{')) {
+    return null
+  }
+  try {
+    const parsed = JSON.parse(normalized)
+    if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+      return parsed as Record<string, unknown>
+    }
+  } catch {
+    return null
+  }
+  return null
+}
+
+const resolveBlockRenderKind = (block: BlockItem): BlockRenderKind => {
+  const normalizedContent = stripBlockTelemetrySegment(block.content).trim()
+  if (/^#{1,6}\s+\S/m.test(normalizedContent)) {
+    return 'Markdown'
+  }
+
+  const payload = parseStructuredBlockPayload(block.content)
+  if (!payload) {
+    return 'SystemStatus'
+  }
+
+  if (
+    block.title === 'event.risk.alert' ||
+    ('decision' in payload &&
+      payload.decision &&
+      typeof payload.decision === 'object' &&
+      'violations' in (payload.decision as Record<string, unknown>))
+  ) {
+    return 'RiskAlert'
+  }
+
+  if (
+    block.title === 'event.trade.executed' ||
+    ('execution' in payload &&
+      payload.execution &&
+      typeof payload.execution === 'object' &&
+      'status' in (payload.execution as Record<string, unknown>))
+  ) {
+    return 'TradeExecution'
+  }
+
+  if (
+    block.title === 'event.risk.preview' ||
+    ('allowed' in payload && 'violations' in payload)
+  ) {
+    return 'TradeProposal'
+  }
+
+  if (
+    block.title === 'event.backtests.report' ||
+    ('metrics' in payload && ('equityCurve' in payload || 'trades' in payload))
+  ) {
+    return 'BacktestReport'
+  }
+
+  if (
+    block.title === 'gateway.status response' ||
+    ('protocolVersion' in payload && 'server' in payload)
+  ) {
+    return 'SystemStatus'
+  }
+
+  return 'RawPayload'
 }
 
 function App() {
@@ -3165,12 +3255,28 @@ function App() {
             {blocks.length === 0 ? (
               <p className="empty-state">No blocks yet. Connect and trigger gateway methods.</p>
             ) : (
-              blocks.map((block) => (
-                <article key={block.id} className={`block-card severity-${block.severity}`}>
-                  <h3>{block.title}</h3>
-                  <pre>{block.content}</pre>
-                </article>
-              ))
+              blocks.map((block) => {
+                const blockKind = resolveBlockRenderKind(block)
+                const markdownContent = stripBlockTelemetrySegment(block.content).trim()
+                return (
+                  <article
+                    key={block.id}
+                    className={`block-card severity-${block.severity}`}
+                    data-block-kind={blockKind}
+                  >
+                    <h3>{block.title}</h3>
+                    <p className={`block-kind-label kind-${blockKind.toLowerCase()}`}>{blockKind}</p>
+                    {blockKind === 'Markdown' ? (
+                      <div className="block-markdown-preview">{markdownContent}</div>
+                    ) : (
+                      <pre>{block.content}</pre>
+                    )}
+                    {blockKind === 'RawPayload' ? (
+                      <p className="block-raw-hint">Unknown block type; showing raw payload.</p>
+                    ) : null}
+                  </article>
+                )
+              })
             )}
           </div>
         </section>

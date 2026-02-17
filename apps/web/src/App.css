@@ -452,11 +452,37 @@
   font-size: 0.9rem;
 }
 
+.block-kind-label {
+  margin: 0 0 0.45rem;
+  display: inline-flex;
+  border: 1px solid #33517f;
+  border-radius: 999px;
+  padding: 0.1rem 0.45rem;
+  font-size: 0.67rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: #cddcf4;
+  background: #142743;
+}
+
+.block-markdown-preview {
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: #dbe7fb;
+  white-space: pre-wrap;
+}
+
 .block-card pre {
   margin: 0;
   white-space: pre-wrap;
   font-size: 0.78rem;
   line-height: 1.4;
+}
+
+.block-raw-hint {
+  margin: 0.45rem 0 0;
+  font-size: 0.69rem;
+  color: #a9b8d3;
 }
 
 .severity-warn {
