@@ -569,10 +569,10 @@ describe('Dashboard shell', () => {
         'trade:closed:queued · t1 · close:1.00',
       )
       expect(screen.getByLabelText('Overlay Marker Timeline')).toHaveTextContent(
-        'risk:live_trading_disabled:raised · t2 · close:2.00 · Δlatest:+0.00 (+0.00%) · Δavg:+0.50 (+33.33%)',
+        'risk:live_trading_disabled:raised · t2 · close:2.00 · Δlatest:+0.00 (+0.00%) · Δavg:+0.50 (+33.33%) · bucket:none',
       )
       expect(screen.getByLabelText('Overlay Marker Timeline')).toHaveTextContent(
-        'trade:closed:queued · t1 · close:1.00 · Δlatest:-1.00 (-50.00%) · Δavg:-0.50 (-33.33%)',
+        'trade:closed:queued · t1 · close:1.00 · Δlatest:-1.00 (-50.00%) · Δavg:-0.50 (-33.33%) · bucket:none',
       )
       expect(
         screen.getByRole('button', {
@@ -896,6 +896,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
       `Timeline buckets: mode:60s · scope:all-buckets · buckets:1 · latest:${expectedBucket} · count:2`,
     )
+    expect(screen.getByLabelText('Overlay Marker Timeline')).toHaveTextContent(
+      `bucket:${expectedBucket}`,
+    )
     fireEvent.change(screen.getByLabelText('Bucket Scope'), { target: { value: 'latest-bucket' } })
     expect(screen.getByLabelText('Overlay Marker Drilldown')).toHaveTextContent(
       'Marker focus: all · window:5 · age:all · scope:latest-bucket · order:newest-first · visible:2 · latest:risk:live_trading_disabled:raised',
@@ -916,6 +919,9 @@ describe('Dashboard shell', () => {
       'risk:live_trading_disabled:raised',
     )
     const latestBucketAfterUpdate = new Date(Math.floor(fakeNow / 60_000) * 60_000).toISOString()
+    expect(screen.getByLabelText('Overlay Marker Timeline')).toHaveTextContent(
+      `bucket:${latestBucketAfterUpdate}`,
+    )
     expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
       `Timeline buckets: mode:60s · scope:latest-bucket · buckets:2 · latest:${latestBucketAfterUpdate} · count:1`,
     )

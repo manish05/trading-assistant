@@ -1298,6 +1298,12 @@ function App() {
     )
     const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
     const baseline = marketOverlayAverageClose
+    const bucketSizeMs =
+      marketOverlayMarkerBucket === 'none'
+        ? null
+        : marketOverlayMarkerBucket === '30s'
+          ? 30_000
+          : 60_000
     return marketOverlayScopedVisibleAnnotations.map((annotation) => {
       const timelineAnnotation = timelineById.get(annotation.id)
       const point = timelineAnnotation
@@ -1314,15 +1320,20 @@ function App() {
           ? (deltaToLatest / latestPoint.value) * 100
           : null
       const ageLabel = formatElapsedMs(Date.now() - annotation.timestamp)
+      const bucketLabel =
+        bucketSizeMs === null
+          ? 'none'
+          : new Date(Math.floor(annotation.timestamp / bucketSizeMs) * bucketSizeMs).toISOString()
       return {
         id: annotation.id,
-        text: `${annotation.kind}:${annotation.label} · t${timelineAnnotation?.time ?? 'n/a'} · close:${point ? point.value.toFixed(2) : 'n/a'} · Δlatest:${deltaToLatest === null ? 'n/a' : `${deltaToLatest >= 0 ? '+' : ''}${deltaToLatest.toFixed(2)} (${deltaToLatestPct !== null ? `${deltaToLatestPct >= 0 ? '+' : ''}${deltaToLatestPct.toFixed(2)}%` : 'n/a'})`} · Δavg:${deltaFromAverage === null ? 'n/a' : `${deltaFromAverage >= 0 ? '+' : ''}${deltaFromAverage.toFixed(2)} (${deltaFromAveragePct !== null ? `${deltaFromAveragePct >= 0 ? '+' : ''}${deltaFromAveragePct.toFixed(2)}%` : 'n/a'})`} · age:${ageLabel}`,
+        text: `${annotation.kind}:${annotation.label} · t${timelineAnnotation?.time ?? 'n/a'} · close:${point ? point.value.toFixed(2) : 'n/a'} · Δlatest:${deltaToLatest === null ? 'n/a' : `${deltaToLatest >= 0 ? '+' : ''}${deltaToLatest.toFixed(2)} (${deltaToLatestPct !== null ? `${deltaToLatestPct >= 0 ? '+' : ''}${deltaToLatestPct.toFixed(2)}%` : 'n/a'})`} · Δavg:${deltaFromAverage === null ? 'n/a' : `${deltaFromAverage >= 0 ? '+' : ''}${deltaFromAverage.toFixed(2)} (${deltaFromAveragePct !== null ? `${deltaFromAveragePct >= 0 ? '+' : ''}${deltaFromAveragePct.toFixed(2)}%` : 'n/a'})`} · bucket:${bucketLabel} · age:${ageLabel}`,
         isSelected: annotation.id === marketOverlaySelectedMarkerId,
       }
     })
   }, [
     marketOverlayAverageClose,
     marketOverlayChartPoints,
+    marketOverlayMarkerBucket,
     marketOverlayScopedTimelineAnnotations,
     marketOverlayScopedVisibleAnnotations,
     marketOverlaySelectedMarkerId,
