@@ -972,6 +972,34 @@ describe('Dashboard shell', () => {
     })
   })
 
+  it('omits preset export telemetry details when block telemetry is hidden', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(window.navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    })
+
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Hide Block Telemetry' }))
+    fireEvent.change(screen.getByLabelText('Preset Name'), {
+      target: { value: 'export-hidden-template' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Save Preset' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Export Presets JSON' }))
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalled()
+      const payload = String(writeText.mock.calls[writeText.mock.calls.length - 1][0])
+      expect(payload).toContain('export-hidden-template')
+      expect(screen.getByText('Copied 1 presets JSON to clipboard.')).toBeInTheDocument()
+      expect(
+        screen.queryByText(
+          'Copied 1 presets JSON to clipboard (lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0).',
+        ),
+      ).not.toBeInTheDocument()
+    })
+  })
+
   it('imports presets from JSON payload', async () => {
     render(<App />)
 
@@ -1534,6 +1562,21 @@ describe('Dashboard shell', () => {
       screen.queryByText('lockCounterReset:never', {
         selector: '.import-snapshot-badges .import-summary-badge',
       }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('omits reset lock counter telemetry details when block telemetry is hidden', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Hide Block Telemetry' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Unlock Reset' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Lock Reset' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Reset Lock Counters' }))
+
+    expect(screen.getByText('Reset helper lock counters.')).toBeInTheDocument()
+    expect(
+      screen.queryByText(
+        'Reset helper lock counters (lock toggles: 2, tone: active, reset: never; sources: Alt+L=0, controls=2, snapshot=0).',
+      ),
     ).not.toBeInTheDocument()
   })
 
@@ -2133,6 +2176,38 @@ describe('Dashboard shell', () => {
     })
   })
 
+  it('omits last summary lock telemetry metadata when block telemetry is hidden', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(window.navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    })
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Hide Block Telemetry' }))
+    fireEvent.change(screen.getByLabelText('Import Presets JSON'), {
+      target: {
+        value: '{"summary-hidden-template":{"feedSymbol":"SOLUSDm"}}',
+      },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Import Presets JSON' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Copy Last Summary' })).toBeEnabled()
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Copy Last Summary' }))
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalled()
+      const payload = String(writeText.mock.calls[writeText.mock.calls.length - 1][0])
+      expect(payload).toContain('Last import:')
+      expect(payload).toContain('accepted 1')
+      expect(payload).toContain('rejected 0')
+      expect(payload).not.toContain('[LockTelemetry]')
+      expect(payload).not.toContain('lockToggleTotal=')
+      expect(screen.getByText('Copied last import summary to clipboard.')).toBeInTheDocument()
+    })
+  })
+
   it('clears preset import report diagnostics', async () => {
     render(<App />)
     fireEvent.change(screen.getByLabelText('Import Presets JSON'), {
@@ -2157,6 +2232,32 @@ describe('Dashboard shell', () => {
         'Cleared the latest preset import diagnostics (lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0).',
       ),
     ).toBeInTheDocument()
+  })
+
+  it('omits clear-import-report telemetry details when block telemetry is hidden', async () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Hide Block Telemetry' }))
+    fireEvent.change(screen.getByLabelText('Import Presets JSON'), {
+      target: {
+        value: '{"clear-hidden-template":{"feedSymbol":"ETHUSDm"}}',
+      },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Import Presets JSON' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Clear Import Report' })).toBeEnabled()
+      expect(screen.getByText('Accepted')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Clear Import Report' }))
+
+    expect(screen.queryByText('Accepted')).not.toBeInTheDocument()
+    expect(screen.getByText('Cleared the latest preset import diagnostics.')).toBeInTheDocument()
+    expect(
+      screen.queryByText(
+        'Cleared the latest preset import diagnostics (lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0).',
+      ),
+    ).not.toBeInTheDocument()
   })
 
   it('supports collapsing and expanding preset import report details', async () => {
