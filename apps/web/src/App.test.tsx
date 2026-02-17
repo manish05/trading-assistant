@@ -355,7 +355,7 @@ describe('Dashboard shell', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Refresh Overlay Snapshot' }))
     expect(screen.getByLabelText('Overlay Snapshot Summary')).toHaveTextContent(
-      'Summary: candles:0 · chartPoints:0 · chartLens:price-only · markerFocus:all · markerWindow:5 · markerAge:all · markerBucket:none · bucketScope:all-buckets · timelineOrder:newest-first · markerWrap:bounded · markerNav:0/0|selected:none · markers:t0/r0/f0 · corr:none · trend:neutral · vol:n/a · pulse:quiet(0) · regime:observe',
+      'Summary: candles:0 · chartPoints:0 · chartLens:price-only · markerFocus:all · markerWindow:5 · markerAge:all · markerBucket:none · bucketScope:all-buckets · timelineOrder:newest-first · markerWrap:bounded · markerSelection:sticky · markerNav:0/0|selected:none · markers:t0/r0/f0 · corr:none · trend:neutral · vol:n/a · pulse:quiet(0) · regime:observe',
     )
     expect(screen.getByLabelText('Overlay Snapshot Time')).not.toHaveTextContent('Snapshot: never')
 
@@ -364,7 +364,7 @@ describe('Dashboard shell', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: 'Refresh Overlay Snapshot' }))
     expect(screen.getByLabelText('Overlay Snapshot Summary')).toHaveTextContent(
-      'Summary: candles:0 · tradeEvents:0 · chartPoints:0 · chartLens:price-only · markerFocus:all · markerWindow:5 · markerAge:all · markerBucket:none · bucketScope:all-buckets · timelineOrder:newest-first · markerWrap:bounded · markerNav:0/0|selected:none · markers:t0/r0/f0 · corr:none · trend:neutral · vol:n/a · pulse:quiet(0) · regime:observe',
+      'Summary: candles:0 · tradeEvents:0 · chartPoints:0 · chartLens:price-only · markerFocus:all · markerWindow:5 · markerAge:all · markerBucket:none · bucketScope:all-buckets · timelineOrder:newest-first · markerWrap:bounded · markerSelection:sticky · markerNav:0/0|selected:none · markers:t0/r0/f0 · corr:none · trend:neutral · vol:n/a · pulse:quiet(0) · regime:observe',
     )
 
     fireEvent.change(screen.getByLabelText('Overlay Mode'), {
@@ -372,7 +372,7 @@ describe('Dashboard shell', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: 'Refresh Overlay Snapshot' }))
     expect(screen.getByLabelText('Overlay Snapshot Summary')).toHaveTextContent(
-      'Summary: candles:0 · tradeEvents:0 · riskAlerts:0 · chartPoints:0 · chartLens:price-only · markerFocus:all · markerWindow:5 · markerAge:all · markerBucket:none · bucketScope:all-buckets · timelineOrder:newest-first · markerWrap:bounded · markerNav:0/0|selected:none · markers:t0/r0/f0 · corr:none · trend:neutral · vol:n/a · pulse:quiet(0) · regime:observe',
+      'Summary: candles:0 · tradeEvents:0 · riskAlerts:0 · chartPoints:0 · chartLens:price-only · markerFocus:all · markerWindow:5 · markerAge:all · markerBucket:none · bucketScope:all-buckets · timelineOrder:newest-first · markerWrap:bounded · markerSelection:sticky · markerNav:0/0|selected:none · markers:t0/r0/f0 · corr:none · trend:neutral · vol:n/a · pulse:quiet(0) · regime:observe',
     )
   })
 
@@ -766,7 +766,7 @@ describe('Dashboard shell', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Refresh Overlay Snapshot' }))
     expect(screen.getByLabelText('Overlay Snapshot Summary')).toHaveTextContent(
-      'Summary: candles:2 · tradeEvents:1 · riskAlerts:1 · chartPoints:2 · chartLens:diagnostics · markerFocus:all · markerWindow:5 · markerAge:all · markerBucket:none · bucketScope:all-buckets · timelineOrder:oldest-first · markerWrap:bounded · markerNav:2/2|selected:risk:live_trading_disabled:raised · markers:t1/r1/f0 · corr:risk:live_trading_disabled:raised@2.00(t2) · trend:up (+1.00) · vol:1.00 · pulse:intense(5) · regime:risk_on',
+      'Summary: candles:2 · tradeEvents:1 · riskAlerts:1 · chartPoints:2 · chartLens:diagnostics · markerFocus:all · markerWindow:5 · markerAge:all · markerBucket:none · bucketScope:all-buckets · timelineOrder:oldest-first · markerWrap:bounded · markerSelection:sticky · markerNav:2/2|selected:risk:live_trading_disabled:raised · markers:t1/r1/f0 · corr:risk:live_trading_disabled:raised@2.00(t2) · trend:up (+1.00) · vol:1.00 · pulse:intense(5) · regime:risk_on',
     )
 
     sendSpy.mockRestore()
@@ -1092,6 +1092,10 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Overlay Marker Behavior')).toHaveTextContent(
       'Marker behavior: wrap:bounded · selection:follow-latest',
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh Overlay Snapshot' }))
+    expect(screen.getByLabelText('Overlay Snapshot Summary')).toHaveTextContent(
+      'markerSelection:follow-latest',
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Close All Now' }))

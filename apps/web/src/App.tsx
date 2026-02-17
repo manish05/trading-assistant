@@ -3710,6 +3710,7 @@ function App() {
     const bucketScope = marketOverlayBucketScope
     const timelineOrder = marketOverlayTimelineOrder
     const markerWrap = marketOverlayMarkerWrap
+    const markerSelection = marketOverlaySelectionMode
     const markerNavigation = marketOverlayMarkerNavigationLabel.replace(' · ', '|')
     const markerSummary = `t${marketOverlayAnnotationSummary.tradeCount}/r${marketOverlayAnnotationSummary.riskCount}/f${marketOverlayAnnotationSummary.feedCount}`
     const correlationHint = marketOverlayCorrelationHint
@@ -3718,9 +3719,9 @@ function App() {
     const pulseSummary = marketOverlayPulse.summary
     const regimeSummary = marketOverlayRegime.summary
     const summaryByMode: Record<MarketOverlayMode, string> = {
-      'price-only': `candles:${candles} · chartPoints:${chartPoints} · chartLens:${chartLens} · markerFocus:${markerFocus} · markerWindow:${markerWindow} · markerAge:${markerAge} · markerBucket:${markerBucket} · bucketScope:${bucketScope} · timelineOrder:${timelineOrder} · markerWrap:${markerWrap} · markerNav:${markerNavigation} · markers:${markerSummary} · corr:${correlationHint} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
-      'with-trades': `candles:${candles} · tradeEvents:${tradeEvents} · chartPoints:${chartPoints} · chartLens:${chartLens} · markerFocus:${markerFocus} · markerWindow:${markerWindow} · markerAge:${markerAge} · markerBucket:${markerBucket} · bucketScope:${bucketScope} · timelineOrder:${timelineOrder} · markerWrap:${markerWrap} · markerNav:${markerNavigation} · markers:${markerSummary} · corr:${correlationHint} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
-      'with-risk': `candles:${candles} · tradeEvents:${tradeEvents} · riskAlerts:${alerts} · chartPoints:${chartPoints} · chartLens:${chartLens} · markerFocus:${markerFocus} · markerWindow:${markerWindow} · markerAge:${markerAge} · markerBucket:${markerBucket} · bucketScope:${bucketScope} · timelineOrder:${timelineOrder} · markerWrap:${markerWrap} · markerNav:${markerNavigation} · markers:${markerSummary} · corr:${correlationHint} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
+      'price-only': `candles:${candles} · chartPoints:${chartPoints} · chartLens:${chartLens} · markerFocus:${markerFocus} · markerWindow:${markerWindow} · markerAge:${markerAge} · markerBucket:${markerBucket} · bucketScope:${bucketScope} · timelineOrder:${timelineOrder} · markerWrap:${markerWrap} · markerSelection:${markerSelection} · markerNav:${markerNavigation} · markers:${markerSummary} · corr:${correlationHint} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
+      'with-trades': `candles:${candles} · tradeEvents:${tradeEvents} · chartPoints:${chartPoints} · chartLens:${chartLens} · markerFocus:${markerFocus} · markerWindow:${markerWindow} · markerAge:${markerAge} · markerBucket:${markerBucket} · bucketScope:${bucketScope} · timelineOrder:${timelineOrder} · markerWrap:${markerWrap} · markerSelection:${markerSelection} · markerNav:${markerNavigation} · markers:${markerSummary} · corr:${correlationHint} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
+      'with-risk': `candles:${candles} · tradeEvents:${tradeEvents} · riskAlerts:${alerts} · chartPoints:${chartPoints} · chartLens:${chartLens} · markerFocus:${markerFocus} · markerWindow:${markerWindow} · markerAge:${markerAge} · markerBucket:${markerBucket} · bucketScope:${bucketScope} · timelineOrder:${timelineOrder} · markerWrap:${markerWrap} · markerSelection:${markerSelection} · markerNav:${markerNavigation} · markers:${markerSummary} · corr:${correlationHint} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
     }
     setMarketOverlaySnapshotSummary(summaryByMode[marketOverlayMode])
     setMarketOverlaySnapshotAt(new Date().toISOString())
@@ -3736,6 +3737,7 @@ function App() {
     marketOverlayBucketScope,
     marketOverlayMarkerAgeFilter,
     marketOverlayMarkerWrap,
+    marketOverlaySelectionMode,
     marketOverlayTimelineOrder,
     marketOverlayMarkerFocus,
     marketOverlayMarkerWindow,
