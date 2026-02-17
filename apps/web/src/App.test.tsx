@@ -1337,6 +1337,46 @@ describe('Dashboard shell', () => {
     })
   })
 
+  it('shows lock telemetry when shortcut cheat-sheet copy fails', async () => {
+    const writeText = vi.fn().mockRejectedValue(new Error('denied'))
+    Object.defineProperty(window.navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    })
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Copy Shortcut Cheat Sheet' }))
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalled()
+      expect(
+        screen.getByText(
+          'Clipboard access failed or is unavailable. Lock telemetry: lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0.',
+        ),
+      ).toBeInTheDocument()
+    })
+  })
+
+  it('omits shortcut cheat-sheet copy failure telemetry when block telemetry is hidden', async () => {
+    const writeText = vi.fn().mockRejectedValue(new Error('denied'))
+    Object.defineProperty(window.navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    })
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Hide Block Telemetry' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Copy Shortcut Cheat Sheet' }))
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalled()
+      expect(screen.getByText('Clipboard access failed or is unavailable.')).toBeInTheDocument()
+      expect(
+        screen.queryByText(
+          'Clipboard access failed or is unavailable. Lock telemetry: lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0.',
+        ),
+      ).not.toBeInTheDocument()
+    })
+  })
+
   it('omits shortcut lock telemetry metadata when block telemetry is hidden', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined)
     Object.defineProperty(window.navigator, 'clipboard', {
@@ -2073,6 +2113,46 @@ describe('Dashboard shell', () => {
           'Copied helper reset badge text to clipboard (lock: locked, toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0).',
         ),
       ).toBeInTheDocument()
+    })
+  })
+
+  it('shows lock telemetry when helper reset badge copy fails', async () => {
+    const writeText = vi.fn().mockRejectedValue(new Error('denied'))
+    Object.defineProperty(window.navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    })
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Copy Reset Badge' }))
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalled()
+      expect(
+        screen.getByText(
+          'Clipboard access failed or is unavailable. Lock telemetry: lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0.',
+        ),
+      ).toBeInTheDocument()
+    })
+  })
+
+  it('omits helper reset badge copy failure telemetry when block telemetry is hidden', async () => {
+    const writeText = vi.fn().mockRejectedValue(new Error('denied'))
+    Object.defineProperty(window.navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    })
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Hide Block Telemetry' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Copy Reset Badge' }))
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalled()
+      expect(screen.getByText('Clipboard access failed or is unavailable.')).toBeInTheDocument()
+      expect(
+        screen.queryByText(
+          'Clipboard access failed or is unavailable. Lock telemetry: lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0.',
+        ),
+      ).not.toBeInTheDocument()
     })
   })
 
