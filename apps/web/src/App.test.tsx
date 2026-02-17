@@ -56,6 +56,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Import Mode Badge')).toBeInTheDocument()
     expect(screen.getByText(/Shortcut: Ctrl\/Cmd\+Enter to import, Esc to clear\./)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Hide Hints' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Use Compact Hints' })).toBeInTheDocument()
     expect(screen.getByText('Last import: none')).toBeInTheDocument()
   })
 
@@ -427,6 +428,13 @@ describe('Dashboard shell', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Show Hints' }))
     expect(screen.getByText(/Shortcut: Ctrl\/Cmd\+Enter to import, Esc to clear\./)).toBeInTheDocument()
     expect(window.localStorage.getItem('quick-action-import-hint-visibility-v1')).toBe('visible')
+  })
+
+  it('supports compact hint mode toggle', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Use Compact Hints' }))
+    expect(screen.getByText(/Shortcuts: Ctrl\/Cmd\+Enter import · Esc clear\./)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Use Detailed Hints' })).toBeInTheDocument()
   })
 
   it('reports accepted and rejected preset names after import', async () => {

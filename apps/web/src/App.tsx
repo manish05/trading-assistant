@@ -56,6 +56,7 @@ type QuickActionPreset = {
   minRequestGapMsInput: string
 }
 type PresetImportMode = 'overwrite' | 'merge'
+type ImportHintMode = 'detailed' | 'compact'
 type PresetImportReport = {
   mode: PresetImportMode
   accepted: string[]
@@ -275,6 +276,7 @@ function App() {
   const [isImportHintVisible, setIsImportHintVisible] = useState<boolean>(
     readImportHintVisibilityFromStorage,
   )
+  const [importHintMode, setImportHintMode] = useState<ImportHintMode>('detailed')
   const [availablePresetNames, setAvailablePresetNames] = useState<string[]>(() =>
     Object.keys(readPresetStoreFromStorage()).sort(),
   )
@@ -1421,16 +1423,30 @@ function App() {
             </label>
             {isImportHintVisible ? (
               <p className="preset-import-hint">
-                Shortcut: Ctrl/Cmd+Enter to import, Esc to clear. Import mode{' '}
-                <strong>{presetImportMode}</strong>{' '}
-                {presetImportMode === 'merge'
-                  ? 'preserves existing conflicting presets.'
-                  : 'overwrites conflicting presets.'}
+                {importHintMode === 'compact' ? (
+                  <>Shortcuts: Ctrl/Cmd+Enter import · Esc clear.</>
+                ) : (
+                  <>
+                    Shortcut: Ctrl/Cmd+Enter to import, Esc to clear. Import mode{' '}
+                    <strong>{presetImportMode}</strong>{' '}
+                    {presetImportMode === 'merge'
+                      ? 'preserves existing conflicting presets.'
+                      : 'overwrites conflicting presets.'}
+                  </>
+                )}
               </p>
             ) : null}
             <div className="preset-import-actions">
               <button type="button" onClick={() => setIsImportHintVisible((current) => !current)}>
                 {isImportHintVisible ? 'Hide Hints' : 'Show Hints'}
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  setImportHintMode((current) => (current === 'detailed' ? 'compact' : 'detailed'))
+                }
+              >
+                {importHintMode === 'detailed' ? 'Use Compact Hints' : 'Use Detailed Hints'}
               </button>
               <button
                 type="button"
