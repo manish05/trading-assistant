@@ -1302,6 +1302,19 @@ function App() {
       marketOverlayScopedTimelineAnnotations.length,
     ],
   )
+  const marketOverlayMarkerModeShortcutSummary = useMemo(
+    () => {
+      const isLocked = marketOverlaySelectionMode === 'follow-latest'
+      return `order:o/l=${marketOverlayTimelineOrder} · scope:g=${marketOverlayBucketScope} · wrap:w=${marketOverlayMarkerWrap} · selection:s=${marketOverlaySelectionMode} · delta:u/j/f/n/0/+/-=${marketOverlayMarkerDeltaFilter} · nav:${isLocked ? 'locked' : 'manual'}`
+    },
+    [
+      marketOverlayBucketScope,
+      marketOverlayMarkerDeltaFilter,
+      marketOverlayMarkerWrap,
+      marketOverlaySelectionMode,
+      marketOverlayTimelineOrder,
+    ],
+  )
   const marketOverlayScopedVisibleAnnotations = useMemo(() => {
     if (marketOverlayScopedTimelineAnnotations.length === 0) {
       return [] as MarketOverlayAnnotation[]
@@ -5338,6 +5351,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Delta Shortcut Summary">
               Delta shortcuts: {marketOverlayMarkerDeltaShortcutSummary}
+            </p>
+            <p aria-label="Overlay Marker Mode Shortcut Summary">
+              Mode shortcuts: {marketOverlayMarkerModeShortcutSummary}
             </p>
             <p aria-label="Overlay Marker Delta Summary">Delta summary: {marketOverlayMarkerDeltaSummary}</p>
             <p aria-label="Overlay Marker Delta Tone Summary">

@@ -80,6 +80,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Delta Shortcut Summary')).toHaveTextContent(
       'Delta shortcuts: keys:u/j/f/n/0/+/- · mode:all · matched:0/0 · active:off',
     )
+    expect(screen.getByLabelText('Overlay Marker Mode Shortcut Summary')).toHaveTextContent(
+      'Mode shortcuts: order:o/l=newest-first · scope:g=all-buckets · wrap:w=bounded · selection:s=sticky · delta:u/j/f/n/0/+/-=all · nav:manual',
+    )
     expect(screen.getByLabelText('Overlay Marker Chronology Summary')).toHaveTextContent(
       'Chronology: none',
     )
@@ -1585,7 +1588,11 @@ describe('Dashboard shell', () => {
       'Marker nav: 1/2 · selected:trade:closed:queued',
     )
 
-    fireEvent.keyDown(screen.getByRole('button', { name: 'trade:closed:queued' }), { key: 's' })
+    const selectedTradeMarkerAfterFollowLatest = within(screen.getByLabelText('Overlay Markers'))
+      .getAllByRole('button', { name: 'trade:closed:queued' })
+      .find((button) => button.getAttribute('aria-pressed') === 'true')
+    expect(selectedTradeMarkerAfterFollowLatest).toBeDefined()
+    fireEvent.keyDown(selectedTradeMarkerAfterFollowLatest as HTMLElement, { key: 's' })
     expect(screen.getByLabelText('Selection Mode')).toHaveValue('follow-latest')
     expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
       'Marker nav: 2/2 · selected:risk:live_trading_disabled:raised',
@@ -1641,7 +1648,12 @@ describe('Dashboard shell', () => {
       'Scope: visible:t2/r1/f0 · selectedKind:trade',
     )
 
-    fireEvent.change(screen.getByLabelText('Selection Mode'), { target: { value: 'sticky' } })
+    const selectedTradeMarkerBeforeStickyToggle = within(screen.getByLabelText('Overlay Markers'))
+      .getAllByRole('button', { name: 'trade:closed:queued' })
+      .find((button) => button.getAttribute('aria-pressed') === 'true')
+    expect(selectedTradeMarkerBeforeStickyToggle).toBeDefined()
+    fireEvent.keyDown(selectedTradeMarkerBeforeStickyToggle as HTMLElement, { key: 's' })
+    expect(screen.getByLabelText('Selection Mode')).toHaveValue('sticky')
     expect(screen.getByLabelText('Overlay Marker Behavior')).toHaveTextContent(
       'Marker behavior: wrap:bounded · selection:sticky · nav:manual',
     )
