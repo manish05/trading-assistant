@@ -35,6 +35,7 @@ function App() {
   const [accountCount, setAccountCount] = useState<number | null>(null)
   const [feedCount, setFeedCount] = useState<number | null>(null)
   const [subscriptionCount, setSubscriptionCount] = useState<number | null>(null)
+  const [activeSubscriptionId, setActiveSubscriptionId] = useState<string | null>(null)
   const [blocks, setBlocks] = useState<BlockItem[]>([])
 
   const websocketUrl = useMemo(() => {
@@ -145,7 +146,68 @@ function App() {
     const subscriptions = Array.isArray(subscriptionsRaw) ? subscriptionsRaw : []
     setFeedCount(feeds.length)
     setSubscriptionCount(subscriptions.length)
+    const nextActiveId = subscriptions
+      .map((item) => {
+        if (item && typeof item === 'object' && 'subscriptionId' in item) {
+          const value = item.subscriptionId
+          return typeof value === 'string' ? value : null
+        }
+        return null
+      })
+      .find((value): value is string => value !== null)
+    setActiveSubscriptionId(nextActiveId ?? null)
   }, [sendRequest])
+
+  const sendFeedSubscribe = useCallback(async () => {
+    const payload = await sendRequest('feeds.subscribe', {
+      topics: ['market.candle.closed'],
+      symbols: ['ETHUSDm'],
+      timeframes: ['5m'],
+    })
+    if (!payload) {
+      return
+    }
+
+    const subscriptionCountRaw = payload.subscriptionCount
+    if (typeof subscriptionCountRaw === 'number') {
+      setSubscriptionCount(subscriptionCountRaw)
+    }
+
+    const subscription = payload.subscription
+    if (subscription && typeof subscription === 'object' && 'subscriptionId' in subscription) {
+      const subscriptionId = subscription.subscriptionId
+      if (typeof subscriptionId === 'string') {
+        setActiveSubscriptionId(subscriptionId)
+      }
+    }
+  }, [sendRequest])
+
+  const sendFeedUnsubscribe = useCallback(async () => {
+    if (!activeSubscriptionId) {
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'feeds.unsubscribe skipped',
+        content: 'No active feed subscription id available.',
+        severity: 'warn',
+      })
+      return
+    }
+
+    const payload = await sendRequest('feeds.unsubscribe', {
+      subscriptionId: activeSubscriptionId,
+    })
+    if (!payload) {
+      return
+    }
+
+    const subscriptionCountRaw = payload.subscriptionCount
+    if (typeof subscriptionCountRaw === 'number') {
+      setSubscriptionCount(subscriptionCountRaw)
+    }
+    if (payload.status === 'removed') {
+      setActiveSubscriptionId(null)
+    }
+  }, [activeSubscriptionId, appendBlock, sendRequest])
 
   useEffect(() => {
     const socket = new WebSocket(websocketUrl)
@@ -252,6 +314,16 @@ function App() {
               <button type="button" onClick={() => void sendFeedsList()}>
                 Feeds
               </button>
+              <button type="button" onClick={() => void sendFeedSubscribe()}>
+                Subscribe Feed
+              </button>
+              <button
+                type="button"
+                onClick={() => void sendFeedUnsubscribe()}
+                disabled={!activeSubscriptionId}
+              >
+                Unsubscribe Feed
+              </button>
             </div>
           </div>
           <div className="block-list">
@@ -294,6 +366,10 @@ function App() {
             <div>
               <dt>Feed Subscriptions</dt>
               <dd>{subscriptionCount ?? 'n/a'}</dd>
+            </div>
+            <div>
+              <dt>Active Subscription</dt>
+              <dd>{activeSubscriptionId ?? 'none'}</dd>
             </div>
           </dl>
         </section>

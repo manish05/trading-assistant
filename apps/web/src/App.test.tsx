@@ -1,9 +1,13 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import App from './App'
 
 describe('Dashboard shell', () => {
+  afterEach(() => {
+    cleanup()
+  })
+
   it('renders primary dashboard regions', () => {
     render(<App />)
 
@@ -15,18 +19,19 @@ describe('Dashboard shell', () => {
   it('renders gateway action buttons for account/feed listing', () => {
     render(<App />)
 
-    expect(screen.getAllByRole('button', { name: 'Accounts' }).length).toBeGreaterThan(0)
-    expect(screen.getAllByRole('button', { name: 'Feeds' }).length).toBeGreaterThan(0)
+    expect(screen.getByRole('button', { name: 'Accounts' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Feeds' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Subscribe Feed' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Unsubscribe Feed' })).toBeDisabled()
   })
 
-  it('sends accounts.list and feeds.list requests from action panel', async () => {
+  it('sends accounts.list, feeds.list, and feeds.subscribe requests', async () => {
     const sendSpy = vi.spyOn(WebSocket.prototype, 'send')
     render(<App />)
 
-    const accountsButton = screen.getAllByRole('button', { name: 'Accounts' })[0]
-    const feedsButton = screen.getAllByRole('button', { name: 'Feeds' })[0]
-    fireEvent.click(accountsButton)
-    fireEvent.click(feedsButton)
+    fireEvent.click(screen.getByRole('button', { name: 'Accounts' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Feeds' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Subscribe Feed' }))
 
     await waitFor(() => {
       const payloads = sendSpy.mock.calls.map(([serialized]) =>
@@ -36,6 +41,7 @@ describe('Dashboard shell', () => {
 
       expect(methods).toContain('accounts.list')
       expect(methods).toContain('feeds.list')
+      expect(methods).toContain('feeds.subscribe')
     })
 
     sendSpy.mockRestore()
