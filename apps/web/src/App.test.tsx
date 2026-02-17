@@ -548,6 +548,34 @@ describe('Dashboard shell', () => {
     sendSpy.mockRestore()
   })
 
+  it('uses default emergency reason when emergency reason input is blank', async () => {
+    const sendSpy = vi.spyOn(WebSocket.prototype, 'send')
+    render(<App />)
+
+    fireEvent.change(screen.getByLabelText('Emergency Reason'), {
+      target: { value: '   ' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Emergency Stop' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Resume Risk' }))
+
+    await waitFor(() => {
+      const payloads = sendSpy.mock.calls.map(([serialized]) =>
+        JSON.parse(String(serialized)),
+      ) as Array<{ method?: string; params?: Record<string, unknown> }>
+
+      const emergencyStop = payloads.find((payload) => payload.method === 'risk.emergencyStop')
+      const resumeRisk = payloads.find((payload) => payload.method === 'risk.resume')
+      expect(emergencyStop?.params).toMatchObject({
+        reason: 'dashboard emergency stop trigger',
+      })
+      expect(resumeRisk?.params).toMatchObject({
+        reason: 'dashboard emergency stop trigger',
+      })
+    })
+
+    sendSpy.mockRestore()
+  })
+
   it('debounces repeated requests for the same method', async () => {
     const sendSpy = vi.spyOn(WebSocket.prototype, 'send')
     render(<App />)
