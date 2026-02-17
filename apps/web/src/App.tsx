@@ -1364,6 +1364,74 @@ function App() {
         : 'cycle:k=latest'
     return `keys:h/m/k · latest:h · average:m · ${cycleHint} · active:${marketOverlayMarkerDeltaBasis}`
   }, [marketOverlayMarkerDeltaBasis])
+  const marketOverlayMarkerDeltaBasisComparisonSummary = useMemo(() => {
+    type DeltaToneStats = {
+      total: number
+      matched: number
+      up: number
+      down: number
+      flat: number
+      unavailable: number
+    }
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const baseline =
+      marketOverlayChartPoints.length === 0
+        ? null
+        : marketOverlayChartPoints.reduce((sum, point) => sum + point.value, 0) /
+          marketOverlayChartPoints.length
+    const computeStats = (basis: MarketOverlayMarkerDeltaBasis): DeltaToneStats => {
+      const stats: DeltaToneStats = {
+        total: marketOverlayBucketScopedTimelineAnnotations.length,
+        matched: 0,
+        up: 0,
+        down: 0,
+        flat: 0,
+        unavailable: 0,
+      }
+      marketOverlayBucketScopedTimelineAnnotations.forEach((annotation) => {
+        const point = pointByTime.get(annotation.time) ?? null
+        const deltaValue =
+          basis === 'latest'
+            ? point && latestPoint
+              ? point.value - latestPoint.value
+              : null
+            : point && baseline !== null
+              ? point.value - baseline
+              : null
+        const tone = resolveMarketOverlayDeltaTone(deltaValue)
+        if (tone === 'up') {
+          stats.up += 1
+        } else if (tone === 'down') {
+          stats.down += 1
+        } else if (tone === 'flat') {
+          stats.flat += 1
+        } else {
+          stats.unavailable += 1
+        }
+        const isMatch =
+          marketOverlayMarkerDeltaFilter === 'all' ||
+          (marketOverlayMarkerDeltaFilter === 'latest-up' && tone === 'up') ||
+          (marketOverlayMarkerDeltaFilter === 'latest-down' && tone === 'down') ||
+          (marketOverlayMarkerDeltaFilter === 'latest-flat' && tone === 'flat') ||
+          (marketOverlayMarkerDeltaFilter === 'latest-unavailable' && tone === 'unavailable')
+        if (isMatch) {
+          stats.matched += 1
+        }
+      })
+      return stats
+    }
+    const latestStats = computeStats('latest')
+    const averageStats = computeStats('average')
+    const formatStats = (label: 'latest' | 'average', stats: DeltaToneStats) =>
+      `${label}:m${stats.matched}/${stats.total}|u${stats.up}|d${stats.down}|f${stats.flat}|n${stats.unavailable}`
+    return `${formatStats('latest', latestStats)} · ${formatStats('average', averageStats)} · mode:${marketOverlayMarkerDeltaFilter} · active:${marketOverlayMarkerDeltaBasis}`
+  }, [
+    marketOverlayBucketScopedTimelineAnnotations,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+  ])
   const marketOverlayMarkerModeShortcutSummary = useMemo(
     () => {
       const isLocked = marketOverlaySelectionMode === 'follow-latest'
@@ -5526,6 +5594,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Delta Basis Shortcut Summary">
               Delta basis shortcuts: {marketOverlayMarkerDeltaBasisShortcutSummary}
+            </p>
+            <p aria-label="Overlay Marker Delta Basis Comparison Summary">
+              Delta basis compare: {marketOverlayMarkerDeltaBasisComparisonSummary}
             </p>
             <p aria-label="Overlay Marker Mode Shortcut Summary">
               Mode shortcuts: {marketOverlayMarkerModeShortcutSummary}
