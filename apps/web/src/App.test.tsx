@@ -67,12 +67,14 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Hide Hints' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Use Compact Hints' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Show Legend in Status' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Hide Reset Badge' })).toBeInTheDocument()
     expect(screen.getByLabelText('Legend Order')).toHaveValue('import-first')
     expect(screen.getByLabelText('Legend Density')).toHaveValue('chips')
     expect(screen.getByRole('button', { name: 'Copy Shortcut Cheat Sheet' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Hide Quick Toggles' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Quick Hide Hints' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Quick Show Legend' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Quick Hide Reset Badge' })).toBeInTheDocument()
     expect(screen.getByText('Helper Diagnostics')).toBeInTheDocument()
     expect(
       screen.getByText('diag:compact', { selector: '.import-snapshot-badges .import-summary-badge' }),
@@ -585,6 +587,34 @@ describe('Dashboard shell', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Quick Show Legend' }))
     expect(screen.getByRole('button', { name: 'Quick Hide Legend' })).toBeInTheDocument()
     expect(screen.getByText('Import Shortcut Legend', { selector: 'dt' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Quick Hide Reset Badge' }))
+    expect(screen.getByRole('button', { name: 'Quick Show Reset Badge' })).toBeInTheDocument()
+    expect(screen.queryByLabelText('Helper Reset Badge')).not.toBeInTheDocument()
+  })
+
+  it('toggles helper reset badge visibility and persists preference', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Hide Reset Badge' }))
+    expect(screen.getByRole('button', { name: 'Show Reset Badge' })).toBeInTheDocument()
+    expect(window.localStorage.getItem('quick-action-helper-reset-badge-visibility-v1')).toBe('hidden')
+    expect(screen.queryByLabelText('Helper Reset Badge')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Copy Reset Badge' })).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Show Reset Badge' }))
+    expect(screen.getByRole('button', { name: 'Hide Reset Badge' })).toBeInTheDocument()
+    expect(window.localStorage.getItem('quick-action-helper-reset-badge-visibility-v1')).toBe(
+      'visible',
+    )
+    expect(screen.getByLabelText('Helper Reset Badge')).toBeInTheDocument()
+  })
+
+  it('initializes helper reset badge visibility from localStorage', () => {
+    window.localStorage.setItem('quick-action-helper-reset-badge-visibility-v1', 'hidden')
+    render(<App />)
+    expect(screen.getByRole('button', { name: 'Show Reset Badge' })).toBeInTheDocument()
+    expect(screen.queryByLabelText('Helper Reset Badge')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Quick Show Reset Badge' })).toBeInTheDocument()
   })
 
   it('persists snapshot quick-toggle expansion state', () => {
@@ -700,6 +730,7 @@ describe('Dashboard shell', () => {
       expect(payload).toContain('density=chips')
       expect(payload).toContain('resetAt=never')
       expect(payload).toContain('resetFormat=absolute')
+      expect(payload).toContain('resetBadgeVisible=yes')
     })
   })
 
@@ -730,6 +761,7 @@ describe('Dashboard shell', () => {
       target: { value: 'inline' },
     })
     fireEvent.click(screen.getByRole('button', { name: 'Use Verbose Diagnostics' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Hide Reset Badge' }))
     fireEvent.click(screen.getByRole('button', { name: 'Hide Quick Toggles' }))
 
     fireEvent.click(screen.getByRole('button', { name: 'Reset Helper Prefs' }))
@@ -739,6 +771,8 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Legend Density')).toHaveValue('chips')
     expect(screen.getByRole('button', { name: 'Use Verbose Diagnostics' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Hide Quick Toggles' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Hide Reset Badge' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Helper Reset Badge')).toBeInTheDocument()
     expect(window.localStorage.getItem('quick-action-helper-diagnostics-reset-at-v1')).toBeTruthy()
     expect(screen.queryByText('resetAge:never')).not.toBeInTheDocument()
     expect(screen.getByText(/resetAge:/)).toBeInTheDocument()

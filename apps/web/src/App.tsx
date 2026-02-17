@@ -90,6 +90,7 @@ const STATUS_SHORTCUT_LEGEND_DENSITY_STORAGE_KEY = 'quick-action-status-shortcut
 const IMPORT_SNAPSHOT_TOGGLES_STORAGE_KEY = 'quick-action-import-snapshot-toggles-v1'
 const HELPER_DIAGNOSTICS_RESET_AT_STORAGE_KEY = 'quick-action-helper-diagnostics-reset-at-v1'
 const HELPER_RESET_TIMESTAMP_FORMAT_STORAGE_KEY = 'quick-action-helper-reset-timestamp-format-v1'
+const HELPER_RESET_BADGE_VISIBILITY_STORAGE_KEY = 'quick-action-helper-reset-badge-visibility-v1'
 const MAX_IMPORT_REPORT_NAMES = 6
 const DEFAULT_PRESET_TEMPLATE: QuickActionPreset = {
   managedAccountId: 'acct_demo_1',
@@ -235,6 +236,13 @@ const readHelperResetTimestampFormatFromStorage = (): TimestampFormat => {
   }
   const raw = window.localStorage.getItem(HELPER_RESET_TIMESTAMP_FORMAT_STORAGE_KEY)
   return raw === 'relative' ? 'relative' : 'absolute'
+}
+
+const readHelperResetBadgeVisibleFromStorage = (): boolean => {
+  if (typeof window === 'undefined') {
+    return true
+  }
+  return window.localStorage.getItem(HELPER_RESET_BADGE_VISIBILITY_STORAGE_KEY) !== 'hidden'
 }
 
 const sanitizePreset = (value: unknown): QuickActionPreset | null => {
@@ -397,6 +405,9 @@ function App() {
   )
   const [helperResetTimestampFormat, setHelperResetTimestampFormat] = useState<TimestampFormat>(
     readHelperResetTimestampFormatFromStorage,
+  )
+  const [isHelperResetBadgeVisible, setIsHelperResetBadgeVisible] = useState<boolean>(
+    readHelperResetBadgeVisibleFromStorage,
   )
   const [availablePresetNames, setAvailablePresetNames] = useState<string[]>(() =>
     Object.keys(readPresetStoreFromStorage()).sort(),
@@ -1157,6 +1168,7 @@ function App() {
       `density=${shortcutLegendDensity}`,
       `resetAt=${helperDiagnosticsLastResetAt ?? 'never'}`,
       `resetFormat=${helperResetTimestampFormat}`,
+      `resetBadgeVisible=${isHelperResetBadgeVisible ? 'yes' : 'no'}`,
       `hintVisible=${isImportHintVisible ? 'yes' : 'no'}`,
       `legendVisible=${showShortcutLegendInStatus ? 'yes' : 'no'}`,
       `legendOrder=${shortcutLegendOrder}`,
@@ -1185,6 +1197,7 @@ function App() {
     isImportHelperDiagnosticsExpanded,
     isImportHintVisible,
     helperDiagnosticsLastResetAt,
+    isHelperResetBadgeVisible,
     helperResetTimestampFormat,
     shortcutLegendDensity,
     shortcutLegendOrder,
@@ -1226,6 +1239,7 @@ function App() {
     setShortcutLegendOrder('import-first')
     setShortcutLegendDensity('chips')
     setHelperDiagnosticsDisplayMode('compact')
+    setIsHelperResetBadgeVisible(true)
     setHelperDiagnosticsLastResetAt(new Date().toISOString())
     appendBlock({
       id: `blk_${Date.now()}`,
@@ -1406,6 +1420,13 @@ function App() {
   useEffect(() => {
     window.localStorage.setItem(HELPER_RESET_TIMESTAMP_FORMAT_STORAGE_KEY, helperResetTimestampFormat)
   }, [helperResetTimestampFormat])
+
+  useEffect(() => {
+    window.localStorage.setItem(
+      HELPER_RESET_BADGE_VISIBILITY_STORAGE_KEY,
+      isHelperResetBadgeVisible ? 'visible' : 'hidden',
+    )
+  }, [isHelperResetBadgeVisible])
 
   useEffect(() => {
     window.localStorage.setItem(IMPORT_HINT_MODE_STORAGE_KEY, importHintMode)
@@ -1780,22 +1801,26 @@ function App() {
                   ? 'Collapse Helper Diagnostics'
                   : 'Expand Helper Diagnostics'}
               </button>
-              <span
-                className={`helper-reset-badge ${helperResetToneClass}`}
-                aria-label="Helper Reset Badge"
-              >
-                last reset:{' '}
-                {helperDiagnosticsLastResetAt
-                  ? formatTimestamp(helperDiagnosticsLastResetAt, helperResetTimestampFormat)
-                  : 'never'}
-              </span>
-              <button
-                type="button"
-                className="summary-copy-button"
-                onClick={() => void copyHelperResetBadge()}
-              >
-                Copy Reset Badge
-              </button>
+              {isHelperResetBadgeVisible ? (
+                <span
+                  className={`helper-reset-badge ${helperResetToneClass}`}
+                  aria-label="Helper Reset Badge"
+                >
+                  last reset:{' '}
+                  {helperDiagnosticsLastResetAt
+                    ? formatTimestamp(helperDiagnosticsLastResetAt, helperResetTimestampFormat)
+                    : 'never'}
+                </span>
+              ) : null}
+              {isHelperResetBadgeVisible ? (
+                <button
+                  type="button"
+                  className="summary-copy-button"
+                  onClick={() => void copyHelperResetBadge()}
+                >
+                  Copy Reset Badge
+                </button>
+              ) : null}
             </div>
             {isImportHelperDiagnosticsExpanded && isImportHintVisible ? (
               <p className="preset-import-hint">
@@ -1851,6 +1876,12 @@ function App() {
                   onClick={() => setShowShortcutLegendInStatus((current) => !current)}
                 >
                   {showShortcutLegendInStatus ? 'Hide Legend in Status' : 'Show Legend in Status'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsHelperResetBadgeVisible((current) => !current)}
+                >
+                  {isHelperResetBadgeVisible ? 'Hide Reset Badge' : 'Show Reset Badge'}
                 </button>
                 <label>
                   Legend Order
@@ -2153,6 +2184,14 @@ function App() {
                       >
                         {showShortcutLegendInStatus ? 'Quick Hide Legend' : 'Quick Show Legend'}
                       </button>
+                      <button
+                        type="button"
+                        onClick={() => setIsHelperResetBadgeVisible((current) => !current)}
+                      >
+                        {isHelperResetBadgeVisible
+                          ? 'Quick Hide Reset Badge'
+                          : 'Quick Show Reset Badge'}
+                      </button>
                     </>
                   ) : null}
                 </div>
@@ -2186,6 +2225,9 @@ function App() {
                     </span>
                     <span className="import-summary-badge badge-hint-mode">
                       legendOrder:{shortcutLegendOrder}
+                    </span>
+                    <span className="import-summary-badge badge-hint-mode">
+                      resetBadge:{isHelperResetBadgeVisible ? 'yes' : 'no'}
                     </span>
                   </>
                 ) : null}
