@@ -380,12 +380,36 @@ def test_gateway_device_pair_and_notify_methods(tmp_path) -> None:
         )
         notify_response = websocket.receive_json()
 
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_register_push_1",
+                "method": "devices.registerPush",
+                "params": {"deviceId": "dev_iphone_1", "pushToken": "push_new"},
+            }
+        )
+        register_push_response = websocket.receive_json()
+
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_device_unpair_1",
+                "method": "devices.unpair",
+                "params": {"deviceId": "dev_iphone_1"},
+            }
+        )
+        unpair_response = websocket.receive_json()
+
     assert pair_response["ok"] is True
     assert pair_response["payload"]["device"]["deviceId"] == "dev_iphone_1"
     assert list_response["ok"] is True
     assert len(list_response["payload"]["devices"]) == 1
     assert notify_response["ok"] is True
     assert notify_response["payload"]["status"] == "queued"
+    assert register_push_response["ok"] is True
+    assert register_push_response["payload"]["device"]["deviceId"] == "dev_iphone_1"
+    assert unpair_response["ok"] is True
+    assert unpair_response["payload"]["status"] == "removed"
 
 
 def test_gateway_persists_device_and_queue_state_between_app_instances(tmp_path) -> None:

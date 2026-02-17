@@ -27,3 +27,21 @@ def test_device_registry_handles_invalid_state_payload(tmp_path) -> None:
     registry = DeviceRegistry(state_path=state_path)
 
     assert registry.list() == []
+
+
+def test_device_registry_register_push_and_unpair(tmp_path) -> None:
+    registry = DeviceRegistry(state_path=tmp_path / "state" / "devices.json")
+    _ = registry.pair(
+        device_id="dev_1",
+        platform="ios",
+        label="iPhone",
+        push_token="push_a",
+    )
+
+    updated = registry.register_push(device_id="dev_1", push_token="push_b")
+    removed = registry.unpair(device_id="dev_1")
+
+    assert updated is not None
+    assert updated.push_token == "push_b"
+    assert removed is True
+    assert registry.list() == []

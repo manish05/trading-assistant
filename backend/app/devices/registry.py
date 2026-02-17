@@ -48,6 +48,21 @@ class DeviceRegistry:
     def list(self) -> list[PairedDevice]:
         return list(self._devices.values())
 
+    def unpair(self, *, device_id: str) -> bool:
+        removed = self._devices.pop(device_id, None) is not None
+        if removed:
+            self._save()
+        return removed
+
+    def register_push(self, *, device_id: str, push_token: str) -> PairedDevice | None:
+        device = self._devices.get(device_id)
+        if device is None:
+            return None
+        device.push_token = push_token
+        device.last_seen_at = datetime.now(UTC).isoformat()
+        self._save()
+        return device
+
     def notify_test(self, *, device_id: str, message: str) -> dict:
         device = self._devices.get(device_id)
         if device is None:

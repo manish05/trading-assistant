@@ -102,6 +102,19 @@ class DeviceNotifyParams(BaseModel):
     message: str = Field(min_length=1)
 
 
+class DeviceUnpairParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    deviceId: str = Field(min_length=1)
+
+
+class DeviceRegisterPushParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    deviceId: str = Field(min_length=1)
+    pushToken: str = Field(min_length=1)
+
+
 class TradesPlaceParams(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -982,6 +995,81 @@ async def handle_gateway_websocket(
                 device_registry.as_public_payload(device) for device in device_registry.list()
             ]
             await websocket.send_json(_ok_response(frame.id, payload={"devices": devices}))
+            continue
+
+        if frame.method == "devices.unpair":
+            try:
+                params = DeviceUnpairParams.model_validate(frame.params)
+            except ValidationError:
+                await websocket.send_json(
+                    _error_response(
+                        frame.id,
+                        code="INVALID_PARAMS",
+                        message="invalid devices.unpair params",
+                    )
+                )
+                continue
+
+            removed = device_registry.unpair(device_id=params.deviceId)
+            if not removed:
+                await websocket.send_json(
+                    _error_response(
+                        frame.id,
+                        code="NOT_FOUND",
+                        message=f"device not found: {params.deviceId}",
+                    )
+                )
+                continue
+
+            audit_store.append(
+                actor="user",
+                action="devices.unpair",
+                trace_id=frame.id,
+                data={"deviceId": params.deviceId},
+            )
+            await websocket.send_json(
+                _ok_response(
+                    frame.id,
+                    payload={"status": "removed", "deviceId": params.deviceId},
+                )
+            )
+            continue
+
+        if frame.method == "devices.registerPush":
+            try:
+                params = DeviceRegisterPushParams.model_validate(frame.params)
+            except ValidationError:
+                await websocket.send_json(
+                    _error_response(
+                        frame.id,
+                        code="INVALID_PARAMS",
+                        message="invalid devices.registerPush params",
+                    )
+                )
+                continue
+
+            updated_device = device_registry.register_push(
+                device_id=params.deviceId,
+                push_token=params.pushToken,
+            )
+            if updated_device is None:
+                await websocket.send_json(
+                    _error_response(
+                        frame.id,
+                        code="NOT_FOUND",
+                        message=f"device not found: {params.deviceId}",
+                    )
+                )
+                continue
+
+            payload = {"device": device_registry.as_public_payload(updated_device)}
+            audit_store.append(
+                actor="user",
+                action="devices.registerPush",
+                trace_id=frame.id,
+                data={"deviceId": params.deviceId},
+            )
+            await websocket.send_json(_ok_response(frame.id, payload=payload))
             continue
 
         if frame.method == "devices.notifyTest":
