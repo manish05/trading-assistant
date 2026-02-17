@@ -613,7 +613,7 @@ function App() {
       appendBlock({
         id: `blk_${Date.now()}`,
         title: 'helper lock counters already empty',
-        content: 'No helper reset lock toggle history to clear.',
+        content: `No helper reset lock toggle history to clear.${lockTelemetryFailureSuffix}`,
         severity: 'warn',
       })
       return
@@ -625,10 +625,15 @@ function App() {
     appendBlock({
       id: `blk_${Date.now()}`,
       title: 'helper lock counters reset',
-      content: 'Reset helper lock counters.',
+      content: `Reset helper lock counters (${lockTelemetryToastDetailsWithLabel}).`,
       severity: 'info',
     })
-  }, [appendBlock, helperResetLockToggleCount])
+  }, [
+    appendBlock,
+    helperResetLockToggleCount,
+    lockTelemetryFailureSuffix,
+    lockTelemetryToastDetailsWithLabel,
+  ])
 
   const pushHistory = useCallback((item: QuickActionHistory) => {
     setQuickActionHistory((current) => [item, ...current].slice(0, 20))

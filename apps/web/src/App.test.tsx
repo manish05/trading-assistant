@@ -850,7 +850,9 @@ describe('Dashboard shell', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Reset Lock Counters' }))
 
-    expect(screen.getByText('Reset helper lock counters.')).toBeInTheDocument()
+    expect(
+      screen.getByText('Reset helper lock counters (lock toggles: 2, tone: active, reset: never).'),
+    ).toBeInTheDocument()
     expect(screen.getByText('lockToggles:0')).toBeInTheDocument()
     expect(screen.getByText('srcControls:0')).toBeInTheDocument()
     expect(screen.getByText('diagLockToggles:0')).toBeInTheDocument()
