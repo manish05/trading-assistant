@@ -551,10 +551,10 @@ describe('Dashboard shell', () => {
         'trade:closed:queued · t1 · close:1.00',
       )
       expect(screen.getByLabelText('Overlay Marker Timeline')).toHaveTextContent(
-        'risk:live_trading_disabled:raised · t2 · close:2.00 · Δlatest:+0.00 (+0.00%)',
+        'risk:live_trading_disabled:raised · t2 · close:2.00 · Δlatest:+0.00 (+0.00%) · Δavg:+0.50',
       )
       expect(screen.getByLabelText('Overlay Marker Timeline')).toHaveTextContent(
-        'trade:closed:queued · t1 · close:1.00 · Δlatest:-1.00 (-50.00%)',
+        'trade:closed:queued · t1 · close:1.00 · Δlatest:-1.00 (-50.00%) · Δavg:-0.50',
       )
       expect(
         screen.getByRole('button', {

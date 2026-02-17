@@ -1247,11 +1247,13 @@ function App() {
       marketOverlayScopedTimelineAnnotations.map((annotation) => [annotation.id, annotation] as const),
     )
     const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
     return marketOverlayScopedVisibleAnnotations.map((annotation) => {
       const timelineAnnotation = timelineById.get(annotation.id)
       const point = timelineAnnotation
         ? marketOverlayChartPoints.find((candidate) => candidate.time === timelineAnnotation.time)
         : null
+      const deltaFromAverage = point && baseline !== null ? point.value - baseline : null
       const deltaToLatest = point && latestPoint ? point.value - latestPoint.value : null
       const deltaToLatestPct =
         deltaToLatest !== null && latestPoint && latestPoint.value !== 0
@@ -1260,11 +1262,12 @@ function App() {
       const ageLabel = formatElapsedMs(Date.now() - annotation.timestamp)
       return {
         id: annotation.id,
-        text: `${annotation.kind}:${annotation.label} · t${timelineAnnotation?.time ?? 'n/a'} · close:${point ? point.value.toFixed(2) : 'n/a'} · Δlatest:${deltaToLatest === null ? 'n/a' : `${deltaToLatest >= 0 ? '+' : ''}${deltaToLatest.toFixed(2)} (${deltaToLatestPct !== null ? `${deltaToLatestPct >= 0 ? '+' : ''}${deltaToLatestPct.toFixed(2)}%` : 'n/a'})`} · age:${ageLabel}`,
+        text: `${annotation.kind}:${annotation.label} · t${timelineAnnotation?.time ?? 'n/a'} · close:${point ? point.value.toFixed(2) : 'n/a'} · Δlatest:${deltaToLatest === null ? 'n/a' : `${deltaToLatest >= 0 ? '+' : ''}${deltaToLatest.toFixed(2)} (${deltaToLatestPct !== null ? `${deltaToLatestPct >= 0 ? '+' : ''}${deltaToLatestPct.toFixed(2)}%` : 'n/a'})`} · Δavg:${deltaFromAverage === null ? 'n/a' : `${deltaFromAverage >= 0 ? '+' : ''}${deltaFromAverage.toFixed(2)}`} · age:${ageLabel}`,
         isSelected: annotation.id === marketOverlaySelectedMarkerId,
       }
     })
   }, [
+    marketOverlayAverageClose,
     marketOverlayChartPoints,
     marketOverlayScopedTimelineAnnotations,
     marketOverlayScopedVisibleAnnotations,
