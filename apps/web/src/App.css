@@ -587,6 +587,23 @@
   font-size: 0.67rem;
 }
 
+.helper-reset-format {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  color: #9fb0cc;
+  font-size: 0.67rem;
+}
+
+.helper-reset-format select {
+  background: #14223a;
+  border: 1px solid #2d4a7e;
+  color: #e8edf5;
+  border-radius: 6px;
+  padding: 0.14rem 0.24rem;
+  font-size: 0.67rem;
+}
+
 .timestamp-grid {
   display: grid;
   grid-template-columns: 1fr;

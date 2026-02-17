@@ -81,6 +81,7 @@ describe('Dashboard shell', () => {
     expect(
       screen.getByText('reset:never', { selector: '.import-snapshot-badges .import-summary-badge' }),
     ).toBeInTheDocument()
+    expect(screen.getByLabelText('Reset TS')).toHaveValue('absolute')
     expect(screen.getByRole('button', { name: 'Copy Helper Summary' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Reset Helper Prefs' })).toBeInTheDocument()
     expect(screen.getByText('Last import: none')).toBeInTheDocument()
@@ -603,6 +604,22 @@ describe('Dashboard shell', () => {
         selector: '.import-snapshot-badges .import-summary-badge',
       }),
     ).toBeInTheDocument()
+  })
+
+  it('persists helper reset timestamp format selection', () => {
+    render(<App />)
+    fireEvent.change(screen.getByLabelText('Reset TS'), {
+      target: { value: 'relative' },
+    })
+    expect(window.localStorage.getItem('quick-action-helper-reset-timestamp-format-v1')).toBe(
+      'relative',
+    )
+  })
+
+  it('initializes helper reset timestamp format from localStorage', () => {
+    window.localStorage.setItem('quick-action-helper-reset-timestamp-format-v1', 'relative')
+    render(<App />)
+    expect(screen.getByLabelText('Reset TS')).toHaveValue('relative')
   })
 
   it('updates helper diagnostics summary counters in status panel', () => {

@@ -89,6 +89,7 @@ const STATUS_SHORTCUT_LEGEND_ORDER_STORAGE_KEY = 'quick-action-status-shortcut-l
 const STATUS_SHORTCUT_LEGEND_DENSITY_STORAGE_KEY = 'quick-action-status-shortcut-legend-density-v1'
 const IMPORT_SNAPSHOT_TOGGLES_STORAGE_KEY = 'quick-action-import-snapshot-toggles-v1'
 const HELPER_DIAGNOSTICS_RESET_AT_STORAGE_KEY = 'quick-action-helper-diagnostics-reset-at-v1'
+const HELPER_RESET_TIMESTAMP_FORMAT_STORAGE_KEY = 'quick-action-helper-reset-timestamp-format-v1'
 const MAX_IMPORT_REPORT_NAMES = 6
 const DEFAULT_PRESET_TEMPLATE: QuickActionPreset = {
   managedAccountId: 'acct_demo_1',
@@ -226,6 +227,14 @@ const readHelperDiagnosticsResetAtFromStorage = (): string | null => {
   }
   const raw = window.localStorage.getItem(HELPER_DIAGNOSTICS_RESET_AT_STORAGE_KEY)
   return raw && raw.length > 0 ? raw : null
+}
+
+const readHelperResetTimestampFormatFromStorage = (): TimestampFormat => {
+  if (typeof window === 'undefined') {
+    return 'absolute'
+  }
+  const raw = window.localStorage.getItem(HELPER_RESET_TIMESTAMP_FORMAT_STORAGE_KEY)
+  return raw === 'relative' ? 'relative' : 'absolute'
 }
 
 const sanitizePreset = (value: unknown): QuickActionPreset | null => {
@@ -373,6 +382,9 @@ function App() {
     useState<HelperDiagnosticsDisplayMode>(readImportHelperDiagnosticsModeFromStorage)
   const [helperDiagnosticsLastResetAt, setHelperDiagnosticsLastResetAt] = useState<string | null>(
     readHelperDiagnosticsResetAtFromStorage,
+  )
+  const [helperResetTimestampFormat, setHelperResetTimestampFormat] = useState<TimestampFormat>(
+    readHelperResetTimestampFormatFromStorage,
   )
   const [availablePresetNames, setAvailablePresetNames] = useState<string[]>(() =>
     Object.keys(readPresetStoreFromStorage()).sort(),
@@ -1346,6 +1358,10 @@ function App() {
   }, [helperDiagnosticsLastResetAt])
 
   useEffect(() => {
+    window.localStorage.setItem(HELPER_RESET_TIMESTAMP_FORMAT_STORAGE_KEY, helperResetTimestampFormat)
+  }, [helperResetTimestampFormat])
+
+  useEffect(() => {
     window.localStorage.setItem(IMPORT_HINT_MODE_STORAGE_KEY, importHintMode)
   }, [importHintMode])
 
@@ -2084,7 +2100,10 @@ function App() {
                   density:{shortcutLegendDensity}
                 </span>
                 <span className="import-summary-badge badge-hint-mode">
-                  reset:{helperDiagnosticsLastResetAt ?? 'never'}
+                  reset:
+                  {helperDiagnosticsLastResetAt
+                    ? formatTimestamp(helperDiagnosticsLastResetAt, helperResetTimestampFormat)
+                    : 'never'}
                 </span>
                 {helperDiagnosticsDisplayMode === 'verbose' ? (
                   <>
@@ -2129,6 +2148,18 @@ function App() {
                 >
                   Reset Helper Prefs
                 </button>
+                <label className="helper-reset-format">
+                  Reset TS
+                  <select
+                    value={helperResetTimestampFormat}
+                    onChange={(event) =>
+                      setHelperResetTimestampFormat(event.target.value as TimestampFormat)
+                    }
+                  >
+                    <option value="absolute">absolute</option>
+                    <option value="relative">relative</option>
+                  </select>
+                </label>
               </dd>
             </div>
             {showShortcutLegendInStatus ? (
