@@ -184,6 +184,7 @@ const MARKET_OVERLAY_MARKER_WRAP_STORAGE_KEY = 'quick-action-market-overlay-mark
 const MARKET_OVERLAY_SELECTION_MODE_STORAGE_KEY = 'quick-action-market-overlay-selection-mode-v1'
 const MAX_IMPORT_REPORT_NAMES = 6
 const FEED_CANDLE_FETCH_LIMIT = 50
+const MARKET_OVERLAY_MARKER_SKIP_STEP = 2
 const DEVICE_NOTIFY_TEST_MESSAGE = 'Dashboard test notification'
 const DEFAULT_RISK_EMERGENCY_REASON = 'dashboard emergency stop trigger'
 const DEFAULT_AGENT_ID = 'agent_eth_5m'
@@ -1243,6 +1244,21 @@ function App() {
     !isMarketOverlayNavigationLocked &&
     marketOverlayActiveTimelineIndex >= 0 &&
     marketOverlayActiveTimelineIndex < marketOverlayTimelineCount - 1
+  const canSelectSkipBackwardMarketOverlayMarker =
+    isMarketOverlayNavigationLocked || marketOverlayActiveTimelineIndex < 0
+      ? false
+      : marketOverlayMarkerWrap === 'wrap'
+      ? hasMultipleMarketOverlayMarkers &&
+        MARKET_OVERLAY_MARKER_SKIP_STEP % marketOverlayTimelineCount !== 0
+      : marketOverlayActiveTimelineIndex - MARKET_OVERLAY_MARKER_SKIP_STEP >= 0
+  const canSelectSkipForwardMarketOverlayMarker =
+    isMarketOverlayNavigationLocked || marketOverlayActiveTimelineIndex < 0
+      ? false
+      : marketOverlayMarkerWrap === 'wrap'
+      ? hasMultipleMarketOverlayMarkers &&
+        MARKET_OVERLAY_MARKER_SKIP_STEP % marketOverlayTimelineCount !== 0
+      : marketOverlayActiveTimelineIndex + MARKET_OVERLAY_MARKER_SKIP_STEP <
+        marketOverlayTimelineCount
   const marketOverlayMarkerDrilldown = useMemo(() => {
     const latest =
       marketOverlayScopedTimelineAnnotations[marketOverlayScopedTimelineAnnotations.length - 1] ?? null
@@ -1510,46 +1526,66 @@ function App() {
     marketOverlaySelectionMode,
   ])
 
+  const selectRelativeMarketOverlayMarker = useCallback(
+    (offset: number) => {
+      if (
+        isMarketOverlayNavigationLocked ||
+        marketOverlayActiveTimelineIndex < 0 ||
+        marketOverlayTimelineCount === 0
+      ) {
+        return
+      }
+      const rawTargetIndex = marketOverlayActiveTimelineIndex + offset
+      const targetIndex =
+        marketOverlayMarkerWrap === 'wrap'
+          ? ((rawTargetIndex % marketOverlayTimelineCount) + marketOverlayTimelineCount) %
+            marketOverlayTimelineCount
+          : Math.max(0, Math.min(marketOverlayTimelineCount - 1, rawTargetIndex))
+      if (targetIndex === marketOverlayActiveTimelineIndex) {
+        return
+      }
+      const target = marketOverlayScopedTimelineAnnotations[targetIndex]
+      if (!target) {
+        return
+      }
+      setMarketOverlaySelectedMarkerId(target.id)
+    },
+    [
+      isMarketOverlayNavigationLocked,
+      marketOverlayActiveTimelineIndex,
+      marketOverlayMarkerWrap,
+      marketOverlayScopedTimelineAnnotations,
+      marketOverlayTimelineCount,
+    ],
+  )
+
   const selectPreviousMarketOverlayMarker = useCallback(() => {
     if (!canSelectPreviousMarketOverlayMarker) {
       return
     }
-    const previous =
-      marketOverlayMarkerWrap === 'wrap' && marketOverlayActiveTimelineIndex === 0
-        ? marketOverlayScopedTimelineAnnotations[marketOverlayTimelineCount - 1]
-        : marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1]
-    if (!previous) {
-      return
-    }
-    setMarketOverlaySelectedMarkerId(previous.id)
-  }, [
-    canSelectPreviousMarketOverlayMarker,
-    marketOverlayActiveTimelineIndex,
-    marketOverlayMarkerWrap,
-    marketOverlayScopedTimelineAnnotations,
-    marketOverlayTimelineCount,
-  ])
+    selectRelativeMarketOverlayMarker(-1)
+  }, [canSelectPreviousMarketOverlayMarker, selectRelativeMarketOverlayMarker])
 
   const selectNextMarketOverlayMarker = useCallback(() => {
     if (!canSelectNextMarketOverlayMarker) {
       return
     }
-    const next =
-      marketOverlayMarkerWrap === 'wrap' &&
-      marketOverlayActiveTimelineIndex === marketOverlayTimelineCount - 1
-        ? marketOverlayScopedTimelineAnnotations[0]
-        : marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1]
-    if (!next) {
+    selectRelativeMarketOverlayMarker(1)
+  }, [canSelectNextMarketOverlayMarker, selectRelativeMarketOverlayMarker])
+
+  const selectSkipBackwardMarketOverlayMarker = useCallback(() => {
+    if (!canSelectSkipBackwardMarketOverlayMarker) {
       return
     }
-    setMarketOverlaySelectedMarkerId(next.id)
-  }, [
-    canSelectNextMarketOverlayMarker,
-    marketOverlayActiveTimelineIndex,
-    marketOverlayMarkerWrap,
-    marketOverlayScopedTimelineAnnotations,
-    marketOverlayTimelineCount,
-  ])
+    selectRelativeMarketOverlayMarker(-MARKET_OVERLAY_MARKER_SKIP_STEP)
+  }, [canSelectSkipBackwardMarketOverlayMarker, selectRelativeMarketOverlayMarker])
+
+  const selectSkipForwardMarketOverlayMarker = useCallback(() => {
+    if (!canSelectSkipForwardMarketOverlayMarker) {
+      return
+    }
+    selectRelativeMarketOverlayMarker(MARKET_OVERLAY_MARKER_SKIP_STEP)
+  }, [canSelectSkipForwardMarketOverlayMarker, selectRelativeMarketOverlayMarker])
 
   const selectOldestMarketOverlayMarker = useCallback(() => {
     if (!canSelectOldestMarketOverlayMarker) {
@@ -1576,14 +1612,34 @@ function App() {
 
   const onMarketOverlayMarkerKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLButtonElement>) => {
+      if ((event.key === 'ArrowLeft' || event.key === 'ArrowUp') && event.shiftKey) {
+        event.preventDefault()
+        selectSkipBackwardMarketOverlayMarker()
+        return
+      }
       if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
         event.preventDefault()
         selectPreviousMarketOverlayMarker()
         return
       }
+      if ((event.key === 'ArrowRight' || event.key === 'ArrowDown') && event.shiftKey) {
+        event.preventDefault()
+        selectSkipForwardMarketOverlayMarker()
+        return
+      }
       if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
         event.preventDefault()
         selectNextMarketOverlayMarker()
+        return
+      }
+      if (event.key === 'PageUp') {
+        event.preventDefault()
+        selectSkipBackwardMarketOverlayMarker()
+        return
+      }
+      if (event.key === 'PageDown') {
+        event.preventDefault()
+        selectSkipForwardMarketOverlayMarker()
         return
       }
       if (event.key === 'Home') {
@@ -1601,6 +1657,8 @@ function App() {
       selectNextMarketOverlayMarker,
       selectOldestMarketOverlayMarker,
       selectPreviousMarketOverlayMarker,
+      selectSkipBackwardMarketOverlayMarker,
+      selectSkipForwardMarketOverlayMarker,
     ],
   )
 
@@ -4081,6 +4139,13 @@ function App() {
               </button>
               <button
                 type="button"
+                onClick={selectSkipBackwardMarketOverlayMarker}
+                disabled={!canSelectSkipBackwardMarketOverlayMarker}
+              >
+                Skip Back 2
+              </button>
+              <button
+                type="button"
                 onClick={selectPreviousMarketOverlayMarker}
                 disabled={!canSelectPreviousMarketOverlayMarker}
               >
@@ -4092,6 +4157,13 @@ function App() {
                 disabled={!canSelectNextMarketOverlayMarker}
               >
                 Next Marker
+              </button>
+              <button
+                type="button"
+                onClick={selectSkipForwardMarketOverlayMarker}
+                disabled={!canSelectSkipForwardMarketOverlayMarker}
+              >
+                Skip Forward 2
               </button>
               <button
                 type="button"
