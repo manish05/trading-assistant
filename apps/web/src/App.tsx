@@ -827,6 +827,7 @@ function App() {
   const [marketplaceSignalCount, setMarketplaceSignalCount] = useState<number | null>(null)
   const [marketplaceFollowsSummary, setMarketplaceFollowsSummary] = useState<string>('none')
   const [copytradePreviewSummary, setCopytradePreviewSummary] = useState<string>('none')
+  const [copytradeControlSummary, setCopytradeControlSummary] = useState<string>('none')
   const [feedTopic, setFeedTopic] = useState<string>(DEFAULT_PRESET_TEMPLATE.feedTopic)
   const [feedSymbol, setFeedSymbol] = useState<string>(DEFAULT_PRESET_TEMPLATE.feedSymbol)
   const [feedTimeframe, setFeedTimeframe] = useState<string>(DEFAULT_PRESET_TEMPLATE.feedTimeframe)
@@ -3481,6 +3482,24 @@ function App() {
     setMarketplaceSignalCount(Array.isArray(signalsRaw) ? signalsRaw.length : 0)
   }, [sendRequest])
 
+  const formatCopytradeControlSummary = useCallback(
+    (payload: unknown, fallbackStatus: string): string => {
+      if (!payload || typeof payload !== 'object') {
+        return `status:${fallbackStatus} · paused:n/a · strategy:${COPYTRADE_PREVIEW_STRATEGY_ID}`
+      }
+      const statusRaw = 'status' in payload && typeof payload.status === 'string' ? payload.status : null
+      const pausedRaw = 'paused' in payload && typeof payload.paused === 'boolean' ? payload.paused : null
+      const strategyRaw =
+        'strategyId' in payload && typeof payload.strategyId === 'string'
+          ? payload.strategyId
+          : COPYTRADE_PREVIEW_STRATEGY_ID
+      return `status:${statusRaw ?? fallbackStatus} · paused:${
+        pausedRaw === null ? 'n/a' : pausedRaw ? 'yes' : 'no'
+      } · strategy:${strategyRaw}`
+    },
+    [],
+  )
+
   const sendMarketplaceFollow = useCallback(async () => {
     const accountId = managedAccountId.trim() || DEFAULT_PRESET_TEMPLATE.managedAccountId
     const payload = await sendRequest('marketplace.follow', {
@@ -3578,6 +3597,42 @@ function App() {
     }
     setCopytradePreviewSummary('allowed')
   }, [feedSymbol, feedTimeframe, managedAccountId, sendRequest])
+
+  const sendCopytradeStatus = useCallback(async () => {
+    const accountId = managedAccountId.trim() || DEFAULT_PRESET_TEMPLATE.managedAccountId
+    const payload = await sendRequest('copytrade.status', {
+      accountId,
+      strategyId: COPYTRADE_PREVIEW_STRATEGY_ID,
+    })
+    if (!payload) {
+      return
+    }
+    setCopytradeControlSummary(formatCopytradeControlSummary(payload, 'active'))
+  }, [formatCopytradeControlSummary, managedAccountId, sendRequest])
+
+  const sendCopytradePause = useCallback(async () => {
+    const accountId = managedAccountId.trim() || DEFAULT_PRESET_TEMPLATE.managedAccountId
+    const payload = await sendRequest('copytrade.pause', {
+      accountId,
+      strategyId: COPYTRADE_PREVIEW_STRATEGY_ID,
+    })
+    if (!payload) {
+      return
+    }
+    setCopytradeControlSummary(formatCopytradeControlSummary(payload, 'paused'))
+  }, [formatCopytradeControlSummary, managedAccountId, sendRequest])
+
+  const sendCopytradeResume = useCallback(async () => {
+    const accountId = managedAccountId.trim() || DEFAULT_PRESET_TEMPLATE.managedAccountId
+    const payload = await sendRequest('copytrade.resume', {
+      accountId,
+      strategyId: COPYTRADE_PREVIEW_STRATEGY_ID,
+    })
+    if (!payload) {
+      return
+    }
+    setCopytradeControlSummary(formatCopytradeControlSummary(payload, 'active'))
+  }, [formatCopytradeControlSummary, managedAccountId, sendRequest])
 
   const runOnboardingFlow = useCallback(async () => {
     await sendAccountConnect()
@@ -4415,6 +4470,17 @@ function App() {
           )
           appendMarketOverlayAnnotation('feed', `${action}${subscriptionId ? `:${subscriptionId}` : ''}`)
         }
+        if (parsed.event === 'event.copytrade.execution') {
+          const payload = parsed.payload ?? {}
+          const statusPayload =
+            'status' in payload && payload.status && typeof payload.status === 'object'
+              ? payload.status
+              : payload
+          const action = typeof payload.action === 'string' ? payload.action : 'execution'
+          setCopytradeControlSummary(
+            `event:${action} · ${formatCopytradeControlSummary(statusPayload, 'active')}`,
+          )
+        }
         appendBlock({
           id: `blk_${Date.now()}`,
           title: parsed.event,
@@ -4433,7 +4499,13 @@ function App() {
       wsRef.current = null
       pendingMap.clear()
     }
-  }, [appendBlock, appendMarketOverlayAnnotation, applyRiskStatusPayload, websocketUrl])
+  }, [
+    appendBlock,
+    appendMarketOverlayAnnotation,
+    applyRiskStatusPayload,
+    formatCopytradeControlSummary,
+    websocketUrl,
+  ])
 
   useEffect(() => {
     window.localStorage.setItem(HISTORY_FILTER_STORAGE_KEY, historyFilter)
@@ -5289,6 +5361,15 @@ function App() {
               </button>
               <button type="button" onClick={() => void sendCopytradePreview()}>
                 Copytrade Preview
+              </button>
+              <button type="button" onClick={() => void sendCopytradeStatus()}>
+                Copytrade Status
+              </button>
+              <button type="button" onClick={() => void sendCopytradePause()}>
+                Copytrade Pause
+              </button>
+              <button type="button" onClick={() => void sendCopytradeResume()}>
+                Copytrade Resume
               </button>
               <button
                 type="button"
@@ -6154,6 +6235,10 @@ function App() {
             <div>
               <dt>Copytrade Preview</dt>
               <dd>{copytradePreviewSummary}</dd>
+            </div>
+            <div>
+              <dt>Copytrade Control</dt>
+              <dd>{copytradeControlSummary}</dd>
             </div>
             <div>
               <dt>Active Subscription</dt>

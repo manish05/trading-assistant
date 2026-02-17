@@ -185,6 +185,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Close Position' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Marketplace Signals' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Copytrade Preview' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Copytrade Status' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Copytrade Pause' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Copytrade Resume' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Unsubscribe Feed' })).toBeEnabled()
     expect(screen.getByLabelText('Refresh Interval (sec)')).toBeInTheDocument()
     expect(screen.getByLabelText('Min Request Gap (ms)')).toBeInTheDocument()
@@ -330,6 +333,9 @@ describe('Dashboard shell', () => {
       'n/a',
     )
     expect(screen.getByText('Copytrade Preview', { selector: 'dt' }).closest('div')).toHaveTextContent(
+      'none',
+    )
+    expect(screen.getByText('Copytrade Control', { selector: 'dt' }).closest('div')).toHaveTextContent(
       'none',
     )
   })
@@ -1657,6 +1663,9 @@ describe('Dashboard shell', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Marketplace Unfollow' }))
     fireEvent.click(screen.getByRole('button', { name: 'Marketplace Follows' }))
     fireEvent.click(screen.getByRole('button', { name: 'Copytrade Preview' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Copytrade Status' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Copytrade Pause' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Copytrade Resume' }))
 
     await waitFor(() => {
       const payloads = sendSpy.mock.calls.map(([serialized]) =>
@@ -1689,6 +1698,9 @@ describe('Dashboard shell', () => {
       expect(methods).toContain('marketplace.unfollow')
       expect(methods).toContain('marketplace.myFollows')
       expect(methods).toContain('copytrade.preview')
+      expect(methods).toContain('copytrade.status')
+      expect(methods).toContain('copytrade.pause')
+      expect(methods).toContain('copytrade.resume')
 
       const accountConnect = payloads.find((payload) => payload.method === 'accounts.connect')
       expect(accountConnect?.params).toMatchObject({
@@ -1815,6 +1827,24 @@ describe('Dashboard shell', () => {
           directionFilter: 'both',
           maxSignalAgeSeconds: 300,
         },
+      })
+
+      const copytradeStatus = payloads.find((payload) => payload.method === 'copytrade.status')
+      expect(copytradeStatus?.params).toMatchObject({
+        accountId: 'acct_custom_9',
+        strategyId: 'strat_dashboard_1',
+      })
+
+      const copytradePause = payloads.find((payload) => payload.method === 'copytrade.pause')
+      expect(copytradePause?.params).toMatchObject({
+        accountId: 'acct_custom_9',
+        strategyId: 'strat_dashboard_1',
+      })
+
+      const copytradeResume = payloads.find((payload) => payload.method === 'copytrade.resume')
+      expect(copytradeResume?.params).toMatchObject({
+        accountId: 'acct_custom_9',
+        strategyId: 'strat_dashboard_1',
       })
     })
 
@@ -1983,6 +2013,66 @@ describe('Dashboard shell', () => {
               }),
             )
           })
+          return
+        }
+        if (payload.type === 'req' && payload.method === 'copytrade.status' && payload.id) {
+          queueMicrotask(() => {
+            this.onmessage?.(
+              new MessageEvent('message', {
+                data: JSON.stringify({
+                  type: 'res',
+                  id: payload.id,
+                  ok: true,
+                  payload: {
+                    followId: 'follow_demo_1',
+                    strategyId: 'strat_dashboard_1',
+                    status: 'active',
+                    paused: false,
+                  },
+                }),
+              }),
+            )
+          })
+          return
+        }
+        if (payload.type === 'req' && payload.method === 'copytrade.pause' && payload.id) {
+          queueMicrotask(() => {
+            this.onmessage?.(
+              new MessageEvent('message', {
+                data: JSON.stringify({
+                  type: 'res',
+                  id: payload.id,
+                  ok: true,
+                  payload: {
+                    followId: 'follow_demo_1',
+                    strategyId: 'strat_dashboard_1',
+                    status: 'paused',
+                    paused: true,
+                  },
+                }),
+              }),
+            )
+          })
+          return
+        }
+        if (payload.type === 'req' && payload.method === 'copytrade.resume' && payload.id) {
+          queueMicrotask(() => {
+            this.onmessage?.(
+              new MessageEvent('message', {
+                data: JSON.stringify({
+                  type: 'res',
+                  id: payload.id,
+                  ok: true,
+                  payload: {
+                    followId: 'follow_demo_1',
+                    strategyId: 'strat_dashboard_1',
+                    status: 'active',
+                    paused: false,
+                  },
+                }),
+              }),
+            )
+          })
         }
       })
 
@@ -1992,6 +2082,9 @@ describe('Dashboard shell', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Marketplace Follows' }))
     fireEvent.click(screen.getByRole('button', { name: 'Marketplace Unfollow' }))
     fireEvent.click(screen.getByRole('button', { name: 'Copytrade Preview' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Copytrade Status' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Copytrade Pause' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Copytrade Resume' }))
 
     await waitFor(() => {
       const marketplaceRow = screen.getByText('Marketplace Signals (last fetch)').closest('div')
@@ -2009,6 +2102,16 @@ describe('Dashboard shell', () => {
       const copytradeRow = screen.getByText('Copytrade Preview', { selector: 'dt' }).closest('div')
       expect(copytradeRow).not.toBeNull()
       expect(within(copytradeRow as HTMLElement).getByText('allowed (volume: 0.2)')).toBeInTheDocument()
+
+      const copytradeControlRow = screen
+        .getByText('Copytrade Control', { selector: 'dt' })
+        .closest('div')
+      expect(copytradeControlRow).not.toBeNull()
+      expect(
+        within(copytradeControlRow as HTMLElement).getByText(
+          'status:active · paused:no · strategy:strat_dashboard_1',
+        ),
+      ).toBeInTheDocument()
     })
 
     sendSpy.mockRestore()
