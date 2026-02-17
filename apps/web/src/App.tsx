@@ -1853,6 +1853,54 @@ function App() {
     const latestShiftLabel = `${latestShift >= 0 ? '+' : ''}${latestShift.toFixed(2)}`
     return `improving:${improvingCount} · softening:${softeningCount} · flat:${flatCount} · latestShift:${latestShiftLabel}`
   }, [marketOverlayChartPoints, marketOverlayScopedTimelineAnnotations])
+  const marketOverlayMarkerDeltaPolaritySummary = useMemo(() => {
+    if (marketOverlayScopedTimelineAnnotations.length === 0 || marketOverlayChartPoints.length === 0) {
+      return 'none'
+    }
+    type DeltaPolarityCounts = { positive: number; negative: number; zero: number; unavailable: number }
+    const createCounts = (): DeltaPolarityCounts => ({ positive: 0, negative: 0, zero: 0, unavailable: 0 })
+    const deltaLatestCounts = createCounts()
+    const deltaAverageCounts = createCounts()
+    const deltaPreviousCounts = createCounts()
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1]
+    const baseline = marketOverlayAverageClose
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const pointIndexByTime = new Map(
+      marketOverlayChartPoints.map((point, index) => [point.time, index] as const),
+    )
+    const recordPolarity = (counts: DeltaPolarityCounts, value: number | null) => {
+      if (value === null || Number.isNaN(value)) {
+        counts.unavailable += 1
+        return
+      }
+      if (value > 0) {
+        counts.positive += 1
+        return
+      }
+      if (value < 0) {
+        counts.negative += 1
+        return
+      }
+      counts.zero += 1
+    }
+    marketOverlayScopedTimelineAnnotations.forEach((annotation) => {
+      const point = pointByTime.get(annotation.time)
+      if (!point) {
+        recordPolarity(deltaLatestCounts, null)
+        recordPolarity(deltaAverageCounts, null)
+        recordPolarity(deltaPreviousCounts, null)
+        return
+      }
+      recordPolarity(deltaLatestCounts, point.value - latestPoint.value)
+      recordPolarity(deltaAverageCounts, baseline === null ? null : point.value - baseline)
+      const pointIndex = pointIndexByTime.get(annotation.time) ?? -1
+      const previousPoint = pointIndex > 0 ? marketOverlayChartPoints[pointIndex - 1] : null
+      recordPolarity(deltaPreviousCounts, previousPoint ? point.value - previousPoint.value : null)
+    })
+    const formatCounts = (label: 'Δl' | 'Δa' | 'Δp', counts: DeltaPolarityCounts) =>
+      `${label}:p${counts.positive}/n${counts.negative}/z${counts.zero}/u${counts.unavailable}`
+    return `${formatCounts('Δl', deltaLatestCounts)} · ${formatCounts('Δa', deltaAverageCounts)} · ${formatCounts('Δp', deltaPreviousCounts)}`
+  }, [marketOverlayAverageClose, marketOverlayChartPoints, marketOverlayScopedTimelineAnnotations])
   const marketOverlayMarkerDeltaExtremes = useMemo(() => {
     if (marketOverlayScopedTimelineAnnotations.length === 0 || marketOverlayChartPoints.length === 0) {
       return 'none'
@@ -4874,6 +4922,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Delta Momentum Summary">
               Delta momentum: {marketOverlayMarkerDeltaMomentumSummary}
+            </p>
+            <p aria-label="Overlay Marker Delta Polarity Summary">
+              Delta polarity: {marketOverlayMarkerDeltaPolaritySummary}
             </p>
             <p aria-label="Overlay Marker Delta Extremes">
               Delta extremes: {marketOverlayMarkerDeltaExtremes}

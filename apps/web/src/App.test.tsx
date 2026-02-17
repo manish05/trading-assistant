@@ -91,6 +91,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Delta Momentum Summary')).toHaveTextContent(
       'Delta momentum: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Delta Polarity Summary')).toHaveTextContent(
+      'Delta polarity: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Delta Extremes')).toHaveTextContent(
       'Delta extremes: none',
     )
@@ -581,6 +584,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Delta Momentum Summary')).toHaveTextContent(
       'Delta momentum: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Delta Polarity Summary')).toHaveTextContent(
+      'Delta polarity: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Delta Extremes')).toHaveTextContent(
       'Delta extremes: none',
     )
@@ -695,6 +701,9 @@ describe('Dashboard shell', () => {
       expect(screen.getByLabelText('Overlay Marker Delta Momentum Summary')).toHaveTextContent(
         'Delta momentum: improving:1 · softening:0 · flat:0 · latestShift:+1.00',
       )
+      expect(screen.getByLabelText('Overlay Marker Delta Polarity Summary')).toHaveTextContent(
+        'Delta polarity: Δl:p0/n1/z1/u0 · Δa:p1/n1/z0/u0 · Δp:p1/n0/z0/u1',
+      )
       expect(screen.getByLabelText('Overlay Marker Delta Extremes')).toHaveTextContent(
         'Delta extremes: rise:risk:live_trading_disabled:raised:+0.00 (+0.00%) · drop:trade:closed:queued:-1.00 (-50.00%) · spread:1.00',
       )
@@ -805,6 +814,9 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Overlay Marker Delta Momentum Summary')).toHaveTextContent(
       'Delta momentum: insufficient:n1',
+    )
+    expect(screen.getByLabelText('Overlay Marker Delta Polarity Summary')).toHaveTextContent(
+      'Delta polarity: Δl:p0/n0/z1/u0 · Δa:p1/n0/z0/u0 · Δp:p1/n0/z0/u0',
     )
     expect(screen.getByLabelText('Overlay Marker Delta Extremes')).toHaveTextContent(
       'Delta extremes: rise:risk:live_trading_disabled:raised:+0.00 (+0.00%) · drop:risk:live_trading_disabled:raised:+0.00 (+0.00%) · spread:0.00',
