@@ -20,6 +20,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByText('Quick Action Timestamps')).toBeInTheDocument()
     expect(screen.getByLabelText('History Filter')).toBeInTheDocument()
     expect(screen.getByLabelText('History Legend')).toBeInTheDocument()
+    expect(screen.getByLabelText('Timestamp Format')).toBeInTheDocument()
   })
 
   it('renders gateway action buttons for account/feed listing', () => {
@@ -252,5 +253,15 @@ describe('Dashboard shell', () => {
     expect(
       screen.getByText('skipped', { selector: '.history-legend .history-status' }),
     ).toHaveClass('status-skipped')
+  })
+
+  it('supports timestamp format selection control', () => {
+    render(<App />)
+
+    const selector = screen.getByLabelText('Timestamp Format')
+    expect(selector).toHaveValue('absolute')
+
+    fireEvent.change(selector, { target: { value: 'relative' } })
+    expect(selector).toHaveValue('relative')
   })
 })

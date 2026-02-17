@@ -37,6 +37,7 @@ type QuickActionHistory = {
 }
 
 type HistoryFilter = 'all' | QuickActionHistory['status']
+type TimestampFormat = 'absolute' | 'relative'
 
 type QuickActionPreset = {
   managedAccountId: string
@@ -86,6 +87,30 @@ const readHistoryFilterFromStorage = (): HistoryFilter => {
   return 'all'
 }
 
+const formatTimestamp = (ts: string, format: TimestampFormat): string => {
+  if (format === 'absolute') {
+    return ts
+  }
+  const millis = Date.parse(ts)
+  if (Number.isNaN(millis)) {
+    return ts
+  }
+  const diffSeconds = Math.max(Math.floor((Date.now() - millis) / 1000), 0)
+  if (diffSeconds < 60) {
+    return `${diffSeconds}s ago`
+  }
+  const diffMinutes = Math.floor(diffSeconds / 60)
+  if (diffMinutes < 60) {
+    return `${diffMinutes}m ago`
+  }
+  const diffHours = Math.floor(diffMinutes / 60)
+  if (diffHours < 24) {
+    return `${diffHours}h ago`
+  }
+  const diffDays = Math.floor(diffHours / 24)
+  return `${diffDays}d ago`
+}
+
 function App() {
   const wsRef = useRef<WebSocket | null>(null)
   const pendingRequestsRef = useRef<Map<string, (value: GatewayResponse) => void>>(new Map())
@@ -132,6 +157,7 @@ function App() {
   const [feedLifecycle, setFeedLifecycle] = useState<FeedLifecycleBadge[]>([])
   const [quickActionHistory, setQuickActionHistory] = useState<QuickActionHistory[]>([])
   const [historyFilter, setHistoryFilter] = useState<HistoryFilter>(readHistoryFilterFromStorage)
+  const [timestampFormat, setTimestampFormat] = useState<TimestampFormat>('absolute')
   const [lastSuccessByMethod, setLastSuccessByMethod] = useState<Record<string, string>>({})
   const [lastErrorByMethod, setLastErrorByMethod] = useState<Record<string, string>>({})
   const [blocks, setBlocks] = useState<BlockItem[]>([])
@@ -1051,6 +1077,16 @@ function App() {
             <div>
               <dt>Quick Action Timestamps</dt>
               <dd className="timestamp-grid">
+                <label className="timestamp-format">
+                  Timestamp Format
+                  <select
+                    value={timestampFormat}
+                    onChange={(event) => setTimestampFormat(event.target.value as TimestampFormat)}
+                  >
+                    <option value="absolute">absolute</option>
+                    <option value="relative">relative</option>
+                  </select>
+                </label>
                 <div>
                   <strong>Success</strong>
                   {Object.keys(lastSuccessByMethod).length === 0 ? (
@@ -1062,7 +1098,7 @@ function App() {
                         .map(([method, ts]) => (
                           <li key={`ok_${method}`}>
                             <span>{method}</span>
-                            <span>{ts}</span>
+                            <span>{formatTimestamp(ts, timestampFormat)}</span>
                           </li>
                         ))}
                     </ul>
@@ -1079,7 +1115,7 @@ function App() {
                         .map(([method, ts]) => (
                           <li key={`err_${method}`}>
                             <span>{method}</span>
-                            <span>{ts}</span>
+                            <span>{formatTimestamp(ts, timestampFormat)}</span>
                           </li>
                         ))}
                     </ul>

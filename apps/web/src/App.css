@@ -353,6 +353,23 @@
   gap: 0.45rem;
 }
 
+.timestamp-format {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  color: #9fb0cc;
+}
+
+.timestamp-format select {
+  background: #14223a;
+  border: 1px solid #2d4a7e;
+  color: #e8edf5;
+  border-radius: 6px;
+  padding: 0.18rem 0.28rem;
+  font-size: 0.72rem;
+}
+
 .timestamp-grid strong {
   font-size: 0.72rem;
   color: #d9e4f7;
