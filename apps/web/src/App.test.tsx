@@ -2517,6 +2517,68 @@ describe('Dashboard shell', () => {
     })
   })
 
+  it('shows lock telemetry when import report copy fails', async () => {
+    const writeText = vi.fn().mockRejectedValue(new Error('denied'))
+    Object.defineProperty(window.navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    })
+
+    render(<App />)
+    fireEvent.change(screen.getByLabelText('Import Presets JSON'), {
+      target: {
+        value: '{"copy-report-failure-template":{"feedSymbol":"SOLUSDm"}}',
+      },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Import Presets JSON' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Copy Import Report' })).toBeEnabled()
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Copy Import Report' }))
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalled()
+      expect(
+        screen.getByText(
+          'Clipboard access failed or is unavailable. Lock telemetry: lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0.',
+        ),
+      ).toBeInTheDocument()
+    })
+  })
+
+  it('omits import report copy failure telemetry when block telemetry is hidden', async () => {
+    const writeText = vi.fn().mockRejectedValue(new Error('denied'))
+    Object.defineProperty(window.navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    })
+
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Hide Block Telemetry' }))
+    fireEvent.change(screen.getByLabelText('Import Presets JSON'), {
+      target: {
+        value: '{"copy-report-failure-hidden-template":{"feedSymbol":"SOLUSDm"}}',
+      },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Import Presets JSON' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Copy Import Report' })).toBeEnabled()
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Copy Import Report' }))
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalled()
+      expect(screen.getByText('Clipboard access failed or is unavailable.')).toBeInTheDocument()
+      expect(
+        screen.queryByText(
+          'Clipboard access failed or is unavailable. Lock telemetry: lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0.',
+        ),
+      ).not.toBeInTheDocument()
+    })
+  })
+
   it('copies last import summary text to clipboard', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined)
     Object.defineProperty(window.navigator, 'clipboard', {
@@ -2583,6 +2645,66 @@ describe('Dashboard shell', () => {
       expect(payload).not.toContain('[LockTelemetry]')
       expect(payload).not.toContain('lockToggleTotal=')
       expect(screen.getByText('Copied last import summary to clipboard.')).toBeInTheDocument()
+    })
+  })
+
+  it('shows lock telemetry when last summary copy fails', async () => {
+    const writeText = vi.fn().mockRejectedValue(new Error('denied'))
+    Object.defineProperty(window.navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    })
+    render(<App />)
+    fireEvent.change(screen.getByLabelText('Import Presets JSON'), {
+      target: {
+        value: '{"summary-copy-failure-template":{"feedSymbol":"SOLUSDm"}}',
+      },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Import Presets JSON' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Copy Last Summary' })).toBeEnabled()
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Copy Last Summary' }))
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalled()
+      expect(
+        screen.getByText(
+          'Clipboard access failed or is unavailable. Lock telemetry: lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0.',
+        ),
+      ).toBeInTheDocument()
+    })
+  })
+
+  it('omits last summary copy failure telemetry when block telemetry is hidden', async () => {
+    const writeText = vi.fn().mockRejectedValue(new Error('denied'))
+    Object.defineProperty(window.navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    })
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Hide Block Telemetry' }))
+    fireEvent.change(screen.getByLabelText('Import Presets JSON'), {
+      target: {
+        value: '{"summary-copy-failure-hidden-template":{"feedSymbol":"SOLUSDm"}}',
+      },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Import Presets JSON' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Copy Last Summary' })).toBeEnabled()
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Copy Last Summary' }))
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalled()
+      expect(screen.getByText('Clipboard access failed or is unavailable.')).toBeInTheDocument()
+      expect(
+        screen.queryByText(
+          'Clipboard access failed or is unavailable. Lock telemetry: lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0.',
+        ),
+      ).not.toBeInTheDocument()
     })
   })
 
@@ -2751,6 +2873,66 @@ describe('Dashboard shell', () => {
       expect(payload).not.toContain('[LockTelemetry]')
       expect(payload).not.toContain('lockToggleTotal=')
       expect(screen.getByText('Copied full accepted/rejected import names to clipboard.')).toBeInTheDocument()
+    })
+  })
+
+  it('shows lock telemetry when full-name copy fails', async () => {
+    const writeText = vi.fn().mockRejectedValue(new Error('denied'))
+    Object.defineProperty(window.navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    })
+    render(<App />)
+    fireEvent.change(screen.getByLabelText('Import Presets JSON'), {
+      target: {
+        value: '{"full-copy-failure-template":{"feedSymbol":"ETHUSDm"}}',
+      },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Import Presets JSON' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Copy Full Names' })).toBeEnabled()
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Copy Full Names' }))
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalled()
+      expect(
+        screen.getByText(
+          'Clipboard access failed or is unavailable. Lock telemetry: lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0.',
+        ),
+      ).toBeInTheDocument()
+    })
+  })
+
+  it('omits full-name copy failure telemetry when block telemetry is hidden', async () => {
+    const writeText = vi.fn().mockRejectedValue(new Error('denied'))
+    Object.defineProperty(window.navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    })
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Hide Block Telemetry' }))
+    fireEvent.change(screen.getByLabelText('Import Presets JSON'), {
+      target: {
+        value: '{"full-copy-failure-hidden-template":{"feedSymbol":"ETHUSDm"}}',
+      },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Import Presets JSON' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Copy Full Names' })).toBeEnabled()
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Copy Full Names' }))
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalled()
+      expect(screen.getByText('Clipboard access failed or is unavailable.')).toBeInTheDocument()
+      expect(
+        screen.queryByText(
+          'Clipboard access failed or is unavailable. Lock telemetry: lock toggles: 0, tone: none, reset: never; sources: Alt+L=0, controls=0, snapshot=0.',
+        ),
+      ).not.toBeInTheDocument()
     })
   })
 })
