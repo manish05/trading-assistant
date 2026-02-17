@@ -41,6 +41,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Marker Bucket')).toHaveValue('none')
     expect(screen.getByLabelText('Bucket Scope')).toHaveValue('all-buckets')
     expect(screen.getByLabelText('Timeline Order')).toHaveValue('newest-first')
+    expect(screen.getByLabelText('Marker Wrap')).toHaveValue('bounded')
     expect(screen.getByLabelText('Chart Lens')).toHaveValue('price-only')
     expect(screen.getByLabelText('Overlay Mode')).toHaveValue('price-only')
     expect(screen.getByLabelText('Overlay Legend')).toBeInTheDocument()
@@ -292,6 +293,9 @@ describe('Dashboard shell', () => {
     fireEvent.change(screen.getByLabelText('Timeline Order'), {
       target: { value: 'oldest-first' },
     })
+    fireEvent.change(screen.getByLabelText('Marker Wrap'), {
+      target: { value: 'wrap' },
+    })
 
     expect(window.localStorage.getItem('quick-action-market-overlay-mode-v1')).toBe('with-risk')
     expect(window.localStorage.getItem('quick-action-market-overlay-chart-lens-v1')).toBe(
@@ -309,6 +313,7 @@ describe('Dashboard shell', () => {
     expect(window.localStorage.getItem('quick-action-market-overlay-timeline-order-v1')).toBe(
       'oldest-first',
     )
+    expect(window.localStorage.getItem('quick-action-market-overlay-marker-wrap-v1')).toBe('wrap')
   })
 
   it('shows chart fallback runtime when ResizeObserver is unavailable', async () => {
@@ -340,7 +345,7 @@ describe('Dashboard shell', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Refresh Overlay Snapshot' }))
     expect(screen.getByLabelText('Overlay Snapshot Summary')).toHaveTextContent(
-      'Summary: candles:0 · chartPoints:0 · chartLens:price-only · markerFocus:all · markerWindow:5 · markerAge:all · markerBucket:none · bucketScope:all-buckets · timelineOrder:newest-first · markerNav:0/0|selected:none · markers:t0/r0/f0 · corr:none · trend:neutral · vol:n/a · pulse:quiet(0) · regime:observe',
+      'Summary: candles:0 · chartPoints:0 · chartLens:price-only · markerFocus:all · markerWindow:5 · markerAge:all · markerBucket:none · bucketScope:all-buckets · timelineOrder:newest-first · markerWrap:bounded · markerNav:0/0|selected:none · markers:t0/r0/f0 · corr:none · trend:neutral · vol:n/a · pulse:quiet(0) · regime:observe',
     )
     expect(screen.getByLabelText('Overlay Snapshot Time')).not.toHaveTextContent('Snapshot: never')
 
@@ -349,7 +354,7 @@ describe('Dashboard shell', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: 'Refresh Overlay Snapshot' }))
     expect(screen.getByLabelText('Overlay Snapshot Summary')).toHaveTextContent(
-      'Summary: candles:0 · tradeEvents:0 · chartPoints:0 · chartLens:price-only · markerFocus:all · markerWindow:5 · markerAge:all · markerBucket:none · bucketScope:all-buckets · timelineOrder:newest-first · markerNav:0/0|selected:none · markers:t0/r0/f0 · corr:none · trend:neutral · vol:n/a · pulse:quiet(0) · regime:observe',
+      'Summary: candles:0 · tradeEvents:0 · chartPoints:0 · chartLens:price-only · markerFocus:all · markerWindow:5 · markerAge:all · markerBucket:none · bucketScope:all-buckets · timelineOrder:newest-first · markerWrap:bounded · markerNav:0/0|selected:none · markers:t0/r0/f0 · corr:none · trend:neutral · vol:n/a · pulse:quiet(0) · regime:observe',
     )
 
     fireEvent.change(screen.getByLabelText('Overlay Mode'), {
@@ -357,7 +362,7 @@ describe('Dashboard shell', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: 'Refresh Overlay Snapshot' }))
     expect(screen.getByLabelText('Overlay Snapshot Summary')).toHaveTextContent(
-      'Summary: candles:0 · tradeEvents:0 · riskAlerts:0 · chartPoints:0 · chartLens:price-only · markerFocus:all · markerWindow:5 · markerAge:all · markerBucket:none · bucketScope:all-buckets · timelineOrder:newest-first · markerNav:0/0|selected:none · markers:t0/r0/f0 · corr:none · trend:neutral · vol:n/a · pulse:quiet(0) · regime:observe',
+      'Summary: candles:0 · tradeEvents:0 · riskAlerts:0 · chartPoints:0 · chartLens:price-only · markerFocus:all · markerWindow:5 · markerAge:all · markerBucket:none · bucketScope:all-buckets · timelineOrder:newest-first · markerWrap:bounded · markerNav:0/0|selected:none · markers:t0/r0/f0 · corr:none · trend:neutral · vol:n/a · pulse:quiet(0) · regime:observe',
     )
   })
 
@@ -671,6 +676,31 @@ describe('Dashboard shell', () => {
       'Marker nav: 1/2 · selected:trade:closed:queued',
     )
 
+    fireEvent.change(screen.getByLabelText('Marker Wrap'), { target: { value: 'wrap' } })
+    expect(screen.getByRole('button', { name: 'Previous Marker' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Next Marker' })).toBeEnabled()
+    fireEvent.click(screen.getByRole('button', { name: 'Previous Marker' }))
+    expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
+      'Marker nav: 2/2 · selected:risk:live_trading_disabled:raised',
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Next Marker' }))
+    expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
+      'Marker nav: 1/2 · selected:trade:closed:queued',
+    )
+    fireEvent.keyDown(screen.getByRole('button', { name: 'trade:closed:queued' }), {
+      key: 'ArrowLeft',
+    })
+    expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
+      'Marker nav: 2/2 · selected:risk:live_trading_disabled:raised',
+    )
+    fireEvent.keyDown(screen.getByRole('button', { name: 'risk:live_trading_disabled:raised' }), {
+      key: 'ArrowRight',
+    })
+    expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
+      'Marker nav: 1/2 · selected:trade:closed:queued',
+    )
+
+    fireEvent.change(screen.getByLabelText('Marker Wrap'), { target: { value: 'bounded' } })
     fireEvent.change(screen.getByLabelText('Timeline Order'), { target: { value: 'oldest-first' } })
     expect(screen.getByLabelText('Overlay Marker Drilldown')).toHaveTextContent(
       'Marker focus: all · window:5 · age:all · scope:all-buckets · order:oldest-first · visible:2 · latest:risk:live_trading_disabled:raised',
@@ -717,7 +747,7 @@ describe('Dashboard shell', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Refresh Overlay Snapshot' }))
     expect(screen.getByLabelText('Overlay Snapshot Summary')).toHaveTextContent(
-      'Summary: candles:2 · tradeEvents:1 · riskAlerts:1 · chartPoints:2 · chartLens:diagnostics · markerFocus:all · markerWindow:5 · markerAge:all · markerBucket:none · bucketScope:all-buckets · timelineOrder:oldest-first · markerNav:2/2|selected:risk:live_trading_disabled:raised · markers:t1/r1/f0 · corr:risk:live_trading_disabled:raised@2.00(t2) · trend:up (+1.00) · vol:1.00 · pulse:intense(5) · regime:risk_on',
+      'Summary: candles:2 · tradeEvents:1 · riskAlerts:1 · chartPoints:2 · chartLens:diagnostics · markerFocus:all · markerWindow:5 · markerAge:all · markerBucket:none · bucketScope:all-buckets · timelineOrder:oldest-first · markerWrap:bounded · markerNav:2/2|selected:risk:live_trading_disabled:raised · markers:t1/r1/f0 · corr:risk:live_trading_disabled:raised@2.00(t2) · trend:up (+1.00) · vol:1.00 · pulse:intense(5) · regime:risk_on',
     )
 
     sendSpy.mockRestore()
