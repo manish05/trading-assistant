@@ -88,6 +88,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Delta Dispersion Summary')).toHaveTextContent(
       'Delta dispersion: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Delta Momentum Summary')).toHaveTextContent(
+      'Delta momentum: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Delta Extremes')).toHaveTextContent(
       'Delta extremes: none',
     )
@@ -575,6 +578,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Delta Dispersion Summary')).toHaveTextContent(
       'Delta dispersion: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Delta Momentum Summary')).toHaveTextContent(
+      'Delta momentum: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Delta Extremes')).toHaveTextContent(
       'Delta extremes: none',
     )
@@ -686,6 +692,9 @@ describe('Dashboard shell', () => {
       expect(screen.getByLabelText('Overlay Marker Delta Dispersion Summary')).toHaveTextContent(
         'Delta dispersion: Δlatest:min:-1.00|max:+0.00|spread:1.00|n:2 · Δavg:min:-0.50|max:+0.50|spread:1.00|n:2 · Δprev:min:+1.00|max:+1.00|spread:0.00|n:1',
       )
+      expect(screen.getByLabelText('Overlay Marker Delta Momentum Summary')).toHaveTextContent(
+        'Delta momentum: improving:1 · softening:0 · flat:0 · latestShift:+1.00',
+      )
       expect(screen.getByLabelText('Overlay Marker Delta Extremes')).toHaveTextContent(
         'Delta extremes: rise:risk:live_trading_disabled:raised:+0.00 (+0.00%) · drop:trade:closed:queued:-1.00 (-50.00%) · spread:1.00',
       )
@@ -793,6 +802,9 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Overlay Marker Delta Dispersion Summary')).toHaveTextContent(
       'Delta dispersion: Δlatest:min:+0.00|max:+0.00|spread:0.00|n:1 · Δavg:min:+0.50|max:+0.50|spread:0.00|n:1 · Δprev:min:+1.00|max:+1.00|spread:0.00|n:1',
+    )
+    expect(screen.getByLabelText('Overlay Marker Delta Momentum Summary')).toHaveTextContent(
+      'Delta momentum: insufficient:n1',
     )
     expect(screen.getByLabelText('Overlay Marker Delta Extremes')).toHaveTextContent(
       'Delta extremes: rise:risk:live_trading_disabled:raised:+0.00 (+0.00%) · drop:risk:live_trading_disabled:raised:+0.00 (+0.00%) · spread:0.00',
