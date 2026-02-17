@@ -777,7 +777,7 @@ def test_gateway_feeds_namespace_methods(tmp_path) -> None:
                 },
             }
         )
-        subscribe_response = websocket.receive_json()
+        subscribe_event, subscribe_response = _read_event_then_response(websocket)
 
         subscription_id = subscribe_response["payload"]["subscription"]["subscriptionId"]
 
@@ -799,13 +799,16 @@ def test_gateway_feeds_namespace_methods(tmp_path) -> None:
                 "params": {"subscriptionId": subscription_id},
             }
         )
-        unsubscribe_response = websocket.receive_json()
+        unsubscribe_event, unsubscribe_response = _read_event_then_response(websocket)
 
     assert list_response["ok"] is True
     assert len(list_response["payload"]["feeds"]) >= 1
 
     assert subscribe_response["ok"] is True
     assert subscribe_response["payload"]["subscription"]["topics"] == ["market.candle.closed"]
+    assert subscribe_event is not None
+    assert subscribe_event["event"] == "event.feed.event"
+    assert subscribe_event["payload"]["action"] == "subscribed"
 
     assert candles_response["ok"] is True
     assert len(candles_response["payload"]["candles"]) == 3
@@ -813,3 +816,6 @@ def test_gateway_feeds_namespace_methods(tmp_path) -> None:
 
     assert unsubscribe_response["ok"] is True
     assert unsubscribe_response["payload"]["status"] == "removed"
+    assert unsubscribe_event is not None
+    assert unsubscribe_event["event"] == "event.feed.event"
+    assert unsubscribe_event["payload"]["action"] == "unsubscribed"

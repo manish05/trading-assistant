@@ -558,6 +558,16 @@ async def handle_gateway_websocket(
                     "topics": params.topics,
                 },
             )
+            await websocket.send_json(
+                _event_frame(
+                    "event.feed.event",
+                    {
+                        "requestId": frame.id,
+                        "action": "subscribed",
+                        "subscription": payload["subscription"],
+                    },
+                )
+            )
             await websocket.send_json(_ok_response(frame.id, payload=payload))
             continue
 
@@ -590,6 +600,16 @@ async def handle_gateway_websocket(
                 action="feeds.unsubscribe",
                 trace_id=frame.id,
                 data={"subscriptionId": params.subscription_id},
+            )
+            await websocket.send_json(
+                _event_frame(
+                    "event.feed.event",
+                    {
+                        "requestId": frame.id,
+                        "action": "unsubscribed",
+                        "subscriptionId": params.subscription_id,
+                    },
+                )
             )
             await websocket.send_json(
                 _ok_response(
