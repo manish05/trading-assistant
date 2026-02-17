@@ -94,6 +94,7 @@ const HELPER_RESET_BADGE_VISIBILITY_STORAGE_KEY = 'quick-action-helper-reset-bad
 const HELPER_RESET_STALE_THRESHOLD_HOURS_STORAGE_KEY =
   'quick-action-helper-reset-stale-threshold-hours-v1'
 const HELPER_RESET_BADGE_SECTION_STORAGE_KEY = 'quick-action-helper-reset-badge-section-v1'
+const HELPER_RESET_LOCK_STORAGE_KEY = 'quick-action-helper-reset-lock-v1'
 const MAX_IMPORT_REPORT_NAMES = 6
 const DEFAULT_PRESET_TEMPLATE: QuickActionPreset = {
   managedAccountId: 'acct_demo_1',
@@ -262,6 +263,13 @@ const readHelperResetBadgeSectionExpandedFromStorage = (): boolean => {
     return true
   }
   return window.localStorage.getItem(HELPER_RESET_BADGE_SECTION_STORAGE_KEY) !== 'collapsed'
+}
+
+const readHelperResetLockFromStorage = (): boolean => {
+  if (typeof window === 'undefined') {
+    return true
+  }
+  return window.localStorage.getItem(HELPER_RESET_LOCK_STORAGE_KEY) !== 'unlocked'
 }
 
 const sanitizePreset = (value: unknown): QuickActionPreset | null => {
@@ -436,6 +444,7 @@ function App() {
   )
   const [isHelperResetBadgeSectionExpanded, setIsHelperResetBadgeSectionExpanded] =
     useState<boolean>(readHelperResetBadgeSectionExpandedFromStorage)
+  const [isHelperResetLocked, setIsHelperResetLocked] = useState<boolean>(readHelperResetLockFromStorage)
   const [availablePresetNames, setAvailablePresetNames] = useState<string[]>(() =>
     Object.keys(readPresetStoreFromStorage()).sort(),
   )
@@ -1198,6 +1207,7 @@ function App() {
       `resetFormat=${helperResetTimestampFormat}`,
       `resetBadgeVisible=${isHelperResetBadgeVisible ? 'yes' : 'no'}`,
       `resetBadgeSection=${isHelperResetBadgeSectionExpanded ? 'expanded' : 'collapsed'}`,
+      `resetLock=${isHelperResetLocked ? 'locked' : 'unlocked'}`,
       `resetStaleAfterHours=${helperResetStaleThresholdHours}`,
       `hintVisible=${isImportHintVisible ? 'yes' : 'no'}`,
       `legendVisible=${showShortcutLegendInStatus ? 'yes' : 'no'}`,
@@ -1229,6 +1239,7 @@ function App() {
     helperDiagnosticsLastResetAt,
     isHelperResetBadgeSectionExpanded,
     isHelperResetBadgeVisible,
+    isHelperResetLocked,
     helperResetStaleThresholdHours,
     helperResetTimestampFormat,
     shortcutLegendDensity,
@@ -1267,6 +1278,15 @@ function App() {
   }, [appendBlock, helperDiagnosticsLastResetAt, helperResetStaleThresholdHours, helperResetTimestampFormat])
 
   const resetHelperDiagnosticsPreferences = useCallback(() => {
+    if (isHelperResetLocked) {
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'helper diagnostics reset locked',
+        content: 'Unlock reset controls before resetting helper diagnostics preferences.',
+        severity: 'warn',
+      })
+      return
+    }
     setIsImportHintVisible(true)
     setIsImportHelperDiagnosticsExpanded(true)
     setImportHintMode('detailed')
@@ -1285,7 +1305,7 @@ function App() {
       content: 'Reset helper diagnostics preferences to defaults.',
       severity: 'info',
     })
-  }, [appendBlock])
+  }, [appendBlock, isHelperResetLocked])
 
   const clearPresetImportReport = useCallback(() => {
     if (!presetImportReport) {
@@ -1472,6 +1492,13 @@ function App() {
       isHelperResetBadgeSectionExpanded ? 'expanded' : 'collapsed',
     )
   }, [isHelperResetBadgeSectionExpanded])
+
+  useEffect(() => {
+    window.localStorage.setItem(
+      HELPER_RESET_LOCK_STORAGE_KEY,
+      isHelperResetLocked ? 'locked' : 'unlocked',
+    )
+  }, [isHelperResetLocked])
 
   useEffect(() => {
     window.localStorage.setItem(
@@ -2280,6 +2307,9 @@ function App() {
                 <span className="import-summary-badge badge-hint-mode">
                   staleAfter:{helperResetStaleThresholdHours}h
                 </span>
+                <span className="import-summary-badge badge-hint-mode">
+                  lock:{isHelperResetLocked ? 'locked' : 'unlocked'}
+                </span>
                 {helperDiagnosticsDisplayMode === 'verbose' ? (
                   <>
                     <span className="import-summary-badge badge-hint-mode">
@@ -2323,8 +2353,21 @@ function App() {
                   type="button"
                   className="summary-copy-button"
                   onClick={resetHelperDiagnosticsPreferences}
+                  disabled={isHelperResetLocked}
+                  title={
+                    isHelperResetLocked
+                      ? 'Unlock reset controls to enable.'
+                      : 'Reset helper diagnostics preferences to defaults.'
+                  }
                 >
                   Reset Helper Prefs
+                </button>
+                <button
+                  type="button"
+                  className="summary-copy-button"
+                  onClick={() => setIsHelperResetLocked((current) => !current)}
+                >
+                  {isHelperResetLocked ? 'Unlock Reset' : 'Lock Reset'}
                 </button>
                 <label className="helper-reset-format">
                   Reset TS

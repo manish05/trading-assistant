@@ -96,10 +96,14 @@ describe('Dashboard shell', () => {
     expect(
       screen.getByText('staleAfter:24h', { selector: '.import-snapshot-badges .import-summary-badge' }),
     ).toBeInTheDocument()
+    expect(
+      screen.getByText('lock:locked', { selector: '.import-snapshot-badges .import-summary-badge' }),
+    ).toBeInTheDocument()
     expect(screen.getByLabelText('Reset TS')).toHaveValue('absolute')
     expect(screen.getByLabelText('Stale After')).toHaveValue('24')
     expect(screen.getByRole('button', { name: 'Copy Helper Summary' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Reset Helper Prefs' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Reset Helper Prefs' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Unlock Reset' })).toBeInTheDocument()
     expect(screen.getByText('Last import: none')).toBeInTheDocument()
   })
 
@@ -637,6 +641,25 @@ describe('Dashboard shell', () => {
     expect(screen.queryByRole('button', { name: 'Copy Reset Badge' })).not.toBeInTheDocument()
   })
 
+  it('toggles helper reset lock and persists preference', () => {
+    render(<App />)
+    expect(screen.getByRole('button', { name: 'Reset Helper Prefs' })).toBeDisabled()
+    fireEvent.click(screen.getByRole('button', { name: 'Unlock Reset' }))
+    expect(screen.getByRole('button', { name: 'Lock Reset' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Reset Helper Prefs' })).toBeEnabled()
+    expect(window.localStorage.getItem('quick-action-helper-reset-lock-v1')).toBe('unlocked')
+  })
+
+  it('initializes helper reset lock from localStorage', () => {
+    window.localStorage.setItem('quick-action-helper-reset-lock-v1', 'unlocked')
+    render(<App />)
+    expect(screen.getByRole('button', { name: 'Lock Reset' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Reset Helper Prefs' })).toBeEnabled()
+    expect(
+      screen.getByText('lock:unlocked', { selector: '.import-snapshot-badges .import-summary-badge' }),
+    ).toBeInTheDocument()
+  })
+
   it('initializes helper reset badge visibility from localStorage', () => {
     window.localStorage.setItem('quick-action-helper-reset-badge-visibility-v1', 'hidden')
     render(<App />)
@@ -787,6 +810,7 @@ describe('Dashboard shell', () => {
       expect(payload).toContain('resetFormat=absolute')
       expect(payload).toContain('resetBadgeVisible=yes')
       expect(payload).toContain('resetBadgeSection=expanded')
+      expect(payload).toContain('resetLock=locked')
       expect(payload).toContain('resetStaleAfterHours=24')
     })
   })
@@ -821,6 +845,7 @@ describe('Dashboard shell', () => {
     fireEvent.change(screen.getByLabelText('Stale After'), {
       target: { value: '72' },
     })
+    fireEvent.click(screen.getByRole('button', { name: 'Unlock Reset' }))
     fireEvent.click(screen.getByRole('button', { name: 'Use Verbose Diagnostics' }))
     fireEvent.click(screen.getByRole('button', { name: 'Hide Reset Badge Tools' }))
     fireEvent.click(screen.getByRole('button', { name: 'Hide Reset Badge' }))
@@ -835,6 +860,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Hide Quick Toggles' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Hide Reset Badge Tools' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Hide Reset Badge' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Lock Reset' })).toBeInTheDocument()
     expect(screen.getByLabelText('Helper Reset Badge')).toBeInTheDocument()
     expect(screen.getByLabelText('Stale After')).toHaveValue('24')
     expect(
