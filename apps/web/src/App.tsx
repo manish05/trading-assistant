@@ -61,6 +61,27 @@ type HistoryFilter = 'all' | QuickActionHistory['status']
 type TimestampFormat = 'absolute' | 'relative'
 type RiskEmergencyAction = 'pause_trading' | 'cancel_all' | 'close_all' | 'disable_live'
 type MarketOverlayMode = 'price-only' | 'with-trades' | 'with-risk'
+type MarketOverlayChartRuntime = 'loading' | 'ready' | 'fallback' | 'error'
+type MarketOverlayChartPoint = { time: number; value: number }
+type MarketOverlayChartSeries = {
+  setData: (data: MarketOverlayChartPoint[]) => void
+}
+type MarketOverlayChart = {
+  addLineSeries?: (options: { color: string; lineWidth: number }) => MarketOverlayChartSeries
+  addSeries?: (
+    seriesDefinition: unknown,
+    options: { color: string; lineWidth: number },
+  ) => MarketOverlayChartSeries
+  applyOptions: (options: { width?: number; height?: number }) => void
+  remove: () => void
+  timeScale: () => {
+    fitContent: () => void
+  }
+}
+type LightweightChartsModule = {
+  createChart: (container: HTMLElement, options: Record<string, unknown>) => MarketOverlayChart
+  LineSeries?: unknown
+}
 
 type QuickActionPreset = {
   managedAccountId: string
@@ -532,6 +553,9 @@ function App() {
   const requestGuardsRef = useRef<Map<string, number>>(new Map())
   const requestCounter = useRef(0)
   const blockIdCounterRef = useRef(0)
+  const marketOverlayChartContainerRef = useRef<HTMLDivElement | null>(null)
+  const marketOverlayChartRef = useRef<MarketOverlayChart | null>(null)
+  const marketOverlayChartSeriesRef = useRef<MarketOverlayChartSeries | null>(null)
 
   const [connectionStatus, setConnectionStatus] = useState<
     'connecting' | 'connected' | 'disconnected'
@@ -689,6 +713,8 @@ function App() {
   )
   const [marketOverlaySnapshotAt, setMarketOverlaySnapshotAt] = useState<string | null>(null)
   const [marketOverlaySnapshotSummary, setMarketOverlaySnapshotSummary] = useState<string>('none')
+  const [marketOverlayChartRuntime, setMarketOverlayChartRuntime] =
+    useState<MarketOverlayChartRuntime>('loading')
 
   const onboardingCompletedCount = useMemo(
     () =>
@@ -838,6 +864,122 @@ function App() {
       className: 'overlay-regime-watch',
     }
   }, [marketOverlayPulse.className, marketOverlayTrend.className, marketOverlayVolatility.className])
+  const marketOverlayChartPoints = useMemo(
+    () => marketOverlayRecentCloses.map((value, index) => ({ time: index + 1, value })),
+    [marketOverlayRecentCloses],
+  )
+  const marketOverlayChartSummary = useMemo(() => {
+    if (marketOverlayChartPoints.length === 0) {
+      return 'points:none'
+    }
+    const latest = marketOverlayChartPoints[marketOverlayChartPoints.length - 1]
+    return `points:${marketOverlayChartPoints.length} · last:${latest.value.toFixed(2)}`
+  }, [marketOverlayChartPoints])
+
+  useEffect(() => {
+    const container = marketOverlayChartContainerRef.current
+    if (!container || typeof window.ResizeObserver === 'undefined') {
+      setMarketOverlayChartRuntime('fallback')
+      return
+    }
+
+    let disposed = false
+    let resizeObserver: ResizeObserver | null = null
+
+    const initChart = async () => {
+      try {
+        const lightweightCharts = (await import('lightweight-charts')) as LightweightChartsModule
+        if (disposed) {
+          return
+        }
+
+        const chart = lightweightCharts.createChart(container, {
+          width: Math.max(container.clientWidth, 240),
+          height: Math.max(container.clientHeight, 140),
+          layout: {
+            background: { color: '#081224' },
+            textColor: '#9fb0cc',
+          },
+          grid: {
+            vertLines: { color: '#203556' },
+            horzLines: { color: '#203556' },
+          },
+          rightPriceScale: {
+            borderColor: '#2d4a7e',
+          },
+          timeScale: {
+            borderColor: '#2d4a7e',
+            timeVisible: false,
+            secondsVisible: false,
+          },
+        })
+
+        const lineSeries =
+          chart.addLineSeries
+            ? chart.addLineSeries({
+                color: '#84d3f8',
+                lineWidth: 2,
+              })
+            : chart.addSeries && lightweightCharts.LineSeries
+              ? chart.addSeries(lightweightCharts.LineSeries, {
+                  color: '#84d3f8',
+                  lineWidth: 2,
+                })
+              : null
+
+        if (!lineSeries) {
+          chart.remove()
+          setMarketOverlayChartRuntime('fallback')
+          return
+        }
+
+        marketOverlayChartRef.current = chart
+        marketOverlayChartSeriesRef.current = lineSeries
+        lineSeries.setData([])
+        chart.timeScale().fitContent()
+        setMarketOverlayChartRuntime('ready')
+
+        resizeObserver = new ResizeObserver((entries) => {
+          const next = entries[0]
+          if (!next || disposed || !marketOverlayChartRef.current) {
+            return
+          }
+          window.requestAnimationFrame(() => {
+            if (disposed || !marketOverlayChartRef.current) {
+              return
+            }
+            marketOverlayChartRef.current.applyOptions({
+              width: Math.max(next.contentRect.width, 240),
+              height: Math.max(next.contentRect.height, 140),
+            })
+          })
+        })
+        resizeObserver.observe(container)
+      } catch {
+        if (!disposed) {
+          setMarketOverlayChartRuntime('error')
+        }
+      }
+    }
+
+    void initChart()
+
+    return () => {
+      disposed = true
+      resizeObserver?.disconnect()
+      marketOverlayChartRef.current?.remove?.()
+      marketOverlayChartRef.current = null
+      marketOverlayChartSeriesRef.current = null
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!marketOverlayChartSeriesRef.current || !marketOverlayChartRef.current) {
+      return
+    }
+    marketOverlayChartSeriesRef.current.setData(marketOverlayChartPoints)
+    marketOverlayChartRef.current.timeScale().fitContent()
+  }, [marketOverlayChartPoints])
 
   const websocketUrl = useMemo(() => {
     const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws'
@@ -2830,19 +2972,21 @@ function App() {
     const candles = lastFetchedCandlesCount ?? 0
     const tradeEvents = tradeControlEvents.length
     const alerts = riskAlerts.length
+    const chartPoints = marketOverlayChartPoints.length
     const trendLabel = marketOverlayTrend.label
     const volatilitySummary = marketOverlayVolatility.summary
     const pulseSummary = marketOverlayPulse.summary
     const regimeSummary = marketOverlayRegime.summary
     const summaryByMode: Record<MarketOverlayMode, string> = {
-      'price-only': `candles:${candles} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
-      'with-trades': `candles:${candles} · tradeEvents:${tradeEvents} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
-      'with-risk': `candles:${candles} · tradeEvents:${tradeEvents} · riskAlerts:${alerts} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
+      'price-only': `candles:${candles} · chartPoints:${chartPoints} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
+      'with-trades': `candles:${candles} · tradeEvents:${tradeEvents} · chartPoints:${chartPoints} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
+      'with-risk': `candles:${candles} · tradeEvents:${tradeEvents} · riskAlerts:${alerts} · chartPoints:${chartPoints} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
     }
     setMarketOverlaySnapshotSummary(summaryByMode[marketOverlayMode])
     setMarketOverlaySnapshotAt(new Date().toISOString())
   }, [
     lastFetchedCandlesCount,
+    marketOverlayChartPoints.length,
     marketOverlayMode,
     marketOverlayPulse.summary,
     marketOverlayRegime.summary,
@@ -2862,8 +3006,20 @@ function App() {
       <main className="dashboard-grid">
         <section className="panel market-panel">
           <h2>Market Panel</h2>
-          <div className="placeholder-chart">
-            <span>Chart overlay surface (lightweight-charts integration in progress)</span>
+          <div className="placeholder-chart" aria-label="Market Overlay Chart">
+            <div
+              ref={marketOverlayChartContainerRef}
+              className={`market-overlay-chart-surface runtime-${marketOverlayChartRuntime}`}
+            />
+            <p aria-label="Overlay Chart Summary" className="market-overlay-chart-summary">
+              Chart: {marketOverlayChartSummary}
+            </p>
+            <p
+              aria-label="Overlay Chart Runtime"
+              className={`market-overlay-chart-runtime runtime-${marketOverlayChartRuntime}`}
+            >
+              Runtime: {marketOverlayChartRuntime}
+            </p>
           </div>
           <section className="market-overlay-controls">
             <label>

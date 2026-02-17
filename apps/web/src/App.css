@@ -79,11 +79,39 @@
   border-radius: 10px;
   min-height: 160px;
   display: flex;
-  align-items: center;
+  align-items: stretch;
   justify-content: center;
+  flex-direction: column;
+  gap: 0.45rem;
   color: #9aa6be;
-  padding: 1rem;
-  text-align: center;
+  padding: 0.75rem;
+}
+
+.market-overlay-chart-surface {
+  min-height: 150px;
+  border-radius: 8px;
+  border: 1px solid #2a436d;
+  background: #081224;
+  overflow: hidden;
+}
+
+.market-overlay-chart-summary,
+.market-overlay-chart-runtime {
+  margin: 0;
+  font-size: 0.7rem;
+  color: #9fb0cc;
+}
+
+.market-overlay-chart-runtime.runtime-ready {
+  color: #71d48c;
+}
+
+.market-overlay-chart-runtime.runtime-fallback {
+  color: #e9cf7a;
+}
+
+.market-overlay-chart-runtime.runtime-error {
+  color: #ee8d8d;
 }
 
 .market-overlay-controls {
