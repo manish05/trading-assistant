@@ -1237,7 +1237,9 @@ function App() {
       appendBlock({
         id: `blk_${Date.now()}`,
         title: 'helper summary copied',
-        content: 'Copied helper diagnostics summary to clipboard.',
+        content: `Copied helper diagnostics summary to clipboard (lock: ${
+          isHelperResetLocked ? 'locked' : 'unlocked'
+        }).`,
         severity: 'info',
       })
     } catch {
