@@ -1007,6 +1007,24 @@ function App() {
     applyRiskStatusPayload(payload)
   }, [applyRiskStatusPayload, riskEmergencyReason, sendRequest])
 
+  const sendInterventionEmergencyAction = useCallback(
+    async (action: RiskEmergencyAction) => {
+      const payload = await sendRequest('risk.emergencyStop', {
+        action,
+        reason: riskEmergencyReason.trim() || `intervention:${action}`,
+      })
+      applyRiskStatusPayload(payload)
+    },
+    [applyRiskStatusPayload, riskEmergencyReason, sendRequest],
+  )
+
+  const sendInterventionResume = useCallback(async () => {
+    const payload = await sendRequest('risk.resume', {
+      reason: riskEmergencyReason.trim() || 'intervention:resume',
+    })
+    applyRiskStatusPayload(payload)
+  }, [applyRiskStatusPayload, riskEmergencyReason, sendRequest])
+
   const sendTradePlace = useCallback(() => {
     const accountId = managedAccountId.trim() || DEFAULT_PRESET_TEMPLATE.managedAccountId
     const symbol = feedSymbol.trim() || DEFAULT_PRESET_TEMPLATE.feedSymbol
@@ -3100,6 +3118,48 @@ function App() {
                 </div>
               </div>
             ) : null}
+          </section>
+          <section className="template-panel intervention-panel">
+            <h3>Intervention Panel</h3>
+            <div className="actions">
+              <button
+                type="button"
+                onClick={() => void sendInterventionEmergencyAction('pause_trading')}
+              >
+                Pause Trading Now
+              </button>
+              <button
+                type="button"
+                onClick={() => void sendInterventionEmergencyAction('cancel_all')}
+              >
+                Cancel All Now
+              </button>
+              <button
+                type="button"
+                onClick={() => void sendInterventionEmergencyAction('close_all')}
+              >
+                Close All Now
+              </button>
+              <button
+                type="button"
+                onClick={() => void sendInterventionEmergencyAction('disable_live')}
+              >
+                Disable Live Now
+              </button>
+              <button type="button" onClick={() => void sendInterventionResume()}>
+                Resume Trading Now
+              </button>
+            </div>
+            <p aria-label="Intervention Summary">
+              Emergency status:{' '}
+              {riskEmergencyStopActive === null
+                ? 'n/a'
+                : riskEmergencyStopActive
+                  ? 'active'
+                  : 'inactive'}{' '}
+              · Last action: {riskLastEmergencyAction ?? 'none'} · Updated:{' '}
+              {riskLastEmergencyUpdatedAt ?? 'never'}
+            </p>
           </section>
           <div className="block-list">
             {blocks.length === 0 ? (

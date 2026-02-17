@@ -35,6 +35,12 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Agents' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Create Agent' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Run Onboarding Flow' })).toBeInTheDocument()
+    expect(screen.getByText('Intervention Panel')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Pause Trading Now' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Cancel All Now' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Close All Now' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Disable Live Now' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Resume Trading Now' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Connect Account' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Disconnect Account' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Feeds' })).toBeInTheDocument()
@@ -193,6 +199,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByText('Managed Agent').closest('div')).toHaveTextContent('agent_eth_5m')
     expect(screen.getByText('Onboarding Checklist').closest('div')).toHaveTextContent(
       'completed 0/3',
+    )
+    expect(screen.getByLabelText('Intervention Summary')).toHaveTextContent(
+      'Emergency status: n/a · Last action: none · Updated: never',
     )
     expect(screen.getByText('Marketplace Signals (last fetch)').closest('div')).toHaveTextContent(
       'n/a',
@@ -723,6 +732,190 @@ describe('Dashboard shell', () => {
       expect(methods).toContain('feeds.subscribe')
       expect(screen.getByText('Onboarding Checklist').closest('div')).toHaveTextContent(
         'completed 3/3',
+      )
+    })
+
+    sendSpy.mockRestore()
+  })
+
+  it('dispatches intervention panel emergency actions with expected payloads', async () => {
+    const sendSpy = vi.spyOn(WebSocket.prototype, 'send')
+    render(<App />)
+
+    fireEvent.change(screen.getByLabelText('Min Request Gap (ms)'), {
+      target: { value: '0' },
+    })
+    fireEvent.change(screen.getByLabelText('Emergency Reason'), {
+      target: { value: 'manual intervention reason' },
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Pause Trading Now' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel All Now' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Close All Now' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Disable Live Now' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Resume Trading Now' }))
+
+    await waitFor(() => {
+      const payloads = sendSpy.mock.calls.map(([serialized]) =>
+        JSON.parse(String(serialized)),
+      ) as Array<{ method?: string; params?: Record<string, unknown> }>
+
+      const emergencyActions = payloads
+        .filter((payload) => payload.method === 'risk.emergencyStop')
+        .map((payload) => payload.params?.action)
+      expect(emergencyActions).toEqual([
+        'pause_trading',
+        'cancel_all',
+        'close_all',
+        'disable_live',
+      ])
+
+      const resumePayload = payloads.find((payload) => payload.method === 'risk.resume')
+      expect(resumePayload?.params).toMatchObject({
+        reason: 'manual intervention reason',
+      })
+    })
+
+    sendSpy.mockRestore()
+  })
+
+  it('updates intervention summary from intervention panel actions', async () => {
+    const sendSpy = vi
+      .spyOn(WebSocket.prototype, 'send')
+      .mockImplementation(function (
+        this: WebSocket,
+        data: string | ArrayBufferLike | Blob | ArrayBufferView<ArrayBufferLike>,
+      ) {
+        if (typeof data !== 'string') {
+          return
+        }
+        const payload = JSON.parse(data) as {
+          type?: string
+          id?: string
+          method?: string
+          params?: { action?: string }
+        }
+        if (payload.type === 'req' && payload.method === 'risk.emergencyStop' && payload.id) {
+          const action = payload.params?.action ?? 'pause_trading'
+          queueMicrotask(() => {
+            this.onmessage?.(
+              new MessageEvent('message', {
+                data: JSON.stringify({
+                  type: 'event',
+                  event: 'event.risk.emergencyStop',
+                  payload: {
+                    requestId: payload.id,
+                    status: {
+                      emergencyStopActive: true,
+                      lastAction: action,
+                      lastReason: 'manual intervention reason',
+                      updatedAt: '2026-02-17T12:30:00.000Z',
+                      actionCounts: {
+                        pause_trading: action === 'pause_trading' ? 1 : 0,
+                        cancel_all: action === 'cancel_all' ? 1 : 0,
+                        close_all: action === 'close_all' ? 1 : 0,
+                        disable_live: action === 'disable_live' ? 1 : 0,
+                      },
+                    },
+                  },
+                }),
+              }),
+            )
+          })
+          queueMicrotask(() => {
+            this.onmessage?.(
+              new MessageEvent('message', {
+                data: JSON.stringify({
+                  type: 'res',
+                  id: payload.id,
+                  ok: true,
+                  payload: {
+                    emergencyStopActive: true,
+                    lastAction: action,
+                    lastReason: 'manual intervention reason',
+                    updatedAt: '2026-02-17T12:30:00.000Z',
+                    actionCounts: {
+                      pause_trading: action === 'pause_trading' ? 1 : 0,
+                      cancel_all: action === 'cancel_all' ? 1 : 0,
+                      close_all: action === 'close_all' ? 1 : 0,
+                      disable_live: action === 'disable_live' ? 1 : 0,
+                    },
+                  },
+                }),
+              }),
+            )
+          })
+          return
+        }
+        if (payload.type === 'req' && payload.method === 'risk.resume' && payload.id) {
+          queueMicrotask(() => {
+            this.onmessage?.(
+              new MessageEvent('message', {
+                data: JSON.stringify({
+                  type: 'event',
+                  event: 'event.risk.emergencyStop',
+                  payload: {
+                    requestId: payload.id,
+                    status: {
+                      emergencyStopActive: false,
+                      lastAction: 'close_all',
+                      lastReason: 'manual intervention reason',
+                      updatedAt: '2026-02-17T12:31:00.000Z',
+                      actionCounts: {
+                        pause_trading: 0,
+                        cancel_all: 0,
+                        close_all: 1,
+                        disable_live: 0,
+                      },
+                    },
+                  },
+                }),
+              }),
+            )
+          })
+          queueMicrotask(() => {
+            this.onmessage?.(
+              new MessageEvent('message', {
+                data: JSON.stringify({
+                  type: 'res',
+                  id: payload.id,
+                  ok: true,
+                  payload: {
+                    emergencyStopActive: false,
+                    lastAction: 'close_all',
+                    lastReason: 'manual intervention reason',
+                    updatedAt: '2026-02-17T12:31:00.000Z',
+                    actionCounts: {
+                      pause_trading: 0,
+                      cancel_all: 0,
+                      close_all: 1,
+                      disable_live: 0,
+                    },
+                  },
+                }),
+              }),
+            )
+          })
+        }
+      })
+
+    render(<App />)
+    fireEvent.change(screen.getByLabelText('Emergency Reason'), {
+      target: { value: 'manual intervention reason' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Close All Now' }))
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Intervention Summary')).toHaveTextContent(
+        'Emergency status: active · Last action: close_all · Updated: 2026-02-17T12:30:00.000Z',
+      )
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Resume Trading Now' }))
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Intervention Summary')).toHaveTextContent(
+        'Emergency status: inactive · Last action: close_all · Updated: 2026-02-17T12:31:00.000Z',
       )
     })
 
