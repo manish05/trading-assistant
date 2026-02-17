@@ -3,14 +3,47 @@ from typing import Any
 from uuid import uuid4
 
 from fastapi import WebSocket
-from pydantic import ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from starlette.websockets import WebSocketDisconnect
 
 from app.gateway.models import GatewayConnectParams
 from app.protocol.frames import RequestFrame, parse_gateway_frame
+from app.queues.agent_queue import AgentQueue, AgentRequest, QueueSettings
+from app.risk.engine import AccountRiskSnapshot, RiskEngine, RiskPolicy, TradeIntent
 
 PROTOCOL_VERSION = 1
 SERVER_NAME = "mt5-claude-trader-v2"
+
+
+class AgentRunRequestInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    request_id: str = Field(min_length=1)
+    kind: str = Field(min_length=1)
+    priority: str = Field(default="normal", min_length=1)
+    dedupe_key: str | None = None
+    payload: dict = Field(default_factory=dict)
+
+
+class AgentRunParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    agentId: str = Field(min_length=1)
+    request: AgentRunRequestInput
+
+
+class AgentQueueStatusParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    agentId: str = Field(min_length=1)
+
+
+class RiskPreviewParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    intent: TradeIntent
+    policy: RiskPolicy
+    snapshot: AccountRiskSnapshot
 
 
 def _error_response(
@@ -43,11 +76,25 @@ def _ok_response(request_id: str, payload: dict[str, Any]) -> dict:
     }
 
 
-async def handle_gateway_websocket(websocket: WebSocket, *, started_at: datetime) -> None:
+def _get_or_create_queue(agent_id: str, queues: dict[str, AgentQueue]) -> AgentQueue:
+    if agent_id in queues:
+        return queues[agent_id]
+    queue = AgentQueue(QueueSettings(mode="followup", cap=50, drop_policy="old"))
+    queues[agent_id] = queue
+    return queue
+
+
+async def handle_gateway_websocket(
+    websocket: WebSocket,
+    *,
+    started_at: datetime,
+    agent_queues: dict[str, AgentQueue],
+) -> None:
     await websocket.accept()
 
     connected = False
     session_id: str | None = None
+    risk_engine = RiskEngine()
 
     while True:
         try:
@@ -149,6 +196,99 @@ async def handle_gateway_websocket(websocket: WebSocket, *, started_at: datetime
                             "name": SERVER_NAME,
                             "version": "0.1.0",
                         },
+                    },
+                )
+            )
+            continue
+
+        if frame.method == "risk.preview":
+            try:
+                params = RiskPreviewParams.model_validate(frame.params)
+            except ValidationError:
+                await websocket.send_json(
+                    _error_response(
+                        frame.id,
+                        code="INVALID_PARAMS",
+                        message="invalid risk.preview params",
+                    )
+                )
+                continue
+
+            decision = risk_engine.evaluate(
+                intent=params.intent,
+                policy=params.policy,
+                snapshot=params.snapshot,
+            )
+            await websocket.send_json(
+                _ok_response(
+                    frame.id,
+                    payload=decision.model_dump(mode="json"),
+                )
+            )
+            continue
+
+        if frame.method == "agent.run":
+            try:
+                params = AgentRunParams.model_validate(frame.params)
+            except ValidationError:
+                await websocket.send_json(
+                    _error_response(
+                        frame.id,
+                        code="INVALID_PARAMS",
+                        message="invalid agent.run params",
+                    )
+                )
+                continue
+
+            queue = _get_or_create_queue(params.agentId, agent_queues)
+            request = AgentRequest(
+                request_id=params.request.request_id,
+                agent_id=params.agentId,
+                kind=params.request.kind,
+                priority=params.request.priority,
+                dedupe_key=params.request.dedupe_key,
+                payload=params.request.payload,
+            )
+            decision = queue.enqueue(request, now_ms=int(datetime.now(UTC).timestamp() * 1000))
+            await websocket.send_json(
+                _ok_response(
+                    frame.id,
+                    payload={
+                        "decision": decision.model_dump(mode="json"),
+                        "activeRequestId": (
+                            queue.active_request.request_id if queue.active_request else None
+                        ),
+                        "pendingCount": len(queue.pending),
+                    },
+                )
+            )
+            continue
+
+        if frame.method == "agent.queue.status":
+            try:
+                params = AgentQueueStatusParams.model_validate(frame.params)
+            except ValidationError:
+                await websocket.send_json(
+                    _error_response(
+                        frame.id,
+                        code="INVALID_PARAMS",
+                        message="invalid agent.queue.status params",
+                    )
+                )
+                continue
+
+            queue = _get_or_create_queue(params.agentId, agent_queues)
+            await websocket.send_json(
+                _ok_response(
+                    frame.id,
+                    payload={
+                        "agentId": params.agentId,
+                        "mode": queue.settings.mode,
+                        "activeRequestId": (
+                            queue.active_request.request_id if queue.active_request else None
+                        ),
+                        "pendingCount": len(queue.pending),
+                        "collectBufferCount": len(queue.collect_buffer),
                     },
                 )
             )

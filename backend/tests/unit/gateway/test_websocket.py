@@ -86,3 +86,109 @@ def test_websocket_status_returns_runtime_snapshot() -> None:
     assert status_response["ok"] is True
     assert status_response["payload"]["server"]["name"] == "mt5-claude-trader-v2"
     assert status_response["payload"]["protocolVersion"] == 1
+
+
+def test_websocket_risk_preview_returns_decision() -> None:
+    client = TestClient(create_app())
+
+    with client.websocket_connect("/ws") as websocket:
+        websocket.send_json(_connect_payload())
+        _ = websocket.receive_json()
+
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_risk_1",
+                "method": "risk.preview",
+                "params": {
+                    "intent": {
+                        "account_id": "acct_demo_1",
+                        "symbol": "ETHUSDm",
+                        "action": "PLACE_MARKET_ORDER",
+                        "side": "buy",
+                        "volume": 0.3,
+                        "stop_loss": None,
+                        "take_profit": 2800.0,
+                    },
+                    "policy": {
+                        "allowed_symbols": ["ETHUSDm"],
+                        "max_volume": 0.2,
+                        "max_concurrent_positions": 2,
+                        "max_daily_loss": 100.0,
+                        "require_stop_loss": True,
+                    },
+                    "snapshot": {
+                        "open_positions": 0,
+                        "daily_pnl": -20.0,
+                    },
+                },
+            }
+        )
+        response = websocket.receive_json()
+
+    assert response["ok"] is True
+    assert response["payload"]["allowed"] is False
+    assert len(response["payload"]["violations"]) == 2
+
+
+def test_websocket_agent_run_updates_queue_status() -> None:
+    client = TestClient(create_app())
+
+    with client.websocket_connect("/ws") as websocket:
+        websocket.send_json(_connect_payload())
+        _ = websocket.receive_json()
+
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_run_1",
+                "method": "agent.run",
+                "params": {
+                    "agentId": "agent_eth_5m",
+                    "request": {
+                        "request_id": "ar_1",
+                        "kind": "hook_trigger",
+                        "priority": "normal",
+                        "payload": {"message": "first run"},
+                    },
+                },
+            }
+        )
+        run_response_1 = websocket.receive_json()
+
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_run_2",
+                "method": "agent.run",
+                "params": {
+                    "agentId": "agent_eth_5m",
+                    "request": {
+                        "request_id": "ar_2",
+                        "kind": "hook_trigger",
+                        "priority": "normal",
+                        "payload": {"message": "second run"},
+                    },
+                },
+            }
+        )
+        run_response_2 = websocket.receive_json()
+
+        websocket.send_json(
+            {
+                "type": "req",
+                "id": "req_queue_status_1",
+                "method": "agent.queue.status",
+                "params": {"agentId": "agent_eth_5m"},
+            }
+        )
+        status_response = websocket.receive_json()
+
+    assert run_response_1["ok"] is True
+    assert run_response_1["payload"]["decision"]["type"] == "run_now"
+    assert run_response_2["ok"] is True
+    assert run_response_2["payload"]["decision"]["type"] == "enqueued"
+    assert status_response["ok"] is True
+    assert status_response["payload"]["activeRequestId"] == "ar_1"
+    assert status_response["payload"]["pendingCount"] == 1
+    assert status_response["payload"]["mode"] == "followup"
