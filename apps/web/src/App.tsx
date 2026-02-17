@@ -1947,6 +1947,20 @@ function App() {
                 </div>
               </dd>
             </div>
+            <div>
+              <dt>Helper Diagnostics</dt>
+              <dd className="import-snapshot-badges">
+                <span className="import-summary-badge badge-hint-mode">
+                  expanded:{isImportHelperDiagnosticsExpanded ? 'yes' : 'no'}
+                </span>
+                <span className="import-summary-badge badge-hint-mode">
+                  enabled:{Number(isImportHintVisible) + Number(showShortcutLegendInStatus)}/2
+                </span>
+                <span className="import-summary-badge badge-hint-mode">
+                  density:{shortcutLegendDensity}
+                </span>
+              </dd>
+            </div>
             {showShortcutLegendInStatus ? (
               <div>
                 <dt>

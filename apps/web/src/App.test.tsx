@@ -69,6 +69,10 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Copy Shortcut Cheat Sheet' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Quick Hide Hints' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Quick Show Legend' })).toBeInTheDocument()
+    expect(screen.getByText('Helper Diagnostics')).toBeInTheDocument()
+    expect(
+      screen.getByText('enabled:1/2', { selector: '.import-snapshot-badges .import-summary-badge' }),
+    ).toBeInTheDocument()
     expect(screen.getByText('Last import: none')).toBeInTheDocument()
   })
 
@@ -562,6 +566,23 @@ describe('Dashboard shell', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Quick Show Legend' }))
     expect(screen.getByRole('button', { name: 'Quick Hide Legend' })).toBeInTheDocument()
     expect(screen.getByText('Import Shortcut Legend', { selector: 'dt' })).toBeInTheDocument()
+  })
+
+  it('updates helper diagnostics summary counters in status panel', () => {
+    render(<App />)
+    expect(
+      screen.getByText('enabled:1/2', { selector: '.import-snapshot-badges .import-summary-badge' }),
+    ).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Quick Show Legend' }))
+    expect(
+      screen.getByText('enabled:2/2', { selector: '.import-snapshot-badges .import-summary-badge' }),
+    ).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Quick Hide Hints' }))
+    expect(
+      screen.getByText('enabled:1/2', { selector: '.import-snapshot-badges .import-summary-badge' }),
+    ).toBeInTheDocument()
   })
 
   it('reports accepted and rejected preset names after import', async () => {
