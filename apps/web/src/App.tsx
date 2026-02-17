@@ -532,6 +532,35 @@ function App() {
     return counts
   }, [quickActionHistory])
 
+  const lockTelemetrySummaryLines = useMemo(
+    () => [
+      `lockCounterResetAt=${helperLockCountersLastResetAt ?? 'never'}`,
+      `lockToggleTotal=${helperResetLockToggleCount}`,
+      `lockToggleTone=${helperResetLockToggleToneClass.replace('counter-tone-', '')}`,
+      `lockToggleAlt+L=${helperResetLockSourceCounts['Alt+L']}`,
+      `lockToggleAlt+LTone=${resolveLockCounterTone(helperResetLockSourceCounts['Alt+L']).replace(
+        'counter-tone-',
+        '',
+      )}`,
+      `lockToggleControls=${helperResetLockSourceCounts.controls}`,
+      `lockToggleControlsTone=${resolveLockCounterTone(helperResetLockSourceCounts.controls).replace(
+        'counter-tone-',
+        '',
+      )}`,
+      `lockToggleSnapshot=${helperResetLockSourceCounts.snapshot}`,
+      `lockToggleSnapshotTone=${resolveLockCounterTone(helperResetLockSourceCounts.snapshot).replace(
+        'counter-tone-',
+        '',
+      )}`,
+    ],
+    [
+      helperLockCountersLastResetAt,
+      helperResetLockSourceCounts,
+      helperResetLockToggleCount,
+      helperResetLockToggleToneClass,
+    ],
+  )
+
   const toggleHelperResetLock = useCallback((source: 'Alt+L' | 'controls' | 'snapshot') => {
     const now = Date.now()
     const lockEntry: QuickActionHistory = {
@@ -1169,6 +1198,8 @@ function App() {
       `created=${presetImportReport.createdCount}`,
       `preserved=${presetImportReport.preservedCount}`,
       `overwritten=${presetImportReport.overwrittenCount}`,
+      '[LockTelemetry]',
+      ...lockTelemetrySummaryLines,
     ]
     try {
       if (!navigator.clipboard?.writeText) {
@@ -1189,7 +1220,7 @@ function App() {
         severity: 'warn',
       })
     }
-  }, [appendBlock, presetImportReport])
+  }, [appendBlock, lockTelemetrySummaryLines, presetImportReport])
 
   const lastImportSummaryText = useMemo(() => {
     if (!presetImportReport) {
@@ -1247,7 +1278,9 @@ function App() {
       if (!navigator.clipboard?.writeText) {
         throw new Error('Clipboard API unavailable')
       }
-      await navigator.clipboard.writeText(lastImportSummaryText)
+      await navigator.clipboard.writeText(
+        [lastImportSummaryText, '[LockTelemetry]', ...lockTelemetrySummaryLines].join('\n'),
+      )
       appendBlock({
         id: `blk_${Date.now()}`,
         title: 'last summary copied',
@@ -1262,7 +1295,7 @@ function App() {
         severity: 'warn',
       })
     }
-  }, [appendBlock, lastImportSummaryText, presetImportReport])
+  }, [appendBlock, lastImportSummaryText, lockTelemetrySummaryLines, presetImportReport])
 
   const copyImportShortcutCheatSheet = useCallback(async () => {
     const cheatSheet = [
