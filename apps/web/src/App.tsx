@@ -1490,6 +1490,62 @@ function App() {
     marketOverlayScopedTimelineAnnotations,
     marketOverlayScopedVisibleAnnotations,
   ])
+  const marketOverlayMarkerDeltaExtremes = useMemo(() => {
+    if (marketOverlayScopedTimelineAnnotations.length === 0 || marketOverlayChartPoints.length === 0) {
+      return 'none'
+    }
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1]
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const formatDelta = (delta: number) => `${delta >= 0 ? '+' : ''}${delta.toFixed(2)}`
+    const candidates = marketOverlayScopedTimelineAnnotations
+      .map((annotation) => {
+        const point = pointByTime.get(annotation.time)
+        if (!point) {
+          return null
+        }
+        const delta = point.value - latestPoint.value
+        const deltaPct = latestPoint.value === 0 ? null : (delta / latestPoint.value) * 100
+        return { annotation, delta, deltaPct }
+      })
+      .filter(
+        (
+          candidate,
+        ): candidate is {
+          annotation: MarketOverlayTimelineAnnotation
+          delta: number
+          deltaPct: number | null
+        } => candidate !== null,
+      )
+    if (candidates.length === 0) {
+      return 'none'
+    }
+    const rise = candidates.reduce((best, candidate) => {
+      if (
+        candidate.delta > best.delta ||
+        (candidate.delta === best.delta && candidate.annotation.timestamp > best.annotation.timestamp)
+      ) {
+        return candidate
+      }
+      return best
+    }, candidates[0])
+    const drop = candidates.reduce((best, candidate) => {
+      if (
+        candidate.delta < best.delta ||
+        (candidate.delta === best.delta && candidate.annotation.timestamp > best.annotation.timestamp)
+      ) {
+        return candidate
+      }
+      return best
+    }, candidates[0])
+    const formatExtreme = (value: {
+      annotation: MarketOverlayTimelineAnnotation
+      delta: number
+      deltaPct: number | null
+    }) =>
+      `${value.annotation.kind}:${value.annotation.label}:${formatDelta(value.delta)} (${value.deltaPct === null ? 'n/a' : `${formatDelta(value.deltaPct)}%`})`
+    const spread = rise.delta - drop.delta
+    return `rise:${formatExtreme(rise)} · drop:${formatExtreme(drop)} · spread:${spread.toFixed(2)}`
+  }, [marketOverlayChartPoints, marketOverlayScopedTimelineAnnotations])
   const marketOverlayCorrelationHint = useMemo(() => {
     if (!marketOverlayActiveTimelineAnnotation || marketOverlayChartPoints.length === 0) {
       return 'none'
@@ -4422,6 +4478,9 @@ function App() {
               Scope: {marketOverlayMarkerScopeSummary}
             </p>
             <p aria-label="Overlay Marker Delta Summary">Delta summary: {marketOverlayMarkerDeltaSummary}</p>
+            <p aria-label="Overlay Marker Delta Extremes">
+              Delta extremes: {marketOverlayMarkerDeltaExtremes}
+            </p>
             <p aria-label="Overlay Marker Behavior">Marker behavior: {marketOverlayMarkerBehaviorLabel}</p>
             <p aria-label="Overlay Marker Navigation">Marker nav: {marketOverlayMarkerNavigationLabel}</p>
             <p aria-label="Overlay Marker Shortcut Hint">
