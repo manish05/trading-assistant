@@ -3696,6 +3696,57 @@ function App() {
     marketOverlayMarkerDeltaFilter,
     marketOverlayScopedTimelineAnnotations,
   ])
+  const marketOverlayActiveMarkerNeighborConsensusTransitionSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const resolveRelation = (annotation: MarketOverlayTimelineAnnotation | null): 'agree' | 'diverge' | null => {
+      if (!annotation) {
+        return null
+      }
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point) {
+        return null
+      }
+      const latestDelta = latestPoint ? point.value - latestPoint.value : null
+      const averageDelta = baseline !== null ? point.value - baseline : null
+      const latestTone = resolveMarketOverlayDeltaTone(latestDelta)
+      const averageTone = resolveMarketOverlayDeltaTone(averageDelta)
+      if (latestTone === 'unavailable' || averageTone === 'unavailable') {
+        return null
+      }
+      return latestTone === averageTone ? 'agree' : 'diverge'
+    }
+    const toScore = (relation: 'agree' | 'diverge' | null) =>
+      relation === 'agree' ? 1 : relation === 'diverge' ? -1 : 0
+    const describeTransition = (from: number, to: number) => {
+      const change = to - from
+      const direction = change > 0 ? 'toward-agree' : change < 0 ? 'toward-diverge' : 'flat'
+      return `${direction}(${change >= 0 ? '+' : ''}${change})`
+    }
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    const previousScore = toScore(resolveRelation(previousAnnotation))
+    const activeScore = toScore(resolveRelation(marketOverlayActiveTimelineAnnotation))
+    const nextScore = toScore(resolveRelation(nextAnnotation))
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · prev->active:${describeTransition(previousScore, activeScore)} · active->next:${describeTransition(activeScore, nextScore)} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
   const marketOverlayActiveMarkerNeighborDeltaRelationSummary = useMemo(() => {
     if (
       !marketOverlayActiveTimelineAnnotation ||
@@ -7367,6 +7418,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Active Neighbor Consensus Balance Summary">
               Active neighbor consensus balance: {marketOverlayActiveMarkerNeighborConsensusBalanceSummary}
+            </p>
+            <p aria-label="Overlay Marker Active Neighbor Consensus Transition Summary">
+              Active neighbor consensus transition: {marketOverlayActiveMarkerNeighborConsensusTransitionSummary}
             </p>
             <p aria-label="Overlay Marker Active Neighbor Delta Relation Summary">
               Active neighbor delta relation: {marketOverlayActiveMarkerNeighborDeltaRelationSummary}
