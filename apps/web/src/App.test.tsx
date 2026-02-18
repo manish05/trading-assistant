@@ -386,6 +386,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Timeline Interaction Readiness Summary')).toHaveTextContent(
       'Timeline interaction readiness: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Timeline Interaction Coherence Summary')).toHaveTextContent(
+      'Timeline interaction coherence: none',
+    )
     expect(screen.getByRole('button', { name: 'Oldest Marker' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Previous Bucket' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Skip Back 2' })).toBeDisabled()
@@ -1182,6 +1185,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Timeline Interaction Readiness Summary')).toHaveTextContent(
       'Timeline interaction readiness: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Timeline Interaction Coherence Summary')).toHaveTextContent(
+      'Timeline interaction coherence: none',
+    )
     expect(screen.getByRole('button', { name: 'Oldest Marker' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Previous Bucket' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Skip Back 2' })).toBeDisabled()
@@ -1557,6 +1563,9 @@ describe('Dashboard shell', () => {
       expect(screen.getByLabelText('Overlay Marker Timeline Interaction Readiness Summary')).toHaveTextContent(
         'Timeline interaction readiness: active:risk:live_trading_disabled:raised|slot:2/2 · matrix:step:1/0|skip:0/0|kind:0/0|bucket:0/0|edge:1/0 · readiness:backward:2|forward:0|total:2/10|tilt:backward|band:light · wrap:bounded|selection:sticky|order:newest-first',
       )
+      expect(screen.getByLabelText('Overlay Marker Timeline Interaction Coherence Summary')).toHaveTextContent(
+        'Timeline interaction coherence: active:risk:live_trading_disabled:raised|slot:2/2 · readiness:b2/f0|route:1/6|edge:1/2 · net:+2|bias:backward|coherence:edge-lean|phase:backward-sync · wrap:bounded|selection:sticky|order:newest-first',
+      )
       expect(screen.getByLabelText('Overlay Marker Behavior')).toHaveTextContent(
         'Marker behavior: wrap:bounded · selection:sticky · nav:manual',
       )
@@ -1677,6 +1686,9 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Overlay Marker Timeline Interaction Readiness Summary')).toHaveTextContent(
       'Timeline interaction readiness: active:trade:closed:queued|slot:1/2 · matrix:step:0/1|skip:0/0|kind:0/0|bucket:0/0|edge:0/1 · readiness:backward:0|forward:2|total:2/10|tilt:forward|band:light · wrap:bounded|selection:sticky|order:newest-first',
+    )
+    expect(screen.getByLabelText('Overlay Marker Timeline Interaction Coherence Summary')).toHaveTextContent(
+      'Timeline interaction coherence: active:trade:closed:queued|slot:1/2 · readiness:b0/f2|route:1/6|edge:1/2 · net:-2|bias:forward|coherence:edge-lean|phase:forward-sync · wrap:bounded|selection:sticky|order:newest-first',
     )
     expect(screen.getByRole('button', { name: 'trade:closed:queued' })).toHaveAttribute(
       'aria-pressed',

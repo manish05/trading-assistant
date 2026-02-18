@@ -2777,6 +2777,78 @@ function App() {
     marketOverlayTimelineCount,
     marketOverlayTimelineOrder,
   ])
+  const marketOverlayMarkerTimelineInteractionCoherenceSummary = useMemo(() => {
+    if (isMarketOverlayNavigationLocked) {
+      return 'locked'
+    }
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayTimelineCount === 0
+    ) {
+      return 'none'
+    }
+    const backwardReady =
+      Number(canSelectPreviousMarketOverlayMarker) +
+      Number(canSelectSkipBackwardMarketOverlayMarker) +
+      Number(canSelectPreviousSameKindMarketOverlayMarker) +
+      Number(canSelectPreviousBucketMarketOverlayMarker) +
+      Number(canSelectOldestMarketOverlayMarker)
+    const forwardReady =
+      Number(canSelectNextMarketOverlayMarker) +
+      Number(canSelectSkipForwardMarketOverlayMarker) +
+      Number(canSelectNextSameKindMarketOverlayMarker) +
+      Number(canSelectNextBucketMarketOverlayMarker) +
+      Number(canSelectLatestMarketOverlayMarker)
+    const routeReachable =
+      Number(canSelectPreviousMarketOverlayMarker) +
+      Number(canSelectNextMarketOverlayMarker) +
+      Number(canSelectPreviousSameKindMarketOverlayMarker) +
+      Number(canSelectNextSameKindMarketOverlayMarker) +
+      Number(canSelectPreviousBucketMarketOverlayMarker) +
+      Number(canSelectNextBucketMarketOverlayMarker)
+    const edgeReady = Number(canSelectOldestMarketOverlayMarker) + Number(canSelectLatestMarketOverlayMarker)
+    const net = backwardReady - forwardReady
+    const bias = net === 0 ? 'balanced' : net > 0 ? 'backward' : 'forward'
+    const coherence =
+      routeReachable === 0 && edgeReady === 0
+        ? 'static'
+        : routeReachable === 1 && edgeReady === 1
+          ? 'edge-lean'
+          : routeReachable === 2 && edgeReady === 0
+            ? 'lane-tight'
+            : routeReachable === 2 && edgeReady === 2
+              ? 'paired'
+              : routeReachable > 2
+                ? 'mesh'
+                : 'mixed'
+    const phase =
+      bias === 'balanced'
+        ? routeReachable === 0
+          ? 'idle'
+          : 'balanced-sync'
+        : `${bias}-sync`
+    const formatSigned = (value: number) => `${value >= 0 ? '+' : ''}${value}`
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label}|slot:${marketOverlayActiveTimelineIndex + 1}/${marketOverlayTimelineCount} · readiness:b${backwardReady}/f${forwardReady}|route:${routeReachable}/6|edge:${edgeReady}/2 · net:${formatSigned(net)}|bias:${bias}|coherence:${coherence}|phase:${phase} · wrap:${marketOverlayMarkerWrap}|selection:${marketOverlaySelectionMode}|order:${marketOverlayTimelineOrder}`
+  }, [
+    canSelectLatestMarketOverlayMarker,
+    canSelectNextBucketMarketOverlayMarker,
+    canSelectNextMarketOverlayMarker,
+    canSelectNextSameKindMarketOverlayMarker,
+    canSelectOldestMarketOverlayMarker,
+    canSelectPreviousBucketMarketOverlayMarker,
+    canSelectPreviousMarketOverlayMarker,
+    canSelectPreviousSameKindMarketOverlayMarker,
+    canSelectSkipBackwardMarketOverlayMarker,
+    canSelectSkipForwardMarketOverlayMarker,
+    isMarketOverlayNavigationLocked,
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayMarkerWrap,
+    marketOverlaySelectionMode,
+    marketOverlayTimelineCount,
+    marketOverlayTimelineOrder,
+  ])
   const marketOverlayMarkerDrilldown = useMemo(() => {
     const latest =
       marketOverlayScopedTimelineAnnotations[marketOverlayScopedTimelineAnnotations.length - 1] ?? null
@@ -11276,6 +11348,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Timeline Interaction Readiness Summary">
               Timeline interaction readiness: {marketOverlayMarkerTimelineInteractionReadinessSummary}
+            </p>
+            <p aria-label="Overlay Marker Timeline Interaction Coherence Summary">
+              Timeline interaction coherence: {marketOverlayMarkerTimelineInteractionCoherenceSummary}
             </p>
             <div className="market-overlay-marker-navigation">
               <button
