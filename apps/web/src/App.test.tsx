@@ -203,6 +203,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Visual Distribution Summary')).toHaveTextContent(
       'Marker visual distribution: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Visual Transition Summary')).toHaveTextContent(
+      'Marker visual transition: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
       'Timeline buckets: mode:none · scope:all-buckets · buckets:0 · latest:none · count:0',
     )
@@ -990,6 +993,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Visual Distribution Summary')).toHaveTextContent(
       'Marker visual distribution: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Visual Transition Summary')).toHaveTextContent(
+      'Marker visual transition: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
       'Timeline buckets: mode:none · scope:all-buckets · buckets:0 · latest:none · count:0',
     )
@@ -1291,6 +1297,9 @@ describe('Dashboard shell', () => {
       )
       expect(screen.getByLabelText('Overlay Marker Visual Distribution Summary')).toHaveTextContent(
         'Marker visual distribution: roles:active:1|prev:1|next:0|context:0 · tones:up:0|down:1|flat:1|unavailable:0 · contextTone:none · basis:latest · mode:all',
+      )
+      expect(screen.getByLabelText('Overlay Marker Visual Transition Summary')).toHaveTextContent(
+        'Marker visual transition: prev->active:down->flat|Δ:+1|warming|shape:arrowDown->circle · active->next:n/a · legs:1/2|motion:1|phase:shifting · basis:latest · mode:all',
       )
       expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
         'Timeline buckets: mode:none · scope:all-buckets · buckets:2 · latest:t2 · count:2',
@@ -1679,6 +1688,9 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Overlay Marker Visual Distribution Summary')).toHaveTextContent(
       'Marker visual distribution: roles:active:1|prev:0|next:1|context:0 · tones:up:0|down:1|flat:1|unavailable:0 · contextTone:none · basis:latest · mode:all',
+    )
+    expect(screen.getByLabelText('Overlay Marker Visual Transition Summary')).toHaveTextContent(
+      'Marker visual transition: prev->active:n/a · active->next:down->flat|Δ:+1|warming|shape:arrowDown->circle · legs:1/2|motion:1|phase:shifting · basis:latest · mode:all',
     )
 
     fireEvent.keyDown(screen.getByRole('button', { name: 'trade:closed:queued' }), { key: '2' })

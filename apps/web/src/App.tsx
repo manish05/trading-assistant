@@ -6304,6 +6304,61 @@ function App() {
     marketOverlayMarkerVisualProfiles,
     marketOverlayScopedTimelineAnnotations,
   ])
+  const marketOverlayMarkerVisualTransitionSummary = useMemo(() => {
+    if (!marketOverlayActiveTimelineAnnotation || marketOverlayActiveTimelineIndex < 0) {
+      return 'none'
+    }
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    const previousProfile = previousAnnotation
+      ? marketOverlayMarkerVisualProfiles.get(previousAnnotation.id) ?? null
+      : null
+    const activeProfile = marketOverlayMarkerVisualProfiles.get(marketOverlayActiveTimelineAnnotation.id) ?? null
+    const nextProfile = nextAnnotation ? marketOverlayMarkerVisualProfiles.get(nextAnnotation.id) ?? null : null
+    if (!activeProfile) {
+      return 'none'
+    }
+    const toneScore = (tone: MarketOverlayMarkerVisualProfile['tone']) => {
+      if (tone === 'up') {
+        return 1
+      }
+      if (tone === 'down') {
+        return -1
+      }
+      return 0
+    }
+    const formatSigned = (value: number) => `${value >= 0 ? '+' : ''}${value}`
+    const describeLeg = (
+      fromLabel: 'prev' | 'active',
+      toLabel: 'active' | 'next',
+      fromProfile: MarketOverlayMarkerVisualProfile | null,
+      toProfile: MarketOverlayMarkerVisualProfile | null,
+    ) => {
+      if (!fromProfile || !toProfile) {
+        return { summary: `${fromLabel}->${toLabel}:n/a`, step: null as number | null }
+      }
+      const step = toneScore(toProfile.tone) - toneScore(fromProfile.tone)
+      const direction = step === 0 ? 'steady' : step > 0 ? 'warming' : 'cooling'
+      return {
+        summary: `${fromLabel}->${toLabel}:${fromProfile.tone}->${toProfile.tone}|Δ:${formatSigned(step)}|${direction}|shape:${fromProfile.shape}->${toProfile.shape}`,
+        step,
+      }
+    }
+    const prevToActive = describeLeg('prev', 'active', previousProfile, activeProfile)
+    const activeToNext = describeLeg('active', 'next', activeProfile, nextProfile)
+    const availableLegs = Number(prevToActive.step !== null) + Number(activeToNext.step !== null)
+    const motion = Math.abs(prevToActive.step ?? 0) + Math.abs(activeToNext.step ?? 0)
+    const phase = motion === 0 ? 'steady' : motion === 1 ? 'shifting' : motion === 2 ? 'swing' : 'volatile'
+    return `${prevToActive.summary} · ${activeToNext.summary} · legs:${availableLegs}/2|motion:${motion}|phase:${phase} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayMarkerVisualProfiles,
+    marketOverlayScopedTimelineAnnotations,
+  ])
 
   useEffect(() => {
     if (marketOverlayScopedVisibleAnnotations.length === 0) {
@@ -9388,6 +9443,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Visual Distribution Summary">
               Marker visual distribution: {marketOverlayMarkerVisualDistributionSummary}
+            </p>
+            <p aria-label="Overlay Marker Visual Transition Summary">
+              Marker visual transition: {marketOverlayMarkerVisualTransitionSummary}
             </p>
             <p
               aria-label="Overlay Chart Runtime"
