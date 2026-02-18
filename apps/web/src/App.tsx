@@ -6819,6 +6819,64 @@ function App() {
     marketOverlayMarkerVisualProfiles,
     marketOverlayScopedTimelineAnnotations,
   ])
+  const marketOverlayMarkerVisualNeighborCadenceSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const activeProfile = marketOverlayMarkerVisualProfiles.get(marketOverlayActiveTimelineAnnotation.id) ?? null
+    if (!activeProfile) {
+      return 'none'
+    }
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    const previousProfile = previousAnnotation
+      ? marketOverlayMarkerVisualProfiles.get(previousAnnotation.id) ?? null
+      : null
+    const nextProfile = nextAnnotation ? marketOverlayMarkerVisualProfiles.get(nextAnnotation.id) ?? null : null
+    const pointIndexByTime = new Map(
+      marketOverlayChartPoints.map((point, index) => [point.time, index] as const),
+    )
+    const activePointIndex = pointIndexByTime.get(marketOverlayActiveTimelineAnnotation.time) ?? -1
+    const computeStepGap = (annotation: MarketOverlayTimelineAnnotation | null) => {
+      if (!annotation || activePointIndex < 0) {
+        return null
+      }
+      const index = pointIndexByTime.get(annotation.time) ?? -1
+      if (index < 0) {
+        return null
+      }
+      return Math.abs(index - activePointIndex)
+    }
+    const previousGap = computeStepGap(previousAnnotation)
+    const nextGap = computeStepGap(nextAnnotation)
+    const coverage = Number(previousGap !== null) + Number(nextGap !== null)
+    const totalGap = (previousGap ?? 0) + (nextGap ?? 0)
+    const averageGap = coverage === 0 ? null : totalGap / coverage
+    const cadence =
+      coverage === 0
+        ? 'isolated'
+        : coverage === 1
+          ? 'edge'
+          : previousGap === nextGap
+            ? 'symmetric'
+            : (previousGap ?? 0) < (nextGap ?? 0)
+              ? 'front-weighted'
+              : 'back-weighted'
+    return `active:${activeProfile.tone}|slot:${marketOverlayActiveTimelineIndex + 1}/${marketOverlayScopedTimelineAnnotations.length} · prev:${previousProfile ? previousProfile.tone : 'none'}|Δstep:${previousGap ?? 'n/a'} · next:${nextProfile ? nextProfile.tone : 'none'}|Δstep:${nextGap ?? 'n/a'} · cadence:${cadence}|avgGap:${averageGap === null ? 'n/a' : averageGap.toFixed(2)}|coverage:${coverage}/2 · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayMarkerVisualProfiles,
+    marketOverlayScopedTimelineAnnotations,
+  ])
 
   useEffect(() => {
     if (marketOverlayScopedVisibleAnnotations.length === 0) {
@@ -9927,6 +9985,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Visual Neighbor Tension Summary">
               Marker visual neighbor tension: {marketOverlayMarkerVisualNeighborTensionSummary}
+            </p>
+            <p aria-label="Overlay Marker Visual Neighbor Cadence Summary">
+              Marker visual neighbor cadence: {marketOverlayMarkerVisualNeighborCadenceSummary}
             </p>
             <p
               aria-label="Overlay Chart Runtime"

@@ -230,6 +230,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Visual Neighbor Tension Summary')).toHaveTextContent(
       'Marker visual neighbor tension: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Visual Neighbor Cadence Summary')).toHaveTextContent(
+      'Marker visual neighbor cadence: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
       'Timeline buckets: mode:none · scope:all-buckets · buckets:0 · latest:none · count:0',
     )
@@ -1044,6 +1047,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Visual Neighbor Tension Summary')).toHaveTextContent(
       'Marker visual neighbor tension: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Visual Neighbor Cadence Summary')).toHaveTextContent(
+      'Marker visual neighbor cadence: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
       'Timeline buckets: mode:none · scope:all-buckets · buckets:0 · latest:none · count:0',
     )
@@ -1372,6 +1378,9 @@ describe('Dashboard shell', () => {
       )
       expect(screen.getByLabelText('Overlay Marker Visual Neighbor Tension Summary')).toHaveTextContent(
         'Marker visual neighbor tension: active:flat|score:+0 · prev:down|Δa:-1 · next:n/a · net:-1|tension:1|vector:down|phase:skewed-edge|coverage:1/2 · basis:latest · mode:all',
+      )
+      expect(screen.getByLabelText('Overlay Marker Visual Neighbor Cadence Summary')).toHaveTextContent(
+        'Marker visual neighbor cadence: active:flat|slot:2/2 · prev:down|Δstep:1 · next:none|Δstep:n/a · cadence:edge|avgGap:1.00|coverage:1/2 · basis:latest · mode:all',
       )
       expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
         'Timeline buckets: mode:none · scope:all-buckets · buckets:2 · latest:t2 · count:2',
@@ -1787,6 +1796,9 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Overlay Marker Visual Neighbor Tension Summary')).toHaveTextContent(
       'Marker visual neighbor tension: active:down|score:-1 · prev:n/a · next:flat|Δa:+1 · net:+1|tension:1|vector:up|phase:skewed-edge|coverage:1/2 · basis:latest · mode:all',
+    )
+    expect(screen.getByLabelText('Overlay Marker Visual Neighbor Cadence Summary')).toHaveTextContent(
+      'Marker visual neighbor cadence: active:down|slot:1/2 · prev:none|Δstep:n/a · next:flat|Δstep:1 · cadence:edge|avgGap:1.00|coverage:1/2 · basis:latest · mode:all',
     )
 
     fireEvent.keyDown(screen.getByRole('button', { name: 'trade:closed:queued' }), { key: '2' })
