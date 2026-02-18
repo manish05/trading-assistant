@@ -6877,6 +6877,85 @@ function App() {
     marketOverlayMarkerVisualProfiles,
     marketOverlayScopedTimelineAnnotations,
   ])
+  const marketOverlayMarkerVisualNeighborCadenceDriftSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const activeProfile = marketOverlayMarkerVisualProfiles.get(marketOverlayActiveTimelineAnnotation.id) ?? null
+    if (!activeProfile) {
+      return 'none'
+    }
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    const previousProfile = previousAnnotation
+      ? marketOverlayMarkerVisualProfiles.get(previousAnnotation.id) ?? null
+      : null
+    const nextProfile = nextAnnotation ? marketOverlayMarkerVisualProfiles.get(nextAnnotation.id) ?? null : null
+    const toneScore = (tone: MarketOverlayMarkerVisualProfile['tone']) => {
+      if (tone === 'up') {
+        return 1
+      }
+      if (tone === 'down') {
+        return -1
+      }
+      return 0
+    }
+    const pointIndexByTime = new Map(
+      marketOverlayChartPoints.map((point, index) => [point.time, index] as const),
+    )
+    const activePointIndex = pointIndexByTime.get(marketOverlayActiveTimelineAnnotation.time) ?? -1
+    const resolveGap = (annotation: MarketOverlayTimelineAnnotation | null) => {
+      if (!annotation || activePointIndex < 0) {
+        return null
+      }
+      const index = pointIndexByTime.get(annotation.time) ?? -1
+      if (index < 0) {
+        return null
+      }
+      return Math.abs(index - activePointIndex)
+    }
+    const activeScore = toneScore(activeProfile.tone)
+    const previousToneDelta = previousProfile ? toneScore(previousProfile.tone) - activeScore : null
+    const nextToneDelta = nextProfile ? toneScore(nextProfile.tone) - activeScore : null
+    const previousGap = resolveGap(previousAnnotation)
+    const nextGap = resolveGap(nextAnnotation)
+    const toWeightedDelta = (toneDelta: number | null, gap: number | null) => {
+      if (toneDelta === null || gap === null) {
+        return null
+      }
+      return toneDelta / Math.max(1, gap)
+    }
+    const previousWeighted = toWeightedDelta(previousToneDelta, previousGap)
+    const nextWeighted = toWeightedDelta(nextToneDelta, nextGap)
+    const coverage = Number(previousWeighted !== null) + Number(nextWeighted !== null)
+    const net = (previousWeighted ?? 0) + (nextWeighted ?? 0)
+    const direction = Math.abs(net) < 1e-9 ? 'balanced' : net > 0 ? 'warming' : 'cooling'
+    const pressure =
+      coverage === 0
+        ? 'isolated'
+        : Math.abs(net) < 0.5
+          ? 'gentle'
+          : Math.abs(net) < 1
+            ? 'moderate'
+            : 'strong'
+    const spread =
+      previousWeighted === null || nextWeighted === null ? null : previousWeighted - nextWeighted
+    const formatSigned = (value: number, digits = 2) => `${value >= 0 ? '+' : ''}${value.toFixed(digits)}`
+    return `active:${activeProfile.tone}|score:${activeScore >= 0 ? '+' : ''}${activeScore} · prev:${previousProfile ? `${previousProfile.tone}|Δtone:${previousToneDelta === null ? 'n/a' : `${previousToneDelta >= 0 ? '+' : ''}${previousToneDelta}`}|Δstep:${previousGap ?? 'n/a'}|weight:${previousWeighted === null ? 'n/a' : formatSigned(previousWeighted)}` : 'n/a'} · next:${nextProfile ? `${nextProfile.tone}|Δtone:${nextToneDelta === null ? 'n/a' : `${nextToneDelta >= 0 ? '+' : ''}${nextToneDelta}`}|Δstep:${nextGap ?? 'n/a'}|weight:${nextWeighted === null ? 'n/a' : formatSigned(nextWeighted)}` : 'n/a'} · drift:${formatSigned(net)}|direction:${direction}|pressure:${pressure}|spread:${spread === null ? 'n/a' : formatSigned(spread)}|coverage:${coverage}/2 · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayMarkerVisualProfiles,
+    marketOverlayScopedTimelineAnnotations,
+  ])
 
   useEffect(() => {
     if (marketOverlayScopedVisibleAnnotations.length === 0) {
@@ -9988,6 +10067,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Visual Neighbor Cadence Summary">
               Marker visual neighbor cadence: {marketOverlayMarkerVisualNeighborCadenceSummary}
+            </p>
+            <p aria-label="Overlay Marker Visual Neighbor Cadence Drift Summary">
+              Marker visual neighbor cadence drift: {marketOverlayMarkerVisualNeighborCadenceDriftSummary}
             </p>
             <p
               aria-label="Overlay Chart Runtime"

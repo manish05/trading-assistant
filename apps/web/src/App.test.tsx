@@ -233,6 +233,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Visual Neighbor Cadence Summary')).toHaveTextContent(
       'Marker visual neighbor cadence: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Visual Neighbor Cadence Drift Summary')).toHaveTextContent(
+      'Marker visual neighbor cadence drift: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
       'Timeline buckets: mode:none · scope:all-buckets · buckets:0 · latest:none · count:0',
     )
@@ -1050,6 +1053,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Visual Neighbor Cadence Summary')).toHaveTextContent(
       'Marker visual neighbor cadence: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Visual Neighbor Cadence Drift Summary')).toHaveTextContent(
+      'Marker visual neighbor cadence drift: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
       'Timeline buckets: mode:none · scope:all-buckets · buckets:0 · latest:none · count:0',
     )
@@ -1381,6 +1387,9 @@ describe('Dashboard shell', () => {
       )
       expect(screen.getByLabelText('Overlay Marker Visual Neighbor Cadence Summary')).toHaveTextContent(
         'Marker visual neighbor cadence: active:flat|slot:2/2 · prev:down|Δstep:1 · next:none|Δstep:n/a · cadence:edge|avgGap:1.00|coverage:1/2 · basis:latest · mode:all',
+      )
+      expect(screen.getByLabelText('Overlay Marker Visual Neighbor Cadence Drift Summary')).toHaveTextContent(
+        'Marker visual neighbor cadence drift: active:flat|score:+0 · prev:down|Δtone:-1|Δstep:1|weight:-1.00 · next:n/a · drift:-1.00|direction:cooling|pressure:strong|spread:n/a|coverage:1/2 · basis:latest · mode:all',
       )
       expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
         'Timeline buckets: mode:none · scope:all-buckets · buckets:2 · latest:t2 · count:2',
@@ -1799,6 +1808,9 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Overlay Marker Visual Neighbor Cadence Summary')).toHaveTextContent(
       'Marker visual neighbor cadence: active:down|slot:1/2 · prev:none|Δstep:n/a · next:flat|Δstep:1 · cadence:edge|avgGap:1.00|coverage:1/2 · basis:latest · mode:all',
+    )
+    expect(screen.getByLabelText('Overlay Marker Visual Neighbor Cadence Drift Summary')).toHaveTextContent(
+      'Marker visual neighbor cadence drift: active:down|score:-1 · prev:n/a · next:flat|Δtone:+1|Δstep:1|weight:+1.00 · drift:+1.00|direction:warming|pressure:strong|spread:n/a|coverage:1/2 · basis:latest · mode:all',
     )
 
     fireEvent.keyDown(screen.getByRole('button', { name: 'trade:closed:queued' }), { key: '2' })
