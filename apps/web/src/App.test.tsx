@@ -227,6 +227,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Visual Neighbor Phase Summary')).toHaveTextContent(
       'Marker visual neighbor phase: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Visual Neighbor Tension Summary')).toHaveTextContent(
+      'Marker visual neighbor tension: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
       'Timeline buckets: mode:none · scope:all-buckets · buckets:0 · latest:none · count:0',
     )
@@ -1038,6 +1041,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Visual Neighbor Phase Summary')).toHaveTextContent(
       'Marker visual neighbor phase: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Visual Neighbor Tension Summary')).toHaveTextContent(
+      'Marker visual neighbor tension: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
       'Timeline buckets: mode:none · scope:all-buckets · buckets:0 · latest:none · count:0',
     )
@@ -1363,6 +1369,9 @@ describe('Dashboard shell', () => {
       )
       expect(screen.getByLabelText('Overlay Marker Visual Neighbor Phase Summary')).toHaveTextContent(
         'Marker visual neighbor phase: active:flat|score:+0 · prev:down|step:-1 · next:n/a · netStep:-1|bias:cooling|spread:n/a|phase:cooling-edge|coverage:1/2 · basis:latest · mode:all',
+      )
+      expect(screen.getByLabelText('Overlay Marker Visual Neighbor Tension Summary')).toHaveTextContent(
+        'Marker visual neighbor tension: active:flat|score:+0 · prev:down|Δa:-1 · next:n/a · net:-1|tension:1|vector:down|phase:skewed-edge|coverage:1/2 · basis:latest · mode:all',
       )
       expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
         'Timeline buckets: mode:none · scope:all-buckets · buckets:2 · latest:t2 · count:2',
@@ -1775,6 +1784,9 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Overlay Marker Visual Neighbor Phase Summary')).toHaveTextContent(
       'Marker visual neighbor phase: active:down|score:-1 · prev:n/a · next:flat|step:+1 · netStep:+1|bias:warming|spread:n/a|phase:warming-edge|coverage:1/2 · basis:latest · mode:all',
+    )
+    expect(screen.getByLabelText('Overlay Marker Visual Neighbor Tension Summary')).toHaveTextContent(
+      'Marker visual neighbor tension: active:down|score:-1 · prev:n/a · next:flat|Δa:+1 · net:+1|tension:1|vector:up|phase:skewed-edge|coverage:1/2 · basis:latest · mode:all',
     )
 
     fireEvent.keyDown(screen.getByRole('button', { name: 'trade:closed:queued' }), { key: '2' })

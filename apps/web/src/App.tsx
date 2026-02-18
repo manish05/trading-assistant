@@ -6762,6 +6762,63 @@ function App() {
     marketOverlayMarkerVisualProfiles,
     marketOverlayScopedTimelineAnnotations,
   ])
+  const marketOverlayMarkerVisualNeighborTensionSummary = useMemo(() => {
+    if (!marketOverlayActiveTimelineAnnotation || marketOverlayActiveTimelineIndex < 0) {
+      return 'none'
+    }
+    const activeProfile = marketOverlayMarkerVisualProfiles.get(marketOverlayActiveTimelineAnnotation.id) ?? null
+    if (!activeProfile) {
+      return 'none'
+    }
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    const previousProfile = previousAnnotation
+      ? marketOverlayMarkerVisualProfiles.get(previousAnnotation.id) ?? null
+      : null
+    const nextProfile = nextAnnotation ? marketOverlayMarkerVisualProfiles.get(nextAnnotation.id) ?? null : null
+    const toneScore = (tone: MarketOverlayMarkerVisualProfile['tone']) => {
+      if (tone === 'up') {
+        return 1
+      }
+      if (tone === 'down') {
+        return -1
+      }
+      return 0
+    }
+    const formatSigned = (value: number) => `${value >= 0 ? '+' : ''}${value}`
+    const activeScore = toneScore(activeProfile.tone)
+    const previousDelta = previousProfile ? toneScore(previousProfile.tone) - activeScore : null
+    const nextDelta = nextProfile ? toneScore(nextProfile.tone) - activeScore : null
+    const coverage = Number(previousDelta !== null) + Number(nextDelta !== null)
+    const tension = Math.abs(previousDelta ?? 0) + Math.abs(nextDelta ?? 0)
+    const net = (previousDelta ?? 0) + (nextDelta ?? 0)
+    const vector = net === 0 ? 'balanced' : net > 0 ? 'up' : 'down'
+    const phase =
+      coverage === 0
+        ? 'isolated'
+        : coverage === 1
+          ? Math.abs(previousDelta ?? nextDelta ?? 0) < 1e-9
+            ? 'anchored-edge'
+            : Math.abs(previousDelta ?? nextDelta ?? 0) === 1
+              ? 'skewed-edge'
+              : 'stretched-edge'
+          : tension === 0
+            ? 'calm'
+            : tension === 2 && net === 0
+              ? 'balanced-pull'
+              : tension >= 3
+                ? 'fractured'
+                : 'tilted'
+    return `active:${activeProfile.tone}|score:${formatSigned(activeScore)} · prev:${previousProfile ? `${previousProfile.tone}|Δa:${formatSigned(previousDelta ?? 0)}` : 'n/a'} · next:${nextProfile ? `${nextProfile.tone}|Δa:${formatSigned(nextDelta ?? 0)}` : 'n/a'} · net:${formatSigned(net)}|tension:${tension}|vector:${vector}|phase:${phase}|coverage:${coverage}/2 · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayMarkerVisualProfiles,
+    marketOverlayScopedTimelineAnnotations,
+  ])
 
   useEffect(() => {
     if (marketOverlayScopedVisibleAnnotations.length === 0) {
@@ -9867,6 +9924,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Visual Neighbor Phase Summary">
               Marker visual neighbor phase: {marketOverlayMarkerVisualNeighborPhaseSummary}
+            </p>
+            <p aria-label="Overlay Marker Visual Neighbor Tension Summary">
+              Marker visual neighbor tension: {marketOverlayMarkerVisualNeighborTensionSummary}
             </p>
             <p
               aria-label="Overlay Chart Runtime"
