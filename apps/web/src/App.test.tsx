@@ -212,6 +212,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Event Timeline Coupling Summary')).toHaveTextContent(
       'Marker event timeline coupling: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Event Timeline Tension Summary')).toHaveTextContent(
+      'Marker event timeline tension: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Visual Focus Summary')).toHaveTextContent(
       'Marker visual focus: none',
     )
@@ -1062,6 +1065,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Event Timeline Coupling Summary')).toHaveTextContent(
       'Marker event timeline coupling: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Event Timeline Tension Summary')).toHaveTextContent(
+      'Marker event timeline tension: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Visual Focus Summary')).toHaveTextContent(
       'Marker visual focus: none',
     )
@@ -1426,6 +1432,9 @@ describe('Dashboard shell', () => {
       )
       expect(screen.getByLabelText('Overlay Marker Event Timeline Coupling Summary')).toHaveTextContent(
         'Marker event timeline coupling: active:risk:live_trading_disabled:raised|slot:2/2 · prev:step:1|marker:1|coupling:+0.00 · next:step:n/a|marker:n/a|coupling:n/a · net:+0.00|direction:balanced|phase:edge|coverage:1/2|navBias:backward · basis:latest · mode:all',
+      )
+      expect(screen.getByLabelText('Overlay Marker Event Timeline Tension Summary')).toHaveTextContent(
+        'Marker event timeline tension: active:risk:live_trading_disabled:raised|slot:2/2 · prev:step:1|marker:1|stretch:+0.00 · next:step:n/a|marker:n/a|stretch:n/a · tension:+0.00|total:0.00|bias:balanced|symmetry:one-sided|intensity:idle|coverage:1/2|nav:backward · basis:latest · mode:all',
       )
       expect(screen.getByLabelText('Overlay Marker Visual Focus Summary')).toHaveTextContent(
         'Marker visual focus: active:risk:live_trading_disabled:raised|role:active|tone:flat|color:#e5c453|shape:circle · prev:trade:closed:queued|role:prev|tone:down|color:#f2a5a5|shape:arrowDown · next:none · basis:latest · mode:all',
@@ -1895,6 +1904,9 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Overlay Marker Event Timeline Coupling Summary')).toHaveTextContent(
       'Marker event timeline coupling: active:trade:closed:queued|slot:1/2 · prev:step:n/a|marker:n/a|coupling:n/a · next:step:1|marker:1|coupling:+0.00 · net:+0.00|direction:balanced|phase:edge|coverage:1/2|navBias:forward · basis:latest · mode:all',
+    )
+    expect(screen.getByLabelText('Overlay Marker Event Timeline Tension Summary')).toHaveTextContent(
+      'Marker event timeline tension: active:trade:closed:queued|slot:1/2 · prev:step:n/a|marker:n/a|stretch:n/a · next:step:1|marker:1|stretch:+0.00 · tension:+0.00|total:0.00|bias:balanced|symmetry:one-sided|intensity:idle|coverage:1/2|nav:forward · basis:latest · mode:all',
     )
     expect(screen.getByLabelText('Overlay Marker Visual Focus Summary')).toHaveTextContent(
       'Marker visual focus: active:trade:closed:queued|role:active|tone:down|color:#e06f6f|shape:arrowDown · prev:none · next:risk:live_trading_disabled:raised|role:next|tone:flat|color:#f2dd98|shape:circle · basis:latest · mode:all',
