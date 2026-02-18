@@ -3464,6 +3464,72 @@ function App() {
     marketOverlayMarkerDeltaFilter,
     marketOverlayScopedTimelineAnnotations,
   ])
+  const marketOverlayActiveMarkerNeighborDeltaAccelerationSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const resolveDelta = (
+      annotation: MarketOverlayTimelineAnnotation | null,
+      basis: MarketOverlayMarkerDeltaBasis,
+    ): number | null => {
+      if (!annotation) {
+        return null
+      }
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point) {
+        return null
+      }
+      if (basis === 'latest') {
+        return latestPoint ? point.value - latestPoint.value : null
+      }
+      return baseline !== null ? point.value - baseline : null
+    }
+    const describeStep = (from: number | null, to: number | null) => {
+      if (from === null || to === null) {
+        return null
+      }
+      return to - from
+    }
+    const formatStep = (value: number | null) =>
+      value === null ? 'n/a' : `${value >= 0 ? '+' : ''}${value.toFixed(2)}`
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    const previousLatest = resolveDelta(previousAnnotation, 'latest')
+    const activeLatest = resolveDelta(marketOverlayActiveTimelineAnnotation, 'latest')
+    const nextLatest = resolveDelta(nextAnnotation, 'latest')
+    const previousAverage = resolveDelta(previousAnnotation, 'average')
+    const activeAverage = resolveDelta(marketOverlayActiveTimelineAnnotation, 'average')
+    const nextAverage = resolveDelta(nextAnnotation, 'average')
+    const latestPrevToActive = describeStep(previousLatest, activeLatest)
+    const averagePrevToActive = describeStep(previousAverage, activeAverage)
+    const latestActiveToNext = describeStep(activeLatest, nextLatest)
+    const averageActiveToNext = describeStep(activeAverage, nextAverage)
+    const accelerationPrevToActive =
+      latestPrevToActive === null || averagePrevToActive === null
+        ? null
+        : latestPrevToActive - averagePrevToActive
+    const accelerationActiveToNext =
+      latestActiveToNext === null || averageActiveToNext === null
+        ? null
+        : latestActiveToNext - averageActiveToNext
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · prev->active:latest:${formatStep(latestPrevToActive)}|average:${formatStep(averagePrevToActive)}|accel:${formatStep(accelerationPrevToActive)} · active->next:latest:${formatStep(latestActiveToNext)}|average:${formatStep(averageActiveToNext)}|accel:${formatStep(accelerationActiveToNext)} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
   const marketOverlayActiveMarkerNeighborDeltaSummary = useMemo(() => {
     if (
       !marketOverlayActiveTimelineAnnotation ||
@@ -6816,6 +6882,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Active Neighbor Delta Trend Summary">
               Active neighbor delta trend: {marketOverlayActiveMarkerNeighborDeltaTrendSummary}
+            </p>
+            <p aria-label="Overlay Marker Active Neighbor Delta Acceleration Summary">
+              Active neighbor delta acceleration: {marketOverlayActiveMarkerNeighborDeltaAccelerationSummary}
             </p>
             <p aria-label="Overlay Marker Active Delta Neighbors">
               Active delta neighbors: {marketOverlayActiveMarkerNeighborDeltaSummary}
