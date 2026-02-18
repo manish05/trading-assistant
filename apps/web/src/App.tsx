@@ -4166,6 +4166,74 @@ function App() {
     marketOverlayMarkerDeltaFilter,
     marketOverlayScopedTimelineAnnotations,
   ])
+  const marketOverlayActiveMarkerNeighborMagnitudeRatioSideSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const resolveDelta = (
+      annotation: MarketOverlayTimelineAnnotation | null,
+      basis: MarketOverlayMarkerDeltaBasis,
+    ): number | null => {
+      if (!annotation) {
+        return null
+      }
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point) {
+        return null
+      }
+      if (basis === 'latest') {
+        return latestPoint ? point.value - latestPoint.value : null
+      }
+      return baseline !== null ? point.value - baseline : null
+    }
+    const computeRatio = (neighbor: number | null, active: number | null) => {
+      if (neighbor === null || active === null || Math.abs(active) < 1e-9) {
+        return null
+      }
+      return Math.abs(neighbor) / Math.abs(active)
+    }
+    const formatRatio = (value: number | null) => (value === null ? 'n/a' : value.toFixed(2))
+    const describeBasis = (
+      basis: MarketOverlayMarkerDeltaBasis,
+      previousAnnotation: MarketOverlayTimelineAnnotation | null,
+      nextAnnotation: MarketOverlayTimelineAnnotation | null,
+    ) => {
+      const active = resolveDelta(marketOverlayActiveTimelineAnnotation, basis)
+      const previous = resolveDelta(previousAnnotation, basis)
+      const next = resolveDelta(nextAnnotation, basis)
+      const previousRatio = computeRatio(previous, active)
+      const nextRatio = computeRatio(next, active)
+      const availableCount = Number(previousRatio !== null) + Number(nextRatio !== null)
+      let side: 'none' | 'prev' | 'next' | 'balanced' = 'none'
+      if (previousRatio !== null && nextRatio === null) {
+        side = 'prev'
+      } else if (previousRatio === null && nextRatio !== null) {
+        side = 'next'
+      } else if (previousRatio !== null && nextRatio !== null) {
+        side = Math.abs(previousRatio - nextRatio) < 1e-9 ? 'balanced' : previousRatio > nextRatio ? 'prev' : 'next'
+      }
+      return `${basis}:prev:${formatRatio(previousRatio)}|next:${formatRatio(nextRatio)}|side:${side}|available:${availableCount}/2`
+    }
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · ${describeBasis('latest', previousAnnotation, nextAnnotation)} · ${describeBasis('average', previousAnnotation, nextAnnotation)} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
   const marketOverlayActiveMarkerNeighborDeltaSummary = useMemo(() => {
     if (
       !marketOverlayActiveTimelineAnnotation ||
@@ -7554,6 +7622,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Active Neighbor Magnitude Ratio Gap Summary">
               Active neighbor magnitude ratio gap: {marketOverlayActiveMarkerNeighborMagnitudeRatioGapSummary}
+            </p>
+            <p aria-label="Overlay Marker Active Neighbor Magnitude Ratio Side Summary">
+              Active neighbor magnitude ratio side: {marketOverlayActiveMarkerNeighborMagnitudeRatioSideSummary}
             </p>
             <p aria-label="Overlay Marker Active Delta Neighbors">
               Active delta neighbors: {marketOverlayActiveMarkerNeighborDeltaSummary}
