@@ -200,6 +200,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Visual Focus Summary')).toHaveTextContent(
       'Marker visual focus: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Visual Distribution Summary')).toHaveTextContent(
+      'Marker visual distribution: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
       'Timeline buckets: mode:none · scope:all-buckets · buckets:0 · latest:none · count:0',
     )
@@ -984,6 +987,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Visual Focus Summary')).toHaveTextContent(
       'Marker visual focus: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Visual Distribution Summary')).toHaveTextContent(
+      'Marker visual distribution: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
       'Timeline buckets: mode:none · scope:all-buckets · buckets:0 · latest:none · count:0',
     )
@@ -1282,6 +1288,9 @@ describe('Dashboard shell', () => {
       )
       expect(screen.getByLabelText('Overlay Marker Visual Focus Summary')).toHaveTextContent(
         'Marker visual focus: active:risk:live_trading_disabled:raised|role:active|tone:flat|color:#e5c453|shape:circle · prev:trade:closed:queued|role:prev|tone:down|color:#f2a5a5|shape:arrowDown · next:none · basis:latest · mode:all',
+      )
+      expect(screen.getByLabelText('Overlay Marker Visual Distribution Summary')).toHaveTextContent(
+        'Marker visual distribution: roles:active:1|prev:1|next:0|context:0 · tones:up:0|down:1|flat:1|unavailable:0 · contextTone:none · basis:latest · mode:all',
       )
       expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
         'Timeline buckets: mode:none · scope:all-buckets · buckets:2 · latest:t2 · count:2',
@@ -1667,6 +1676,9 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Overlay Marker Visual Focus Summary')).toHaveTextContent(
       'Marker visual focus: active:trade:closed:queued|role:active|tone:down|color:#e06f6f|shape:arrowDown · prev:none · next:risk:live_trading_disabled:raised|role:next|tone:flat|color:#f2dd98|shape:circle · basis:latest · mode:all',
+    )
+    expect(screen.getByLabelText('Overlay Marker Visual Distribution Summary')).toHaveTextContent(
+      'Marker visual distribution: roles:active:1|prev:0|next:1|context:0 · tones:up:0|down:1|flat:1|unavailable:0 · contextTone:none · basis:latest · mode:all',
     )
 
     fireEvent.keyDown(screen.getByRole('button', { name: 'trade:closed:queued' }), { key: '2' })

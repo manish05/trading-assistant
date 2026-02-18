@@ -6135,6 +6135,12 @@ function App() {
       flat: '#f2dd98',
       unavailable: '#a7ddf9',
     }
+    const contextPalette: Record<MarketOverlayMarkerVisualProfile['tone'], string> = {
+      up: '#6bb888',
+      down: '#c98b8b',
+      flat: '#c9b779',
+      unavailable: '#84d3f8',
+    }
     const resolveToneShape = (
       tone: MarketOverlayMarkerVisualProfile['tone'],
     ): MarketOverlayMarkerVisualProfile['shape'] => {
@@ -6161,7 +6167,13 @@ function App() {
               : 'context'
       const tone = resolveMarketOverlayDeltaTone(resolveDelta(annotation))
       if (role === 'context') {
-        profiles.set(annotation.id, { ...baseMarker, role, tone })
+        profiles.set(annotation.id, {
+          ...baseMarker,
+          role,
+          tone,
+          color: contextPalette[tone],
+          text: `${role}:${annotation.kind}:${annotation.label}:${tone}`,
+        })
         return
       }
       const color = role === 'active' ? activePalette[tone] : neighborPalette[tone]
@@ -6234,6 +6246,56 @@ function App() {
       return `${scope}:${annotation.kind}:${annotation.label}|role:${profile.role}|tone:${profile.tone}|color:${profile.color}|shape:${profile.shape}`
     }
     return `${describe('active', marketOverlayActiveTimelineAnnotation, activeProfile)} · ${describe('prev', previousAnnotation, previousProfile)} · ${describe('next', nextAnnotation, nextProfile)} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayMarkerVisualProfiles,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayMarkerVisualDistributionSummary = useMemo(() => {
+    if (!marketOverlayActiveTimelineAnnotation || marketOverlayActiveTimelineIndex < 0) {
+      return 'none'
+    }
+    const roleCounts: Record<MarketOverlayMarkerVisualRole, number> = {
+      active: 0,
+      prev: 0,
+      next: 0,
+      context: 0,
+    }
+    const toneCounts: Record<MarketOverlayMarkerVisualProfile['tone'], number> = {
+      up: 0,
+      down: 0,
+      flat: 0,
+      unavailable: 0,
+    }
+    const contextToneCounts: Record<MarketOverlayMarkerVisualProfile['tone'], number> = {
+      up: 0,
+      down: 0,
+      flat: 0,
+      unavailable: 0,
+    }
+    marketOverlayScopedTimelineAnnotations.forEach((annotation) => {
+      const profile = marketOverlayMarkerVisualProfiles.get(annotation.id)
+      if (!profile) {
+        return
+      }
+      roleCounts[profile.role] += 1
+      toneCounts[profile.tone] += 1
+      if (profile.role === 'context') {
+        contextToneCounts[profile.tone] += 1
+      }
+    })
+    const rankedContextTones = [...Object.entries(contextToneCounts)].sort((left, right) => right[1] - left[1])
+    const topContextToneCount = rankedContextTones[0]?.[1] ?? 0
+    const contextTone =
+      topContextToneCount === 0
+        ? 'none'
+        : rankedContextTones.filter((entry) => entry[1] === topContextToneCount).length > 1
+          ? `tie(${topContextToneCount})`
+          : `${rankedContextTones[0]?.[0] ?? 'none'}(${topContextToneCount})`
+    return `roles:active:${roleCounts.active}|prev:${roleCounts.prev}|next:${roleCounts.next}|context:${roleCounts.context} · tones:up:${toneCounts.up}|down:${toneCounts.down}|flat:${toneCounts.flat}|unavailable:${toneCounts.unavailable} · contextTone:${contextTone} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
   }, [
     marketOverlayActiveTimelineAnnotation,
     marketOverlayActiveTimelineIndex,
@@ -9323,6 +9385,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Visual Focus Summary">
               Marker visual focus: {marketOverlayMarkerVisualFocusSummary}
+            </p>
+            <p aria-label="Overlay Marker Visual Distribution Summary">
+              Marker visual distribution: {marketOverlayMarkerVisualDistributionSummary}
             </p>
             <p
               aria-label="Overlay Chart Runtime"
