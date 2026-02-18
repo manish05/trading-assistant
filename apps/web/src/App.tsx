@@ -1336,6 +1336,74 @@ function App() {
           : 'all'
     return `keys:q/e/x/c · all:q · agree:e · diverge:x · cycle:c=${cycleTarget} · active:${marketOverlayMarkerBasisAgreement}`
   }, [marketOverlayMarkerBasisAgreement])
+  const marketOverlayMarkerBasisAgreementCyclePreviewSummary = useMemo(() => {
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const baseline = marketOverlayAverageClose
+    const resolveToneForBasis = (
+      annotation: MarketOverlayTimelineAnnotation,
+      basis: MarketOverlayMarkerDeltaBasis,
+    ): 'up' | 'down' | 'flat' | 'unavailable' => {
+      const point = pointByTime.get(annotation.time) ?? null
+      const deltaValue =
+        basis === 'latest'
+          ? point && latestPoint
+            ? point.value - latestPoint.value
+            : null
+          : point && baseline !== null
+            ? point.value - baseline
+            : null
+      return resolveMarketOverlayDeltaTone(deltaValue)
+    }
+    const isToneMatch = (tone: 'up' | 'down' | 'flat' | 'unavailable') =>
+      marketOverlayMarkerDeltaFilter === 'all' ||
+      (marketOverlayMarkerDeltaFilter === 'latest-up' && tone === 'up') ||
+      (marketOverlayMarkerDeltaFilter === 'latest-down' && tone === 'down') ||
+      (marketOverlayMarkerDeltaFilter === 'latest-flat' && tone === 'flat') ||
+      (marketOverlayMarkerDeltaFilter === 'latest-unavailable' && tone === 'unavailable')
+    const visibleCountForMode = (mode: MarketOverlayMarkerBasisAgreement) => {
+      const scoped = marketOverlayBucketScopedTimelineAnnotations.filter((annotation) => {
+        if (mode === 'all') {
+          return true
+        }
+        const latestTone = resolveToneForBasis(annotation, 'latest')
+        const averageTone = resolveToneForBasis(annotation, 'average')
+        return mode === 'agree' ? latestTone === averageTone : latestTone !== averageTone
+      })
+      if (marketOverlayMarkerDeltaFilter === 'all') {
+        return scoped.length
+      }
+      return scoped.reduce((count, annotation) => {
+        const tone = resolveToneForBasis(annotation, marketOverlayMarkerDeltaBasis)
+        return isToneMatch(tone) ? count + 1 : count
+      }, 0)
+    }
+    const allVisible = visibleCountForMode('all')
+    const agreeVisible = visibleCountForMode('agree')
+    const divergeVisible = visibleCountForMode('diverge')
+    const cycleTarget =
+      marketOverlayMarkerBasisAgreement === 'all'
+        ? 'agree'
+        : marketOverlayMarkerBasisAgreement === 'agree'
+          ? 'diverge'
+          : 'all'
+    const activeVisible =
+      marketOverlayMarkerBasisAgreement === 'all'
+        ? allVisible
+        : marketOverlayMarkerBasisAgreement === 'agree'
+          ? agreeVisible
+          : divergeVisible
+    const cycleVisible =
+      cycleTarget === 'all' ? allVisible : cycleTarget === 'agree' ? agreeVisible : divergeVisible
+    return `all:${allVisible} · agree:${agreeVisible} · diverge:${divergeVisible} · active:${marketOverlayMarkerBasisAgreement}(${activeVisible}) · next:c=${cycleTarget}(${cycleVisible})`
+  }, [
+    marketOverlayAverageClose,
+    marketOverlayBucketScopedTimelineAnnotations,
+    marketOverlayChartPoints,
+    marketOverlayMarkerBasisAgreement,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+  ])
   const marketOverlayMarkerBasisAgreementKindSummary = useMemo(() => {
     type KindCounts = {
       trade: number
@@ -5922,6 +5990,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Basis Agreement Shortcut Summary">
               Basis agreement shortcuts: {marketOverlayMarkerBasisAgreementShortcutSummary}
+            </p>
+            <p aria-label="Overlay Marker Basis Agreement Cycle Preview Summary">
+              Basis agreement cycle preview: {marketOverlayMarkerBasisAgreementCyclePreviewSummary}
             </p>
             <p aria-label="Overlay Marker Basis Agreement Kind Summary">
               Basis agreement kinds: {marketOverlayMarkerBasisAgreementKindSummary}
