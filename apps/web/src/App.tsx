@@ -75,6 +75,7 @@ type MarketOverlayChartRuntime = 'loading' | 'ready' | 'fallback' | 'error'
 type MarketOverlayChartLens = 'price-only' | 'price-and-trend' | 'diagnostics'
 type MarketOverlayMarkerFocus = 'all' | 'trade' | 'risk' | 'feed'
 type MarketOverlayMarkerWindow = 3 | 5 | 8
+type MarketOverlayMarkerDivergencePreview = 3 | 5 | 8
 type MarketOverlayMarkerAgeFilter = 'all' | 'last-60s' | 'last-300s'
 type MarketOverlayMarkerBucket = 'none' | '30s' | '60s'
 type MarketOverlayMarkerDeltaFilter =
@@ -189,6 +190,8 @@ const MARKET_OVERLAY_MARKER_DELTA_FILTER_STORAGE_KEY =
   'quick-action-market-overlay-marker-delta-filter-v1'
 const MARKET_OVERLAY_MARKER_DELTA_BASIS_STORAGE_KEY =
   'quick-action-market-overlay-marker-delta-basis-v1'
+const MARKET_OVERLAY_MARKER_DIVERGENCE_PREVIEW_STORAGE_KEY =
+  'quick-action-market-overlay-marker-divergence-preview-v1'
 const MARKET_OVERLAY_MARKER_BASIS_AGREEMENT_STORAGE_KEY =
   'quick-action-market-overlay-marker-basis-agreement-v1'
 const MARKET_OVERLAY_MARKER_BUCKET_STORAGE_KEY = 'quick-action-market-overlay-marker-bucket-v1'
@@ -203,6 +206,7 @@ const MARKET_OVERLAY_MARKER_AGE_FILTER_ORDER: MarketOverlayMarkerAgeFilter[] = [
   'last-300s',
 ]
 const MARKET_OVERLAY_MARKER_WINDOW_ORDER: MarketOverlayMarkerWindow[] = [3, 5, 8]
+const MARKET_OVERLAY_MARKER_DIVERGENCE_PREVIEW_ORDER: MarketOverlayMarkerDivergencePreview[] = [3, 5, 8]
 const MARKET_OVERLAY_MARKER_BUCKET_ORDER: MarketOverlayMarkerBucket[] = ['none', '30s', '60s']
 const MARKET_OVERLAY_MARKER_DELTA_FILTER_ORDER: MarketOverlayMarkerDeltaFilter[] = [
   'all',
@@ -223,7 +227,6 @@ const MARKET_OVERLAY_MARKER_BASIS_AGREEMENT_ORDER: MarketOverlayMarkerBasisAgree
 const MAX_IMPORT_REPORT_NAMES = 6
 const FEED_CANDLE_FETCH_LIMIT = 50
 const MARKET_OVERLAY_MARKER_SKIP_STEP = 2
-const MARKET_OVERLAY_MARKER_DIVERGENCE_PREVIEW_LIMIT = 3
 const DEVICE_NOTIFY_TEST_MESSAGE = 'Dashboard test notification'
 const DEFAULT_RISK_EMERGENCY_REASON = 'dashboard emergency stop trigger'
 const DEFAULT_AGENT_ID = 'agent_eth_5m'
@@ -511,6 +514,17 @@ const readMarketOverlayMarkerDeltaBasisFromStorage = (): MarketOverlayMarkerDelt
   return window.localStorage.getItem(MARKET_OVERLAY_MARKER_DELTA_BASIS_STORAGE_KEY) === 'average'
     ? 'average'
     : 'latest'
+}
+
+const readMarketOverlayMarkerDivergencePreviewFromStorage = (): MarketOverlayMarkerDivergencePreview => {
+  if (typeof window === 'undefined') {
+    return 3
+  }
+  const raw = window.localStorage.getItem(MARKET_OVERLAY_MARKER_DIVERGENCE_PREVIEW_STORAGE_KEY)
+  if (raw === '5' || raw === '8') {
+    return Number.parseInt(raw, 10) as MarketOverlayMarkerDivergencePreview
+  }
+  return 3
 }
 
 const readMarketOverlayMarkerBasisAgreementFromStorage = (): MarketOverlayMarkerBasisAgreement => {
@@ -968,6 +982,8 @@ function App() {
     useState<MarketOverlayMarkerDeltaFilter>(readMarketOverlayMarkerDeltaFilterFromStorage)
   const [marketOverlayMarkerDeltaBasis, setMarketOverlayMarkerDeltaBasis] =
     useState<MarketOverlayMarkerDeltaBasis>(readMarketOverlayMarkerDeltaBasisFromStorage)
+  const [marketOverlayMarkerDivergencePreview, setMarketOverlayMarkerDivergencePreview] =
+    useState<MarketOverlayMarkerDivergencePreview>(readMarketOverlayMarkerDivergencePreviewFromStorage)
   const [marketOverlayMarkerBasisAgreement, setMarketOverlayMarkerBasisAgreement] =
     useState<MarketOverlayMarkerBasisAgreement>(readMarketOverlayMarkerBasisAgreementFromStorage)
   const [marketOverlayMarkerBucket, setMarketOverlayMarkerBucket] = useState<MarketOverlayMarkerBucket>(
@@ -1422,6 +1438,22 @@ function App() {
     marketOverlayMarkerDeltaBasis,
     marketOverlayMarkerDeltaFilter,
   ])
+  const marketOverlayMarkerDivergencePreviewShortcutSummary = useMemo(() => {
+    const currentIndex = MARKET_OVERLAY_MARKER_DIVERGENCE_PREVIEW_ORDER.indexOf(
+      marketOverlayMarkerDivergencePreview,
+    )
+    const safeIndex = currentIndex < 0 ? 0 : currentIndex
+    const nextValue =
+      MARKET_OVERLAY_MARKER_DIVERGENCE_PREVIEW_ORDER[
+        (safeIndex + 1) % MARKET_OVERLAY_MARKER_DIVERGENCE_PREVIEW_ORDER.length
+      ]
+    const previousValue =
+      MARKET_OVERLAY_MARKER_DIVERGENCE_PREVIEW_ORDER[
+        (safeIndex - 1 + MARKET_OVERLAY_MARKER_DIVERGENCE_PREVIEW_ORDER.length) %
+          MARKET_OVERLAY_MARKER_DIVERGENCE_PREVIEW_ORDER.length
+      ]
+    return `keys:p/P · value:${marketOverlayMarkerDivergencePreview} · next:p=${nextValue} · prev:P=${previousValue}`
+  }, [marketOverlayMarkerDivergencePreview])
   const marketOverlayMarkerBasisAgreementKindSummary = useMemo(() => {
     type KindCounts = {
       trade: number
@@ -1684,7 +1716,7 @@ function App() {
         return `${annotation.kind}:${annotation.label}:${latestTone}->${averageTone}`
       })
       .filter((item): item is string => item !== null)
-    const previewItems = divergentItems.slice(0, MARKET_OVERLAY_MARKER_DIVERGENCE_PREVIEW_LIMIT)
+    const previewItems = divergentItems.slice(0, marketOverlayMarkerDivergencePreview)
     const overflowCount = divergentItems.length - previewItems.length
     const itemsLabel =
       previewItems.length === 0
@@ -1696,6 +1728,7 @@ function App() {
   }, [
     marketOverlayBucketScopedTimelineAnnotations,
     marketOverlayChartPoints,
+    marketOverlayMarkerDivergencePreview,
     marketOverlayMarkerDeltaFilter,
   ])
   const marketOverlayMarkerDeltaBasisAgreementItemsSummary = useMemo(() => {
@@ -1731,7 +1764,7 @@ function App() {
         return `${annotation.kind}:${annotation.label}:${latestTone}`
       })
       .filter((item): item is string => item !== null)
-    const previewItems = agreeingItems.slice(0, MARKET_OVERLAY_MARKER_DIVERGENCE_PREVIEW_LIMIT)
+    const previewItems = agreeingItems.slice(0, marketOverlayMarkerDivergencePreview)
     const overflowCount = agreeingItems.length - previewItems.length
     const itemsLabel =
       previewItems.length === 0
@@ -1743,6 +1776,7 @@ function App() {
   }, [
     marketOverlayBucketScopedTimelineAnnotations,
     marketOverlayChartPoints,
+    marketOverlayMarkerDivergencePreview,
     marketOverlayMarkerDeltaFilter,
   ])
   const marketOverlayMarkerModeShortcutSummary = useMemo(
@@ -3270,6 +3304,19 @@ function App() {
           return MARKET_OVERLAY_MARKER_BASIS_AGREEMENT_ORDER[
             (currentIndex + direction + MARKET_OVERLAY_MARKER_BASIS_AGREEMENT_ORDER.length) %
               MARKET_OVERLAY_MARKER_BASIS_AGREEMENT_ORDER.length
+          ]
+        })
+        return
+      }
+      if (normalizedKey === 'p') {
+        event.preventDefault()
+        setMarketOverlayMarkerDivergencePreview((current) => {
+          const currentIndex = MARKET_OVERLAY_MARKER_DIVERGENCE_PREVIEW_ORDER.indexOf(current)
+          const safeIndex = currentIndex < 0 ? 0 : currentIndex
+          const direction = event.shiftKey ? -1 : 1
+          return MARKET_OVERLAY_MARKER_DIVERGENCE_PREVIEW_ORDER[
+            (safeIndex + direction + MARKET_OVERLAY_MARKER_DIVERGENCE_PREVIEW_ORDER.length) %
+              MARKET_OVERLAY_MARKER_DIVERGENCE_PREVIEW_ORDER.length
           ]
         })
         return
@@ -5476,6 +5523,13 @@ function App() {
 
   useEffect(() => {
     window.localStorage.setItem(
+      MARKET_OVERLAY_MARKER_DIVERGENCE_PREVIEW_STORAGE_KEY,
+      String(marketOverlayMarkerDivergencePreview),
+    )
+  }, [marketOverlayMarkerDivergencePreview])
+
+  useEffect(() => {
+    window.localStorage.setItem(
       MARKET_OVERLAY_MARKER_BASIS_AGREEMENT_STORAGE_KEY,
       marketOverlayMarkerBasisAgreement,
     )
@@ -5901,6 +5955,21 @@ function App() {
               </select>
             </label>
             <label>
+              Basis Preview
+              <select
+                value={String(marketOverlayMarkerDivergencePreview)}
+                onChange={(event) =>
+                  setMarketOverlayMarkerDivergencePreview(
+                    Number.parseInt(event.target.value, 10) as MarketOverlayMarkerDivergencePreview,
+                  )
+                }
+              >
+                <option value="3">3</option>
+                <option value="5">5</option>
+                <option value="8">8</option>
+              </select>
+            </label>
+            <label>
               Delta Filter
               <select
                 value={marketOverlayMarkerDeltaFilter}
@@ -6060,6 +6129,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Basis Agreement Cycle Preview Summary">
               Basis agreement cycle preview: {marketOverlayMarkerBasisAgreementCyclePreviewSummary}
+            </p>
+            <p aria-label="Overlay Marker Basis Preview Shortcut Summary">
+              Basis preview shortcuts: {marketOverlayMarkerDivergencePreviewShortcutSummary}
             </p>
             <p aria-label="Overlay Marker Basis Agreement Kind Summary">
               Basis agreement kinds: {marketOverlayMarkerBasisAgreementKindSummary}

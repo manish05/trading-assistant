@@ -44,6 +44,7 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Marker Age')).toHaveValue('all')
     expect(screen.getByLabelText('Delta Basis')).toHaveValue('latest')
     expect(screen.getByLabelText('Basis Agreement')).toHaveValue('all')
+    expect(screen.getByLabelText('Basis Preview')).toHaveValue('3')
     expect(screen.getByLabelText('Delta Filter')).toHaveValue('all')
     expect(screen.getByLabelText('Marker Bucket')).toHaveValue('none')
     expect(screen.getByLabelText('Bucket Scope')).toHaveValue('all-buckets')
@@ -93,6 +94,9 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Overlay Marker Basis Agreement Cycle Preview Summary')).toHaveTextContent(
       'Basis agreement cycle preview: all:0 · agree:0 · diverge:0 · active:all(0) · next:c=agree(0) · prev:C=diverge(0)',
+    )
+    expect(screen.getByLabelText('Overlay Marker Basis Preview Shortcut Summary')).toHaveTextContent(
+      'Basis preview shortcuts: keys:p/P · value:3 · next:p=5 · prev:P=8',
     )
     expect(screen.getByLabelText('Overlay Marker Basis Agreement Kind Summary')).toHaveTextContent(
       'Basis agreement kinds: mode:all · scoped:t0/r0/f0 · agree:t0/r0/f0 · diverge:t0/r0/f0',
@@ -409,6 +413,9 @@ describe('Dashboard shell', () => {
     fireEvent.change(screen.getByLabelText('Basis Agreement'), {
       target: { value: 'diverge' },
     })
+    fireEvent.change(screen.getByLabelText('Basis Preview'), {
+      target: { value: '8' },
+    })
     fireEvent.change(screen.getByLabelText('Delta Filter'), {
       target: { value: 'latest-down' },
     })
@@ -442,6 +449,9 @@ describe('Dashboard shell', () => {
     )
     expect(window.localStorage.getItem('quick-action-market-overlay-marker-basis-agreement-v1')).toBe(
       'diverge',
+    )
+    expect(window.localStorage.getItem('quick-action-market-overlay-marker-divergence-preview-v1')).toBe(
+      '8',
     )
     expect(window.localStorage.getItem('quick-action-market-overlay-marker-delta-filter-v1')).toBe(
       'latest-down',
@@ -486,11 +496,13 @@ describe('Dashboard shell', () => {
   it('initializes delta basis preference from localStorage', () => {
     window.localStorage.setItem('quick-action-market-overlay-marker-delta-basis-v1', 'average')
     window.localStorage.setItem('quick-action-market-overlay-marker-basis-agreement-v1', 'diverge')
+    window.localStorage.setItem('quick-action-market-overlay-marker-divergence-preview-v1', '5')
 
     render(<App />)
 
     expect(screen.getByLabelText('Delta Basis')).toHaveValue('average')
     expect(screen.getByLabelText('Basis Agreement')).toHaveValue('diverge')
+    expect(screen.getByLabelText('Basis Preview')).toHaveValue('5')
     expect(screen.getByLabelText('Overlay Marker Basis Agreement Summary')).toHaveTextContent(
       'Basis agreement: mode:diverge · matched:0/0 · agree:0 · diverge:0',
     )
@@ -499,6 +511,9 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Overlay Marker Basis Agreement Cycle Preview Summary')).toHaveTextContent(
       'Basis agreement cycle preview: all:0 · agree:0 · diverge:0 · active:diverge(0) · next:c=all(0) · prev:C=agree(0)',
+    )
+    expect(screen.getByLabelText('Overlay Marker Basis Preview Shortcut Summary')).toHaveTextContent(
+      'Basis preview shortcuts: keys:p/P · value:5 · next:p=8 · prev:P=3',
     )
     expect(screen.getByLabelText('Overlay Marker Basis Agreement Kind Summary')).toHaveTextContent(
       'Basis agreement kinds: mode:diverge · scoped:t0/r0/f0 · agree:t0/r0/f0 · diverge:t0/r0/f0',
@@ -1339,6 +1354,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Basis Agreement Cycle Preview Summary')).toHaveTextContent(
       'Basis agreement cycle preview: all:2 · agree:1 · diverge:1 · active:all(2) · next:c=agree(1) · prev:C=diverge(1)',
     )
+    expect(screen.getByLabelText('Overlay Marker Basis Preview Shortcut Summary')).toHaveTextContent(
+      'Basis preview shortcuts: keys:p/P · value:3 · next:p=5 · prev:P=8',
+    )
     expect(screen.getByLabelText('Overlay Marker Basis Agreement Kind Summary')).toHaveTextContent(
       'Basis agreement kinds: mode:all · scoped:t1/r1/f0 · agree:t1/r0/f0 · diverge:t0/r1/f0',
     )
@@ -1504,6 +1522,46 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Overlay Marker Basis Agreement Cycle Preview Summary')).toHaveTextContent(
       'Basis agreement cycle preview: all:2 · agree:1 · diverge:1 · active:all(2) · next:c=agree(1) · prev:C=diverge(1)',
+    )
+    expect(screen.getByLabelText('Basis Preview')).toHaveValue('3')
+    fireEvent.keyDown(
+      within(screen.getByLabelText('Overlay Markers')).getByRole('button', {
+        name: 'trade:closed:queued',
+      }),
+      { key: 'p' },
+    )
+    expect(screen.getByLabelText('Basis Preview')).toHaveValue('5')
+    expect(window.localStorage.getItem('quick-action-market-overlay-marker-divergence-preview-v1')).toBe(
+      '5',
+    )
+    expect(screen.getByLabelText('Overlay Marker Basis Preview Shortcut Summary')).toHaveTextContent(
+      'Basis preview shortcuts: keys:p/P · value:5 · next:p=8 · prev:P=3',
+    )
+    fireEvent.keyDown(
+      within(screen.getByLabelText('Overlay Markers')).getByRole('button', {
+        name: 'trade:closed:queued',
+      }),
+      { key: 'p' },
+    )
+    expect(screen.getByLabelText('Basis Preview')).toHaveValue('8')
+    expect(window.localStorage.getItem('quick-action-market-overlay-marker-divergence-preview-v1')).toBe(
+      '8',
+    )
+    expect(screen.getByLabelText('Overlay Marker Basis Preview Shortcut Summary')).toHaveTextContent(
+      'Basis preview shortcuts: keys:p/P · value:8 · next:p=3 · prev:P=5',
+    )
+    fireEvent.keyDown(
+      within(screen.getByLabelText('Overlay Markers')).getByRole('button', {
+        name: 'trade:closed:queued',
+      }),
+      { key: 'P', shiftKey: true },
+    )
+    expect(screen.getByLabelText('Basis Preview')).toHaveValue('5')
+    expect(window.localStorage.getItem('quick-action-market-overlay-marker-divergence-preview-v1')).toBe(
+      '5',
+    )
+    expect(screen.getByLabelText('Overlay Marker Basis Preview Shortcut Summary')).toHaveTextContent(
+      'Basis preview shortcuts: keys:p/P · value:5 · next:p=8 · prev:P=3',
     )
     expect(screen.getByLabelText('Marker Focus')).toHaveValue('all')
     fireEvent.keyDown(
