@@ -5930,6 +5930,103 @@ function App() {
     marketOverlayMarkerDeltaFilter,
     marketOverlayScopedTimelineAnnotations,
   ])
+  const marketOverlayMarkerEventCandleComparativeSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const pointIndexByTime = new Map(
+      marketOverlayChartPoints.map((point, index) => [point.time, index] as const),
+    )
+    const activePoint = pointByTime.get(marketOverlayActiveTimelineAnnotation.time) ?? null
+    if (!activePoint) {
+      return 'none'
+    }
+    const activePointIndex = pointIndexByTime.get(activePoint.time) ?? -1
+    if (activePointIndex < 0) {
+      return 'none'
+    }
+    const previousPoint = activePointIndex > 0 ? marketOverlayChartPoints[activePointIndex - 1] : null
+    const nextPoint =
+      activePointIndex < marketOverlayChartPoints.length - 1
+        ? marketOverlayChartPoints[activePointIndex + 1]
+        : null
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const latestDelta = latestPoint ? activePoint.value - latestPoint.value : null
+    const averageDelta = baseline !== null ? activePoint.value - baseline : null
+    const previousDelta = previousPoint ? activePoint.value - previousPoint.value : null
+    const previousDeltaPct =
+      previousDelta !== null && previousPoint && previousPoint.value !== 0
+        ? (previousDelta / previousPoint.value) * 100
+        : null
+    const nextDelta = nextPoint ? nextPoint.value - activePoint.value : null
+    const nextDeltaPct =
+      nextDelta !== null && activePoint.value !== 0 ? (nextDelta / activePoint.value) * 100 : null
+    const corridorDelta =
+      previousPoint && nextPoint ? nextPoint.value - previousPoint.value : null
+    const corridorDeltaPct =
+      corridorDelta !== null && previousPoint && previousPoint.value !== 0
+        ? (corridorDelta / previousPoint.value) * 100
+        : null
+    const previousGap = previousPoint ? Math.abs(activePoint.time - previousPoint.time) : null
+    const nextGap = nextPoint ? Math.abs(nextPoint.time - activePoint.time) : null
+    const cadence =
+      previousGap !== null && nextGap !== null
+        ? previousGap === nextGap
+          ? 'balanced'
+          : previousGap > nextGap
+            ? 'front-loaded'
+            : 'back-loaded'
+        : previousGap !== null || nextGap !== null
+          ? 'edge'
+          : 'isolated'
+    const resolvePhase = () => {
+      if (corridorDelta !== null) {
+        if (Math.abs(corridorDelta) < 1e-9) {
+          return 'balanced'
+        }
+        return corridorDelta > 0 ? 'warming' : 'cooling'
+      }
+      const edgeDelta = previousDelta ?? nextDelta
+      if (edgeDelta === null) {
+        return 'isolated'
+      }
+      if (Math.abs(edgeDelta) < 1e-9) {
+        return 'edge-flat'
+      }
+      return edgeDelta > 0 ? 'edge-rise' : 'edge-fade'
+    }
+    const phase = resolvePhase()
+    const formatSigned = (value: number | null) =>
+      value === null ? 'n/a' : `${value >= 0 ? '+' : ''}${value.toFixed(2)}`
+    const formatPercent = (value: number | null) =>
+      value === null ? 'n/a' : `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`
+    const formatStep = (value: number | null) => (value === null ? 'n/a' : String(value))
+    const describePrevious = previousPoint
+      ? `t${previousPoint.time}|Δ:${formatSigned(previousDelta)} (${formatPercent(previousDeltaPct)})|Δstep:${formatStep(previousGap)}`
+      : 'n/a'
+    const describeNext = nextPoint
+      ? `t${nextPoint.time}|Δ:${formatSigned(nextDelta)} (${formatPercent(nextDeltaPct)})|Δstep:${formatStep(nextGap)}`
+      : 'n/a'
+    const stateLabel = (value: boolean) => (value ? 'on' : 'off')
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · candle:t${activePoint.time}|close:${activePoint.value.toFixed(2)}|slot:${activePointIndex + 1}/${marketOverlayChartPoints.length} · prev:${describePrevious} · next:${describeNext} · corridor:${formatSigned(corridorDelta)} (${formatPercent(corridorDeltaPct)})|phase:${phase}|cadence:${cadence} · latestΔ:${formatSigned(latestDelta)}|avgΔ:${formatSigned(averageDelta)} · nav:prev:${stateLabel(canSelectPreviousMarketOverlayMarker)}|next:${stateLabel(canSelectNextMarketOverlayMarker)}|home:${stateLabel(canSelectOldestMarketOverlayMarker)}|end:${stateLabel(canSelectLatestMarketOverlayMarker)} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    canSelectLatestMarketOverlayMarker,
+    canSelectNextMarketOverlayMarker,
+    canSelectOldestMarketOverlayMarker,
+    canSelectPreviousMarketOverlayMarker,
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+  ])
   const marketOverlayMarkerTimelineRows = useMemo(() => {
     if (marketOverlayScopedVisibleAnnotations.length === 0) {
       return [] as Array<{ id: string; text: string; isSelected: boolean }>
@@ -10113,6 +10210,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Active Neighbor Tone Summary">
               Active neighbor tones: {marketOverlayActiveMarkerNeighborToneSummary}
+            </p>
+            <p aria-label="Overlay Marker Event Candle Comparative Summary">
+              Marker event candle comparative: {marketOverlayMarkerEventCandleComparativeSummary}
             </p>
             <p aria-label="Overlay Marker Visual Focus Summary">
               Marker visual focus: {marketOverlayMarkerVisualFocusSummary}
