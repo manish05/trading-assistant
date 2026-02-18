@@ -1454,6 +1454,45 @@ function App() {
       ]
     return `keys:p/P · value:${marketOverlayMarkerDivergencePreview} · next:p=${nextValue} · prev:P=${previousValue}`
   }, [marketOverlayMarkerDivergencePreview])
+  const marketOverlayMarkerBasisPreviewCountSummary = useMemo(() => {
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const baseline =
+      marketOverlayChartPoints.length === 0
+        ? null
+        : marketOverlayChartPoints.reduce((sum, point) => sum + point.value, 0) /
+          marketOverlayChartPoints.length
+    const resolveToneForBasis = (
+      annotation: MarketOverlayTimelineAnnotation,
+      basis: MarketOverlayMarkerDeltaBasis,
+    ): 'up' | 'down' | 'flat' | 'unavailable' => {
+      const point = pointByTime.get(annotation.time) ?? null
+      const deltaValue =
+        basis === 'latest'
+          ? point && latestPoint
+            ? point.value - latestPoint.value
+            : null
+          : point && baseline !== null
+            ? point.value - baseline
+            : null
+      return resolveMarketOverlayDeltaTone(deltaValue)
+    }
+    const divergenceTotal = marketOverlayBucketScopedTimelineAnnotations.reduce((count, annotation) => {
+      const latestTone = resolveToneForBasis(annotation, 'latest')
+      const averageTone = resolveToneForBasis(annotation, 'average')
+      return latestTone !== averageTone ? count + 1 : count
+    }, 0)
+    const agreementTotal = marketOverlayBucketScopedTimelineAnnotations.length - divergenceTotal
+    const previewSize = marketOverlayMarkerDivergencePreview
+    const divergenceShown = Math.min(divergenceTotal, previewSize)
+    const agreementShown = Math.min(agreementTotal, previewSize)
+    return `size:${previewSize} · diverge:show:${divergenceShown}/${divergenceTotal} · agree:show:${agreementShown}/${agreementTotal} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayBucketScopedTimelineAnnotations,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayMarkerDivergencePreview,
+  ])
   const marketOverlayMarkerBasisAgreementKindSummary = useMemo(() => {
     type KindCounts = {
       trade: number
@@ -6132,6 +6171,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Basis Preview Shortcut Summary">
               Basis preview shortcuts: {marketOverlayMarkerDivergencePreviewShortcutSummary}
+            </p>
+            <p aria-label="Overlay Marker Basis Preview Count Summary">
+              Basis preview counts: {marketOverlayMarkerBasisPreviewCountSummary}
             </p>
             <p aria-label="Overlay Marker Basis Agreement Kind Summary">
               Basis agreement kinds: {marketOverlayMarkerBasisAgreementKindSummary}

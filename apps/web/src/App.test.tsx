@@ -98,6 +98,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Basis Preview Shortcut Summary')).toHaveTextContent(
       'Basis preview shortcuts: keys:p/P · value:3 · next:p=5 · prev:P=8',
     )
+    expect(screen.getByLabelText('Overlay Marker Basis Preview Count Summary')).toHaveTextContent(
+      'Basis preview counts: size:3 · diverge:show:0/0 · agree:show:0/0 · mode:all',
+    )
     expect(screen.getByLabelText('Overlay Marker Basis Agreement Kind Summary')).toHaveTextContent(
       'Basis agreement kinds: mode:all · scoped:t0/r0/f0 · agree:t0/r0/f0 · diverge:t0/r0/f0',
     )
@@ -514,6 +517,12 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Overlay Marker Basis Preview Shortcut Summary')).toHaveTextContent(
       'Basis preview shortcuts: keys:p/P · value:5 · next:p=8 · prev:P=3',
+    )
+    expect(screen.getByLabelText('Overlay Marker Basis Preview Count Summary')).toHaveTextContent(
+      'Basis preview counts: size:5 · diverge:show:0/0 · agree:show:0/0 · mode:all',
+    )
+    expect(screen.getByLabelText('Overlay Marker Basis Preview Count Summary')).toHaveTextContent(
+      'Basis preview counts: size:5 · diverge:show:0/0 · agree:show:0/0 · mode:all',
     )
     expect(screen.getByLabelText('Overlay Marker Basis Agreement Kind Summary')).toHaveTextContent(
       'Basis agreement kinds: mode:diverge · scoped:t0/r0/f0 · agree:t0/r0/f0 · diverge:t0/r0/f0',
@@ -1357,6 +1366,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Basis Preview Shortcut Summary')).toHaveTextContent(
       'Basis preview shortcuts: keys:p/P · value:3 · next:p=5 · prev:P=8',
     )
+    expect(screen.getByLabelText('Overlay Marker Basis Preview Count Summary')).toHaveTextContent(
+      'Basis preview counts: size:3 · diverge:show:1/1 · agree:show:1/1 · mode:all',
+    )
     expect(screen.getByLabelText('Overlay Marker Basis Agreement Kind Summary')).toHaveTextContent(
       'Basis agreement kinds: mode:all · scoped:t1/r1/f0 · agree:t1/r0/f0 · diverge:t0/r1/f0',
     )
@@ -1550,6 +1562,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Basis Preview Shortcut Summary')).toHaveTextContent(
       'Basis preview shortcuts: keys:p/P · value:8 · next:p=3 · prev:P=5',
     )
+    expect(screen.getByLabelText('Overlay Marker Basis Preview Count Summary')).toHaveTextContent(
+      'Basis preview counts: size:8 · diverge:show:1/1 · agree:show:1/1 · mode:all',
+    )
     fireEvent.keyDown(
       within(screen.getByLabelText('Overlay Markers')).getByRole('button', {
         name: 'trade:closed:queued',
@@ -1562,6 +1577,9 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Overlay Marker Basis Preview Shortcut Summary')).toHaveTextContent(
       'Basis preview shortcuts: keys:p/P · value:5 · next:p=8 · prev:P=3',
+    )
+    expect(screen.getByLabelText('Overlay Marker Basis Preview Count Summary')).toHaveTextContent(
+      'Basis preview counts: size:5 · diverge:show:1/1 · agree:show:1/1 · mode:all',
     )
     expect(screen.getByLabelText('Marker Focus')).toHaveValue('all')
     fireEvent.keyDown(
