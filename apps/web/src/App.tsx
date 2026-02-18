@@ -2213,6 +2213,33 @@ function App() {
     marketOverlayScopedTimelineAnnotations,
     marketOverlayTimelineCount,
   ])
+  const marketOverlayMarkerTimelineAnchorSummary = useMemo(() => {
+    if (isMarketOverlayNavigationLocked) {
+      return 'locked'
+    }
+    if (
+      marketOverlayTimelineCount === 0 ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      !marketOverlayActiveTimelineAnnotation
+    ) {
+      return 'none'
+    }
+    const firstAnnotation = marketOverlayScopedTimelineAnnotations[0] ?? null
+    const lastAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayScopedTimelineAnnotations.length - 1] ?? null
+    const describeAnnotation = (annotation: MarketOverlayTimelineAnnotation | null) =>
+      annotation ? `${annotation.kind}:${annotation.label}` : 'none'
+    const distanceToFirst = marketOverlayActiveTimelineIndex
+    const distanceToLast = marketOverlayTimelineCount - 1 - marketOverlayActiveTimelineIndex
+    return `first:${describeAnnotation(firstAnnotation)} · selected:${describeAnnotation(marketOverlayActiveTimelineAnnotation)}@${marketOverlayActiveTimelineIndex + 1}/${marketOverlayTimelineCount} · last:${describeAnnotation(lastAnnotation)} · Δfirst:${distanceToFirst} · Δlast:${distanceToLast} · order:${marketOverlayTimelineOrder}`
+  }, [
+    isMarketOverlayNavigationLocked,
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayScopedTimelineAnnotations,
+    marketOverlayTimelineCount,
+    marketOverlayTimelineOrder,
+  ])
   const marketOverlayMarkerDistanceSummary = useMemo(() => {
     if (isMarketOverlayNavigationLocked) {
       return 'locked'
@@ -6613,6 +6640,9 @@ function App() {
             <p aria-label="Overlay Marker Navigation">Marker nav: {marketOverlayMarkerNavigationLabel}</p>
             <p aria-label="Overlay Marker Navigation Targets">
               Targets: {marketOverlayMarkerNavigationTargets}
+            </p>
+            <p aria-label="Overlay Marker Timeline Anchor Summary">
+              Timeline anchors: {marketOverlayMarkerTimelineAnchorSummary}
             </p>
             <p aria-label="Overlay Marker Distance Summary">
               Distance: {marketOverlayMarkerDistanceSummary}

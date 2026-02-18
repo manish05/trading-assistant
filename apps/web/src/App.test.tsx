@@ -185,6 +185,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Navigation Targets')).toHaveTextContent(
       'Targets: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Timeline Anchor Summary')).toHaveTextContent(
+      'Timeline anchors: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Distance Summary')).toHaveTextContent(
       'Distance: none',
     )
@@ -798,6 +801,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Navigation Targets')).toHaveTextContent(
       'Targets: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Timeline Anchor Summary')).toHaveTextContent(
+      'Timeline anchors: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Distance Summary')).toHaveTextContent(
       'Distance: none',
     )
@@ -1072,6 +1078,9 @@ describe('Dashboard shell', () => {
     })
     expect(screen.getByLabelText('Overlay Marker Navigation Targets')).toHaveTextContent(
       'Targets: prev:none · next:risk:live_trading_disabled:raised · skipBack:none · skipForward:none · prevKind:none · nextKind:none · prevBucket:none · nextBucket:none',
+    )
+    expect(screen.getByLabelText('Overlay Marker Timeline Anchor Summary')).toHaveTextContent(
+      'Timeline anchors: first:trade:closed:queued · selected:trade:closed:queued@1/2 · last:risk:live_trading_disabled:raised · Δfirst:0 · Δlast:1 · order:newest-first',
     )
     expect(screen.getByLabelText('Overlay Marker Distance Summary')).toHaveTextContent(
       'Distance: edges:o0/l1 · kind:n/a/n/a · bucket:n/a/n/a · step:2',
@@ -1398,6 +1407,9 @@ describe('Dashboard shell', () => {
     })
     expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
       'Marker nav: 2/2 · selected:risk:live_trading_disabled:raised',
+    )
+    expect(screen.getByLabelText('Overlay Marker Timeline Anchor Summary')).toHaveTextContent(
+      'Timeline anchors: first:trade:closed:queued · selected:risk:live_trading_disabled:raised@2/2 · last:risk:live_trading_disabled:raised · Δfirst:1 · Δlast:0 · order:newest-first',
     )
     expect(screen.getByLabelText('Overlay Marker Kind Navigation Summary')).toHaveTextContent(
       'Kind nav: kind:risk · slot:1/1 · prev:[=none|Δn/a · next:]=none|Δn/a',
@@ -2381,6 +2393,9 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Overlay Marker Navigation Targets')).toHaveTextContent(
       'Targets: locked',
+    )
+    expect(screen.getByLabelText('Overlay Marker Timeline Anchor Summary')).toHaveTextContent(
+      'Timeline anchors: locked',
     )
     expect(screen.getByLabelText('Overlay Marker Distance Summary')).toHaveTextContent(
       'Distance: locked',
