@@ -110,6 +110,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Active Neighbor Consensus Transition Summary')).toHaveTextContent(
       'Active neighbor consensus transition: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Active Neighbor Consensus Volatility Summary')).toHaveTextContent(
+      'Active neighbor consensus volatility: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Active Neighbor Delta Relation Summary')).toHaveTextContent(
       'Active neighbor delta relation: none',
     )
@@ -834,6 +837,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Active Neighbor Consensus Transition Summary')).toHaveTextContent(
       'Active neighbor consensus transition: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Active Neighbor Consensus Volatility Summary')).toHaveTextContent(
+      'Active neighbor consensus volatility: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Active Neighbor Delta Relation Summary')).toHaveTextContent(
       'Active neighbor delta relation: none',
     )
@@ -1042,6 +1048,9 @@ describe('Dashboard shell', () => {
       )
       expect(screen.getByLabelText('Overlay Marker Active Neighbor Consensus Transition Summary')).toHaveTextContent(
         'Active neighbor consensus transition: active:risk:live_trading_disabled:raised · prev->active:toward-diverge(-2) · active->next:toward-agree(+1) · basis:latest · mode:all',
+      )
+      expect(screen.getByLabelText('Overlay Marker Active Neighbor Consensus Volatility Summary')).toHaveTextContent(
+        'Active neighbor consensus volatility: active:risk:live_trading_disabled:raised · transitions:prev->active:toward-diverge(-2)|active->next:toward-agree(+1) · swing:3 · basis:latest · mode:all',
       )
       expect(screen.getByLabelText('Overlay Marker Active Neighbor Delta Relation Summary')).toHaveTextContent(
         'Active neighbor delta relation: active:risk:live_trading_disabled:raised · prev:latest:lag|average:lag · next:latest:n/a|average:n/a · basis:latest · mode:all',
@@ -1337,6 +1346,9 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Overlay Marker Active Neighbor Consensus Transition Summary')).toHaveTextContent(
       'Active neighbor consensus transition: active:trade:closed:queued · prev->active:toward-agree(+1) · active->next:toward-diverge(-2) · basis:latest · mode:all',
+    )
+    expect(screen.getByLabelText('Overlay Marker Active Neighbor Consensus Volatility Summary')).toHaveTextContent(
+      'Active neighbor consensus volatility: active:trade:closed:queued · transitions:prev->active:toward-agree(+1)|active->next:toward-diverge(-2) · swing:3 · basis:latest · mode:all',
     )
     expect(screen.getByLabelText('Overlay Marker Active Neighbor Delta Relation Summary')).toHaveTextContent(
       'Active neighbor delta relation: active:trade:closed:queued · prev:latest:n/a|average:n/a · next:latest:lead|average:lead · basis:latest · mode:all',
