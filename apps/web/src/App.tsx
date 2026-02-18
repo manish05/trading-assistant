@@ -6549,6 +6549,102 @@ function App() {
     marketOverlayMarkerVisualProfiles,
     marketOverlayScopedTimelineAnnotations,
   ])
+  const marketOverlayMarkerVisualBasisDriftSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const resolveToneByBasis = (
+      annotation: MarketOverlayTimelineAnnotation | null,
+      basis: MarketOverlayMarkerDeltaBasis,
+    ): ReturnType<typeof resolveMarketOverlayDeltaTone> | null => {
+      if (!annotation) {
+        return null
+      }
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point) {
+        return null
+      }
+      const delta =
+        basis === 'latest'
+          ? latestPoint
+            ? point.value - latestPoint.value
+            : null
+          : baseline !== null
+            ? point.value - baseline
+            : null
+      return resolveMarketOverlayDeltaTone(delta)
+    }
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    const toneScore = (tone: ReturnType<typeof resolveMarketOverlayDeltaTone>) => {
+      if (tone === 'up') {
+        return 1
+      }
+      if (tone === 'down') {
+        return -1
+      }
+      return 0
+    }
+    const formatSigned = (value: number) => `${value >= 0 ? '+' : ''}${value}`
+    const describeRole = (
+      label: 'active' | 'prev' | 'next',
+      annotation: MarketOverlayTimelineAnnotation | null,
+    ) => {
+      const latestTone = resolveToneByBasis(annotation, 'latest')
+      const averageTone = resolveToneByBasis(annotation, 'average')
+      if (!annotation || !latestTone || !averageTone) {
+        return { summary: `${label}:n/a`, latestScore: null as number | null, averageScore: null as number | null }
+      }
+      const latestScore = toneScore(latestTone)
+      const averageScore = toneScore(averageTone)
+      const drift = averageScore - latestScore
+      return {
+        summary: `${label}:latest:${latestTone}|average:${averageTone}|Δ:${formatSigned(drift)}`,
+        latestScore,
+        averageScore,
+      }
+    }
+    const active = describeRole('active', marketOverlayActiveTimelineAnnotation)
+    const prev = describeRole('prev', previousAnnotation)
+    const next = describeRole('next', nextAnnotation)
+    const toScore = (value: number | null) => value ?? 0
+    const latestTotal = toScore(active.latestScore) + toScore(prev.latestScore) + toScore(next.latestScore)
+    const averageTotal = toScore(active.averageScore) + toScore(prev.averageScore) + toScore(next.averageScore)
+    const drift = averageTotal - latestTotal
+    const comparableCount =
+      Number(active.latestScore !== null) +
+      Number(prev.latestScore !== null) +
+      Number(next.latestScore !== null)
+    const alignedCount =
+      Number(active.latestScore !== null && active.latestScore === active.averageScore) +
+      Number(prev.latestScore !== null && prev.latestScore === prev.averageScore) +
+      Number(next.latestScore !== null && next.latestScore === next.averageScore)
+    const coherence =
+      comparableCount === 0
+        ? 'none'
+        : alignedCount === comparableCount
+          ? 'aligned'
+          : alignedCount === 0
+            ? 'diverged'
+            : 'partial'
+    return `${active.summary} · ${prev.summary} · ${next.summary} · totals:latest:${formatSigned(latestTotal)}|average:${formatSigned(averageTotal)}|drift:${formatSigned(drift)}|coherence:${coherence} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
 
   useEffect(() => {
     if (marketOverlayScopedVisibleAnnotations.length === 0) {
@@ -9645,6 +9741,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Visual Role Balance Summary">
               Marker visual role balance: {marketOverlayMarkerVisualRoleBalanceSummary}
+            </p>
+            <p aria-label="Overlay Marker Visual Basis Drift Summary">
+              Marker visual basis drift: {marketOverlayMarkerVisualBasisDriftSummary}
             </p>
             <p
               aria-label="Overlay Chart Runtime"
