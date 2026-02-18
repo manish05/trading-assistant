@@ -1698,6 +1698,53 @@ function App() {
     marketOverlayChartPoints,
     marketOverlayMarkerDeltaFilter,
   ])
+  const marketOverlayMarkerDeltaBasisAgreementItemsSummary = useMemo(() => {
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const baseline =
+      marketOverlayChartPoints.length === 0
+        ? null
+        : marketOverlayChartPoints.reduce((sum, point) => sum + point.value, 0) /
+          marketOverlayChartPoints.length
+    const resolveToneForBasis = (
+      annotation: MarketOverlayTimelineAnnotation,
+      basis: MarketOverlayMarkerDeltaBasis,
+    ): 'up' | 'down' | 'flat' | 'unavailable' => {
+      const point = pointByTime.get(annotation.time) ?? null
+      const deltaValue =
+        basis === 'latest'
+          ? point && latestPoint
+            ? point.value - latestPoint.value
+            : null
+          : point && baseline !== null
+            ? point.value - baseline
+            : null
+      return resolveMarketOverlayDeltaTone(deltaValue)
+    }
+    const agreeingItems = marketOverlayBucketScopedTimelineAnnotations
+      .map((annotation) => {
+        const latestTone = resolveToneForBasis(annotation, 'latest')
+        const averageTone = resolveToneForBasis(annotation, 'average')
+        if (latestTone !== averageTone) {
+          return null
+        }
+        return `${annotation.kind}:${annotation.label}:${latestTone}`
+      })
+      .filter((item): item is string => item !== null)
+    const previewItems = agreeingItems.slice(0, MARKET_OVERLAY_MARKER_DIVERGENCE_PREVIEW_LIMIT)
+    const overflowCount = agreeingItems.length - previewItems.length
+    const itemsLabel =
+      previewItems.length === 0
+        ? 'none'
+        : overflowCount > 0
+          ? `${previewItems.join(', ')} (+${overflowCount} more)`
+          : previewItems.join(', ')
+    return `mode:${marketOverlayMarkerDeltaFilter} · agree:${agreeingItems.length}/${marketOverlayBucketScopedTimelineAnnotations.length} · items:${itemsLabel}`
+  }, [
+    marketOverlayBucketScopedTimelineAnnotations,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaFilter,
+  ])
   const marketOverlayMarkerModeShortcutSummary = useMemo(
     () => {
       const isLocked = marketOverlaySelectionMode === 'follow-latest'
@@ -6031,6 +6078,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Delta Basis Divergence Summary">
               Delta basis divergence: {marketOverlayMarkerDeltaBasisDivergenceSummary}
+            </p>
+            <p aria-label="Overlay Marker Delta Basis Agreement Items Summary">
+              Delta basis agreement items: {marketOverlayMarkerDeltaBasisAgreementItemsSummary}
             </p>
             <p aria-label="Overlay Marker Mode Shortcut Summary">
               Mode shortcuts: {marketOverlayMarkerModeShortcutSummary}
