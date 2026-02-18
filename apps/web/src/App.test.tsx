@@ -89,10 +89,10 @@ describe('Dashboard shell', () => {
       'Basis agreement: mode:all · matched:0/0 · agree:0 · diverge:0',
     )
     expect(screen.getByLabelText('Overlay Marker Basis Agreement Shortcut Summary')).toHaveTextContent(
-      'Basis agreement shortcuts: keys:q/e/x/c · all:q · agree:e · diverge:x · cycle:c=agree · active:all',
+      'Basis agreement shortcuts: keys:q/e/x/c/C · all:q · agree:e · diverge:x · cycle:c=agree · reverse:C=diverge · active:all',
     )
     expect(screen.getByLabelText('Overlay Marker Basis Agreement Cycle Preview Summary')).toHaveTextContent(
-      'Basis agreement cycle preview: all:0 · agree:0 · diverge:0 · active:all(0) · next:c=agree(0)',
+      'Basis agreement cycle preview: all:0 · agree:0 · diverge:0 · active:all(0) · next:c=agree(0) · prev:C=diverge(0)',
     )
     expect(screen.getByLabelText('Overlay Marker Basis Agreement Kind Summary')).toHaveTextContent(
       'Basis agreement kinds: mode:all · scoped:t0/r0/f0 · agree:t0/r0/f0 · diverge:t0/r0/f0',
@@ -492,10 +492,10 @@ describe('Dashboard shell', () => {
       'Basis agreement: mode:diverge · matched:0/0 · agree:0 · diverge:0',
     )
     expect(screen.getByLabelText('Overlay Marker Basis Agreement Shortcut Summary')).toHaveTextContent(
-      'Basis agreement shortcuts: keys:q/e/x/c · all:q · agree:e · diverge:x · cycle:c=all · active:diverge',
+      'Basis agreement shortcuts: keys:q/e/x/c/C · all:q · agree:e · diverge:x · cycle:c=all · reverse:C=agree · active:diverge',
     )
     expect(screen.getByLabelText('Overlay Marker Basis Agreement Cycle Preview Summary')).toHaveTextContent(
-      'Basis agreement cycle preview: all:0 · agree:0 · diverge:0 · active:diverge(0) · next:c=all(0)',
+      'Basis agreement cycle preview: all:0 · agree:0 · diverge:0 · active:diverge(0) · next:c=all(0) · prev:C=agree(0)',
     )
     expect(screen.getByLabelText('Overlay Marker Basis Agreement Kind Summary')).toHaveTextContent(
       'Basis agreement kinds: mode:diverge · scoped:t0/r0/f0 · agree:t0/r0/f0 · diverge:t0/r0/f0',
@@ -1325,10 +1325,10 @@ describe('Dashboard shell', () => {
       'Basis agreement: mode:all · matched:2/2 · agree:1 · diverge:1',
     )
     expect(screen.getByLabelText('Overlay Marker Basis Agreement Shortcut Summary')).toHaveTextContent(
-      'Basis agreement shortcuts: keys:q/e/x/c · all:q · agree:e · diverge:x · cycle:c=agree · active:all',
+      'Basis agreement shortcuts: keys:q/e/x/c/C · all:q · agree:e · diverge:x · cycle:c=agree · reverse:C=diverge · active:all',
     )
     expect(screen.getByLabelText('Overlay Marker Basis Agreement Cycle Preview Summary')).toHaveTextContent(
-      'Basis agreement cycle preview: all:2 · agree:1 · diverge:1 · active:all(2) · next:c=agree(1)',
+      'Basis agreement cycle preview: all:2 · agree:1 · diverge:1 · active:all(2) · next:c=agree(1) · prev:C=diverge(1)',
     )
     expect(screen.getByLabelText('Overlay Marker Basis Agreement Kind Summary')).toHaveTextContent(
       'Basis agreement kinds: mode:all · scoped:t1/r1/f0 · agree:t1/r0/f0 · diverge:t0/r1/f0',
@@ -1357,10 +1357,10 @@ describe('Dashboard shell', () => {
       'Basis agreement: mode:diverge · matched:1/2 · agree:1 · diverge:1',
     )
     expect(screen.getByLabelText('Overlay Marker Basis Agreement Shortcut Summary')).toHaveTextContent(
-      'Basis agreement shortcuts: keys:q/e/x/c · all:q · agree:e · diverge:x · cycle:c=all · active:diverge',
+      'Basis agreement shortcuts: keys:q/e/x/c/C · all:q · agree:e · diverge:x · cycle:c=all · reverse:C=agree · active:diverge',
     )
     expect(screen.getByLabelText('Overlay Marker Basis Agreement Cycle Preview Summary')).toHaveTextContent(
-      'Basis agreement cycle preview: all:2 · agree:1 · diverge:1 · active:diverge(1) · next:c=all(2)',
+      'Basis agreement cycle preview: all:2 · agree:1 · diverge:1 · active:diverge(1) · next:c=all(2) · prev:C=agree(1)',
     )
     expect(screen.getByLabelText('Overlay Marker Basis Agreement Kind Summary')).toHaveTextContent(
       'Basis agreement kinds: mode:diverge · scoped:t0/r1/f0 · agree:t1/r0/f0 · diverge:t0/r1/f0',
@@ -1395,10 +1395,10 @@ describe('Dashboard shell', () => {
       'Basis agreement: mode:agree · matched:1/2 · agree:1 · diverge:1',
     )
     expect(screen.getByLabelText('Overlay Marker Basis Agreement Shortcut Summary')).toHaveTextContent(
-      'Basis agreement shortcuts: keys:q/e/x/c · all:q · agree:e · diverge:x · cycle:c=diverge · active:agree',
+      'Basis agreement shortcuts: keys:q/e/x/c/C · all:q · agree:e · diverge:x · cycle:c=diverge · reverse:C=all · active:agree',
     )
     expect(screen.getByLabelText('Overlay Marker Basis Agreement Cycle Preview Summary')).toHaveTextContent(
-      'Basis agreement cycle preview: all:2 · agree:1 · diverge:1 · active:agree(1) · next:c=diverge(1)',
+      'Basis agreement cycle preview: all:2 · agree:1 · diverge:1 · active:agree(1) · next:c=diverge(1) · prev:C=all(2)',
     )
     expect(screen.getByLabelText('Overlay Marker Basis Agreement Kind Summary')).toHaveTextContent(
       'Basis agreement kinds: mode:agree · scoped:t1/r0/f0 · agree:t1/r0/f0 · diverge:t0/r1/f0',
@@ -1427,10 +1427,10 @@ describe('Dashboard shell', () => {
       'Basis agreement: mode:all · matched:2/2 · agree:1 · diverge:1',
     )
     expect(screen.getByLabelText('Overlay Marker Basis Agreement Shortcut Summary')).toHaveTextContent(
-      'Basis agreement shortcuts: keys:q/e/x/c · all:q · agree:e · diverge:x · cycle:c=agree · active:all',
+      'Basis agreement shortcuts: keys:q/e/x/c/C · all:q · agree:e · diverge:x · cycle:c=agree · reverse:C=diverge · active:all',
     )
     expect(screen.getByLabelText('Overlay Marker Basis Agreement Cycle Preview Summary')).toHaveTextContent(
-      'Basis agreement cycle preview: all:2 · agree:1 · diverge:1 · active:all(2) · next:c=agree(1)',
+      'Basis agreement cycle preview: all:2 · agree:1 · diverge:1 · active:all(2) · next:c=agree(1) · prev:C=diverge(1)',
     )
     expect(screen.getByLabelText('Overlay Marker Basis Agreement Kind Summary')).toHaveTextContent(
       'Basis agreement kinds: mode:all · scoped:t1/r1/f0 · agree:t1/r0/f0 · diverge:t0/r1/f0',
@@ -1456,13 +1456,32 @@ describe('Dashboard shell', () => {
       'agree',
     )
     expect(screen.getByLabelText('Overlay Marker Basis Agreement Shortcut Summary')).toHaveTextContent(
-      'Basis agreement shortcuts: keys:q/e/x/c · all:q · agree:e · diverge:x · cycle:c=diverge · active:agree',
+      'Basis agreement shortcuts: keys:q/e/x/c/C · all:q · agree:e · diverge:x · cycle:c=diverge · reverse:C=all · active:agree',
     )
     expect(screen.getByLabelText('Overlay Marker Basis Agreement Cycle Preview Summary')).toHaveTextContent(
-      'Basis agreement cycle preview: all:2 · agree:1 · diverge:1 · active:agree(1) · next:c=diverge(1)',
+      'Basis agreement cycle preview: all:2 · agree:1 · diverge:1 · active:agree(1) · next:c=diverge(1) · prev:C=all(2)',
     )
     expect(screen.getByLabelText('Overlay Marker Delta Filter Summary')).toHaveTextContent(
       'Delta filter: basis:latest · mode:all · matched:1/1 · up:0 · down:1 · flat:0 · n/a:0',
+    )
+    fireEvent.keyDown(
+      within(screen.getByLabelText('Overlay Markers')).getByRole('button', {
+        name: 'trade:closed:queued',
+      }),
+      { key: 'C', shiftKey: true },
+    )
+    expect(screen.getByLabelText('Basis Agreement')).toHaveValue('all')
+    expect(window.localStorage.getItem('quick-action-market-overlay-marker-basis-agreement-v1')).toBe(
+      'all',
+    )
+    expect(screen.getByLabelText('Overlay Marker Basis Agreement Shortcut Summary')).toHaveTextContent(
+      'Basis agreement shortcuts: keys:q/e/x/c/C · all:q · agree:e · diverge:x · cycle:c=agree · reverse:C=diverge · active:all',
+    )
+    expect(screen.getByLabelText('Overlay Marker Basis Agreement Cycle Preview Summary')).toHaveTextContent(
+      'Basis agreement cycle preview: all:2 · agree:1 · diverge:1 · active:all(2) · next:c=agree(1) · prev:C=diverge(1)',
+    )
+    expect(screen.getByLabelText('Overlay Marker Delta Filter Summary')).toHaveTextContent(
+      'Delta filter: basis:latest · mode:all · matched:2/2 · up:0 · down:1 · flat:1 · n/a:0',
     )
     fireEvent.keyDown(
       within(screen.getByLabelText('Overlay Markers')).getByRole('button', {
@@ -1472,10 +1491,10 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Basis Agreement')).toHaveValue('all')
     expect(screen.getByLabelText('Overlay Marker Basis Agreement Shortcut Summary')).toHaveTextContent(
-      'Basis agreement shortcuts: keys:q/e/x/c · all:q · agree:e · diverge:x · cycle:c=agree · active:all',
+      'Basis agreement shortcuts: keys:q/e/x/c/C · all:q · agree:e · diverge:x · cycle:c=agree · reverse:C=diverge · active:all',
     )
     expect(screen.getByLabelText('Overlay Marker Basis Agreement Cycle Preview Summary')).toHaveTextContent(
-      'Basis agreement cycle preview: all:2 · agree:1 · diverge:1 · active:all(2) · next:c=agree(1)',
+      'Basis agreement cycle preview: all:2 · agree:1 · diverge:1 · active:all(2) · next:c=agree(1) · prev:C=diverge(1)',
     )
     expect(screen.getByLabelText('Marker Focus')).toHaveValue('all')
     fireEvent.keyDown(

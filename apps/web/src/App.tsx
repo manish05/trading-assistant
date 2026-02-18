@@ -1328,13 +1328,19 @@ function App() {
     marketOverlayMarkerBasisAgreement,
   ])
   const marketOverlayMarkerBasisAgreementShortcutSummary = useMemo(() => {
-    const cycleTarget =
+    const cycleForwardTarget =
       marketOverlayMarkerBasisAgreement === 'all'
         ? 'agree'
         : marketOverlayMarkerBasisAgreement === 'agree'
           ? 'diverge'
           : 'all'
-    return `keys:q/e/x/c · all:q · agree:e · diverge:x · cycle:c=${cycleTarget} · active:${marketOverlayMarkerBasisAgreement}`
+    const cycleBackwardTarget =
+      marketOverlayMarkerBasisAgreement === 'all'
+        ? 'diverge'
+        : marketOverlayMarkerBasisAgreement === 'agree'
+          ? 'all'
+          : 'agree'
+    return `keys:q/e/x/c/C · all:q · agree:e · diverge:x · cycle:c=${cycleForwardTarget} · reverse:C=${cycleBackwardTarget} · active:${marketOverlayMarkerBasisAgreement}`
   }, [marketOverlayMarkerBasisAgreement])
   const marketOverlayMarkerBasisAgreementCyclePreviewSummary = useMemo(() => {
     const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
@@ -1387,6 +1393,12 @@ function App() {
         : marketOverlayMarkerBasisAgreement === 'agree'
           ? 'diverge'
           : 'all'
+    const reverseTarget =
+      marketOverlayMarkerBasisAgreement === 'all'
+        ? 'diverge'
+        : marketOverlayMarkerBasisAgreement === 'agree'
+          ? 'all'
+          : 'agree'
     const activeVisible =
       marketOverlayMarkerBasisAgreement === 'all'
         ? allVisible
@@ -1395,7 +1407,13 @@ function App() {
           : divergeVisible
     const cycleVisible =
       cycleTarget === 'all' ? allVisible : cycleTarget === 'agree' ? agreeVisible : divergeVisible
-    return `all:${allVisible} · agree:${agreeVisible} · diverge:${divergeVisible} · active:${marketOverlayMarkerBasisAgreement}(${activeVisible}) · next:c=${cycleTarget}(${cycleVisible})`
+    const reverseVisible =
+      reverseTarget === 'all'
+        ? allVisible
+        : reverseTarget === 'agree'
+          ? agreeVisible
+          : divergeVisible
+    return `all:${allVisible} · agree:${agreeVisible} · diverge:${divergeVisible} · active:${marketOverlayMarkerBasisAgreement}(${activeVisible}) · next:c=${cycleTarget}(${cycleVisible}) · prev:C=${reverseTarget}(${reverseVisible})`
   }, [
     marketOverlayAverageClose,
     marketOverlayBucketScopedTimelineAnnotations,
@@ -3201,8 +3219,10 @@ function App() {
           if (currentIndex < 0) {
             return 'all'
           }
+          const direction = event.shiftKey ? -1 : 1
           return MARKET_OVERLAY_MARKER_BASIS_AGREEMENT_ORDER[
-            (currentIndex + 1) % MARKET_OVERLAY_MARKER_BASIS_AGREEMENT_ORDER.length
+            (currentIndex + direction + MARKET_OVERLAY_MARKER_BASIS_AGREEMENT_ORDER.length) %
+              MARKET_OVERLAY_MARKER_BASIS_AGREEMENT_ORDER.length
           ]
         })
         return
