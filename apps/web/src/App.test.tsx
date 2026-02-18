@@ -218,6 +218,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Visual Basis Drift Summary')).toHaveTextContent(
       'Marker visual basis drift: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Visual Neighbor Polarity Summary')).toHaveTextContent(
+      'Marker visual neighbor polarity: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
       'Timeline buckets: mode:none · scope:all-buckets · buckets:0 · latest:none · count:0',
     )
@@ -1020,6 +1023,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Visual Basis Drift Summary')).toHaveTextContent(
       'Marker visual basis drift: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Visual Neighbor Polarity Summary')).toHaveTextContent(
+      'Marker visual neighbor polarity: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
       'Timeline buckets: mode:none · scope:all-buckets · buckets:0 · latest:none · count:0',
     )
@@ -1336,6 +1342,9 @@ describe('Dashboard shell', () => {
       )
       expect(screen.getByLabelText('Overlay Marker Visual Basis Drift Summary')).toHaveTextContent(
         'Marker visual basis drift: active:latest:flat|average:up|Δ:+1 · prev:latest:down|average:down|Δ:+0 · next:n/a · totals:latest:-1|average:+0|drift:+1|coherence:partial · basis:latest · mode:all',
+      )
+      expect(screen.getByLabelText('Overlay Marker Visual Neighbor Polarity Summary')).toHaveTextContent(
+        'Marker visual neighbor polarity: active:flat|score:+0 · prev:down|score:-1 · next:n/a · neighbors:-1|polarity:down-lean|coverage:1/2|spread:n/a · coupling:-1|state:priming · basis:latest · mode:all',
       )
       expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
         'Timeline buckets: mode:none · scope:all-buckets · buckets:2 · latest:t2 · count:2',
@@ -1739,6 +1748,9 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Overlay Marker Visual Basis Drift Summary')).toHaveTextContent(
       'Marker visual basis drift: active:latest:down|average:down|Δ:+0 · prev:n/a · next:latest:flat|average:up|Δ:+1 · totals:latest:-1|average:+0|drift:+1|coherence:partial · basis:latest · mode:all',
+    )
+    expect(screen.getByLabelText('Overlay Marker Visual Neighbor Polarity Summary')).toHaveTextContent(
+      'Marker visual neighbor polarity: active:down|score:-1 · prev:n/a · next:flat|score:+0 · neighbors:+0|polarity:neutral|coverage:1/2|spread:n/a · coupling:+1|state:offset · basis:latest · mode:all',
     )
 
     fireEvent.keyDown(screen.getByRole('button', { name: 'trade:closed:queued' }), { key: '2' })

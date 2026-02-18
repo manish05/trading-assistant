@@ -6645,6 +6645,64 @@ function App() {
     marketOverlayMarkerDeltaFilter,
     marketOverlayScopedTimelineAnnotations,
   ])
+  const marketOverlayMarkerVisualNeighborPolaritySummary = useMemo(() => {
+    if (!marketOverlayActiveTimelineAnnotation || marketOverlayActiveTimelineIndex < 0) {
+      return 'none'
+    }
+    const activeProfile = marketOverlayMarkerVisualProfiles.get(marketOverlayActiveTimelineAnnotation.id) ?? null
+    if (!activeProfile) {
+      return 'none'
+    }
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    const previousProfile = previousAnnotation
+      ? marketOverlayMarkerVisualProfiles.get(previousAnnotation.id) ?? null
+      : null
+    const nextProfile = nextAnnotation ? marketOverlayMarkerVisualProfiles.get(nextAnnotation.id) ?? null : null
+    const toneScore = (tone: MarketOverlayMarkerVisualProfile['tone']) => {
+      if (tone === 'up') {
+        return 1
+      }
+      if (tone === 'down') {
+        return -1
+      }
+      return 0
+    }
+    const formatSigned = (value: number) => `${value >= 0 ? '+' : ''}${value}`
+    const describe = (label: 'active' | 'prev' | 'next', profile: MarketOverlayMarkerVisualProfile | null) => {
+      if (!profile) {
+        return { summary: `${label}:n/a`, score: null as number | null }
+      }
+      const score = toneScore(profile.tone)
+      return { summary: `${label}:${profile.tone}|score:${formatSigned(score)}`, score }
+    }
+    const active = describe('active', activeProfile)
+    const prev = describe('prev', previousProfile)
+    const next = describe('next', nextProfile)
+    const neighborScore = (prev.score ?? 0) + (next.score ?? 0)
+    const neighborCoverage = Number(prev.score !== null) + Number(next.score !== null)
+    const polarity = neighborScore === 0 ? 'neutral' : neighborScore > 0 ? 'up-lean' : 'down-lean'
+    const spread = prev.score === null || next.score === null ? 'n/a' : formatSigned(prev.score - next.score)
+    const activeScore = active.score ?? 0
+    const couplingScore = neighborScore - activeScore
+    const couplingState =
+      couplingScore === 0
+        ? 'aligned'
+        : activeScore === 0
+          ? 'priming'
+          : Math.sign(couplingScore) === Math.sign(activeScore)
+            ? 'supportive'
+            : 'offset'
+    return `${active.summary} · ${prev.summary} · ${next.summary} · neighbors:${formatSigned(neighborScore)}|polarity:${polarity}|coverage:${neighborCoverage}/2|spread:${spread} · coupling:${formatSigned(couplingScore)}|state:${couplingState} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayMarkerVisualProfiles,
+    marketOverlayScopedTimelineAnnotations,
+  ])
 
   useEffect(() => {
     if (marketOverlayScopedVisibleAnnotations.length === 0) {
@@ -9744,6 +9802,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Visual Basis Drift Summary">
               Marker visual basis drift: {marketOverlayMarkerVisualBasisDriftSummary}
+            </p>
+            <p aria-label="Overlay Marker Visual Neighbor Polarity Summary">
+              Marker visual neighbor polarity: {marketOverlayMarkerVisualNeighborPolaritySummary}
             </p>
             <p
               aria-label="Overlay Chart Runtime"
