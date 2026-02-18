@@ -1477,19 +1477,38 @@ function App() {
             : null
       return resolveMarketOverlayDeltaTone(deltaValue)
     }
-    const divergenceTotal = marketOverlayBucketScopedTimelineAnnotations.reduce((count, annotation) => {
+    const matchesDeltaFilter = (tone: 'up' | 'down' | 'flat' | 'unavailable') => {
+      if (marketOverlayMarkerDeltaFilter === 'all') {
+        return true
+      }
+      if (marketOverlayMarkerDeltaFilter === 'latest-up') {
+        return tone === 'up'
+      }
+      if (marketOverlayMarkerDeltaFilter === 'latest-down') {
+        return tone === 'down'
+      }
+      if (marketOverlayMarkerDeltaFilter === 'latest-flat') {
+        return tone === 'flat'
+      }
+      return tone === 'unavailable'
+    }
+    const scopedAnnotations = marketOverlayAgreementScopedTimelineAnnotations.filter((annotation) =>
+      matchesDeltaFilter(resolveToneForBasis(annotation, marketOverlayMarkerDeltaBasis)),
+    )
+    const divergenceTotal = scopedAnnotations.reduce((count, annotation) => {
       const latestTone = resolveToneForBasis(annotation, 'latest')
       const averageTone = resolveToneForBasis(annotation, 'average')
       return latestTone !== averageTone ? count + 1 : count
     }, 0)
-    const agreementTotal = marketOverlayBucketScopedTimelineAnnotations.length - divergenceTotal
+    const agreementTotal = scopedAnnotations.length - divergenceTotal
     const previewSize = marketOverlayMarkerDivergencePreview
     const divergenceShown = Math.min(divergenceTotal, previewSize)
     const agreementShown = Math.min(agreementTotal, previewSize)
     return `size:${previewSize} · diverge:show:${divergenceShown}/${divergenceTotal} · agree:show:${agreementShown}/${agreementTotal} · mode:${marketOverlayMarkerDeltaFilter}`
   }, [
-    marketOverlayBucketScopedTimelineAnnotations,
+    marketOverlayAgreementScopedTimelineAnnotations,
     marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
     marketOverlayMarkerDeltaFilter,
     marketOverlayMarkerDivergencePreview,
   ])
@@ -1745,7 +1764,25 @@ function App() {
             : null
       return resolveMarketOverlayDeltaTone(deltaValue)
     }
-    const divergentItems = marketOverlayBucketScopedTimelineAnnotations
+    const matchesDeltaFilter = (tone: 'up' | 'down' | 'flat' | 'unavailable') => {
+      if (marketOverlayMarkerDeltaFilter === 'all') {
+        return true
+      }
+      if (marketOverlayMarkerDeltaFilter === 'latest-up') {
+        return tone === 'up'
+      }
+      if (marketOverlayMarkerDeltaFilter === 'latest-down') {
+        return tone === 'down'
+      }
+      if (marketOverlayMarkerDeltaFilter === 'latest-flat') {
+        return tone === 'flat'
+      }
+      return tone === 'unavailable'
+    }
+    const scopedAnnotations = marketOverlayAgreementScopedTimelineAnnotations.filter((annotation) =>
+      matchesDeltaFilter(resolveToneForBasis(annotation, marketOverlayMarkerDeltaBasis)),
+    )
+    const divergentItems = scopedAnnotations
       .map((annotation) => {
         const latestTone = resolveToneForBasis(annotation, 'latest')
         const averageTone = resolveToneForBasis(annotation, 'average')
@@ -1763,10 +1800,11 @@ function App() {
         : overflowCount > 0
           ? `${previewItems.join(', ')} (+${overflowCount} more)`
           : previewItems.join(', ')
-    return `mode:${marketOverlayMarkerDeltaFilter} · diverge:${divergentItems.length}/${marketOverlayBucketScopedTimelineAnnotations.length} · items:${itemsLabel}`
+    return `mode:${marketOverlayMarkerDeltaFilter} · diverge:${divergentItems.length}/${scopedAnnotations.length} · items:${itemsLabel}`
   }, [
-    marketOverlayBucketScopedTimelineAnnotations,
+    marketOverlayAgreementScopedTimelineAnnotations,
     marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
     marketOverlayMarkerDivergencePreview,
     marketOverlayMarkerDeltaFilter,
   ])
@@ -1793,7 +1831,25 @@ function App() {
             : null
       return resolveMarketOverlayDeltaTone(deltaValue)
     }
-    const agreeingItems = marketOverlayBucketScopedTimelineAnnotations
+    const matchesDeltaFilter = (tone: 'up' | 'down' | 'flat' | 'unavailable') => {
+      if (marketOverlayMarkerDeltaFilter === 'all') {
+        return true
+      }
+      if (marketOverlayMarkerDeltaFilter === 'latest-up') {
+        return tone === 'up'
+      }
+      if (marketOverlayMarkerDeltaFilter === 'latest-down') {
+        return tone === 'down'
+      }
+      if (marketOverlayMarkerDeltaFilter === 'latest-flat') {
+        return tone === 'flat'
+      }
+      return tone === 'unavailable'
+    }
+    const scopedAnnotations = marketOverlayAgreementScopedTimelineAnnotations.filter((annotation) =>
+      matchesDeltaFilter(resolveToneForBasis(annotation, marketOverlayMarkerDeltaBasis)),
+    )
+    const agreeingItems = scopedAnnotations
       .map((annotation) => {
         const latestTone = resolveToneForBasis(annotation, 'latest')
         const averageTone = resolveToneForBasis(annotation, 'average')
@@ -1811,10 +1867,11 @@ function App() {
         : overflowCount > 0
           ? `${previewItems.join(', ')} (+${overflowCount} more)`
           : previewItems.join(', ')
-    return `mode:${marketOverlayMarkerDeltaFilter} · agree:${agreeingItems.length}/${marketOverlayBucketScopedTimelineAnnotations.length} · items:${itemsLabel}`
+    return `mode:${marketOverlayMarkerDeltaFilter} · agree:${agreeingItems.length}/${scopedAnnotations.length} · items:${itemsLabel}`
   }, [
-    marketOverlayBucketScopedTimelineAnnotations,
+    marketOverlayAgreementScopedTimelineAnnotations,
     marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
     marketOverlayMarkerDivergencePreview,
     marketOverlayMarkerDeltaFilter,
   ])

@@ -1404,6 +1404,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Basis Agreement Kind Summary')).toHaveTextContent(
       'Basis agreement kinds: mode:diverge · scoped:t0/r1/f0 · agree:t1/r0/f0 · diverge:t0/r1/f0',
     )
+    expect(screen.getByLabelText('Overlay Marker Basis Preview Count Summary')).toHaveTextContent(
+      'Basis preview counts: size:3 · diverge:show:1/1 · agree:show:0/0 · mode:all',
+    )
     expect(screen.getByLabelText('Overlay Marker Pipeline Summary')).toHaveTextContent(
       'Pipeline: raw:2 · focus:2/2 · age:2/2 · window:2/2 · timeline:2/2 · bucket:2/2 · agreement:1/2 · delta:1/1 · visible:1/1',
     )
@@ -1415,6 +1418,12 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Overlay Marker Delta Shortcut Summary')).toHaveTextContent(
       'Delta shortcuts: keys:k/u/j/f/n/0/+/- · basis:latest · mode:all · matched:1/1 · active:on',
+    )
+    expect(screen.getByLabelText('Overlay Marker Delta Basis Divergence Summary')).toHaveTextContent(
+      'Delta basis divergence: mode:all · diverge:1/1 · items:risk:live_trading_disabled:raised:flat->up',
+    )
+    expect(screen.getByLabelText('Overlay Marker Delta Basis Agreement Items Summary')).toHaveTextContent(
+      'Delta basis agreement items: mode:all · agree:0/1 · items:none',
     )
     expect(screen.getByLabelText('Overlay Markers')).toHaveTextContent(
       'risk:live_trading_disabled:raised',
@@ -1442,11 +1451,20 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Basis Agreement Kind Summary')).toHaveTextContent(
       'Basis agreement kinds: mode:agree · scoped:t1/r0/f0 · agree:t1/r0/f0 · diverge:t0/r1/f0',
     )
+    expect(screen.getByLabelText('Overlay Marker Basis Preview Count Summary')).toHaveTextContent(
+      'Basis preview counts: size:3 · diverge:show:0/0 · agree:show:1/1 · mode:all',
+    )
     expect(screen.getByLabelText('Overlay Marker Pipeline Summary')).toHaveTextContent(
       'Pipeline: raw:2 · focus:2/2 · age:2/2 · window:2/2 · timeline:2/2 · bucket:2/2 · agreement:1/2 · delta:1/1 · visible:1/1',
     )
     expect(screen.getByLabelText('Overlay Marker Delta Filter Summary')).toHaveTextContent(
       'Delta filter: basis:latest · mode:all · matched:1/1 · up:0 · down:1 · flat:0 · n/a:0',
+    )
+    expect(screen.getByLabelText('Overlay Marker Delta Basis Divergence Summary')).toHaveTextContent(
+      'Delta basis divergence: mode:all · diverge:0/1 · items:none',
+    )
+    expect(screen.getByLabelText('Overlay Marker Delta Basis Agreement Items Summary')).toHaveTextContent(
+      'Delta basis agreement items: mode:all · agree:1/1 · items:trade:closed:queued:down',
     )
     expect(screen.getByLabelText('Overlay Markers')).toHaveTextContent('trade:closed:queued')
     expect(screen.getByLabelText('Overlay Markers')).not.toHaveTextContent(
@@ -1826,10 +1844,13 @@ describe('Dashboard shell', () => {
       'Delta basis compare: latest:m1/2|u0|d1|f1|n0 · average:m1/2|u1|d1|f0|n0 · mode:latest-down · active:latest · agree:1/2 · diverge:1',
     )
     expect(screen.getByLabelText('Overlay Marker Delta Basis Divergence Summary')).toHaveTextContent(
-      'Delta basis divergence: mode:latest-down · diverge:1/2 · items:risk:live_trading_disabled:raised:flat->up',
+      'Delta basis divergence: mode:latest-down · diverge:0/1 · items:none',
     )
     expect(screen.getByLabelText('Overlay Marker Delta Basis Agreement Items Summary')).toHaveTextContent(
-      'Delta basis agreement items: mode:latest-down · agree:1/2 · items:trade:closed:queued:down',
+      'Delta basis agreement items: mode:latest-down · agree:1/1 · items:trade:closed:queued:down',
+    )
+    expect(screen.getByLabelText('Overlay Marker Basis Preview Count Summary')).toHaveTextContent(
+      'Basis preview counts: size:5 · diverge:show:0/0 · agree:show:1/1 · mode:latest-down',
     )
     expect(screen.getByLabelText('Overlay Markers')).toHaveTextContent('trade:closed:queued')
     expect(screen.getByLabelText('Overlay Markers')).not.toHaveTextContent(
