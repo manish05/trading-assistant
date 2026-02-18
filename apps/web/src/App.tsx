@@ -3081,6 +3081,73 @@ function App() {
     marketOverlayMarkerBasisAgreement,
     marketOverlayMarkerDeltaFilter,
   ])
+  const marketOverlayActiveMarkerDeltaPositionSummary = useMemo(() => {
+    if (!marketOverlayActiveTimelineAnnotation || marketOverlayChartPoints.length === 0) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const resolveDelta = (
+      annotation: MarketOverlayTimelineAnnotation,
+      basis: MarketOverlayMarkerDeltaBasis,
+    ): number | null => {
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point) {
+        return null
+      }
+      if (basis === 'latest') {
+        return latestPoint ? point.value - latestPoint.value : null
+      }
+      return baseline !== null ? point.value - baseline : null
+    }
+    const formatDelta = (value: number | null) =>
+      value === null ? 'n/a' : `${value >= 0 ? '+' : ''}${value.toFixed(2)}`
+    const medianValue = (values: number[]) => {
+      if (values.length === 0) {
+        return null
+      }
+      const sortedAscending = values.slice().sort((a, b) => a - b)
+      const middle = Math.floor(sortedAscending.length / 2)
+      if (sortedAscending.length % 2 === 1) {
+        return sortedAscending[middle] ?? null
+      }
+      const lower = sortedAscending[middle - 1]
+      const upper = sortedAscending[middle]
+      if (lower === undefined || upper === undefined) {
+        return null
+      }
+      return (lower + upper) / 2
+    }
+    const describeBasisPosition = (basis: MarketOverlayMarkerDeltaBasis) => {
+      const target = resolveDelta(marketOverlayActiveTimelineAnnotation, basis)
+      if (target === null) {
+        return `${basis}:n/a`
+      }
+      const values = marketOverlayAgreementScopedTimelineAnnotations
+        .map((annotation) => resolveDelta(annotation, basis))
+        .filter((value): value is number => value !== null)
+      if (values.length === 0) {
+        return `${basis}:n/a`
+      }
+      const sortedDescending = values.slice().sort((a, b) => b - a)
+      const rankIndex = sortedDescending.findIndex((value) => Math.abs(value - target) < 1e-9)
+      const leader = sortedDescending[0] ?? null
+      const median = medianValue(values)
+      const slot = rankIndex < 0 ? 'n/a' : `${rankIndex + 1}/${sortedDescending.length}`
+      const deltaToLeader = leader === null ? null : target - leader
+      const deltaToMedian = median === null ? null : target - median
+      return `${basis}:slot:${slot}|Δleader:${formatDelta(deltaToLeader)}|Δmedian:${formatDelta(deltaToMedian)}`
+    }
+    return `${describeBasisPosition('latest')} · ${describeBasisPosition('average')} · scope:${marketOverlayMarkerBasisAgreement} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayAgreementScopedTimelineAnnotations,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerBasisAgreement,
+    marketOverlayMarkerDeltaFilter,
+  ])
   const marketOverlayActiveMarkerNeighborDeltaSummary = useMemo(() => {
     if (
       !marketOverlayActiveTimelineAnnotation ||
@@ -6412,6 +6479,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Active Delta Rank">
               Active delta rank: {marketOverlayActiveMarkerDeltaRank}
+            </p>
+            <p aria-label="Overlay Marker Active Delta Position Summary">
+              Active delta position: {marketOverlayActiveMarkerDeltaPositionSummary}
             </p>
             <p aria-label="Overlay Marker Active Delta Neighbors">
               Active delta neighbors: {marketOverlayActiveMarkerNeighborDeltaSummary}
