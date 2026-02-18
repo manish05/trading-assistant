@@ -3197,6 +3197,69 @@ function App() {
     marketOverlayMarkerBasisAgreement,
     marketOverlayMarkerDeltaFilter,
   ])
+  const marketOverlayActiveMarkerNeighborPercentileSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const resolveDelta = (
+      annotation: MarketOverlayTimelineAnnotation | null,
+      basis: MarketOverlayMarkerDeltaBasis,
+    ): number | null => {
+      if (!annotation) {
+        return null
+      }
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point) {
+        return null
+      }
+      if (basis === 'latest') {
+        return latestPoint ? point.value - latestPoint.value : null
+      }
+      return baseline !== null ? point.value - baseline : null
+    }
+    const toPercentile = (value: number | null, values: number[]) => {
+      if (value === null || values.length === 0) {
+        return null
+      }
+      const min = Math.min(...values)
+      const max = Math.max(...values)
+      const range = max - min
+      if (range === 0) {
+        return null
+      }
+      return ((value - min) / range) * 100
+    }
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    const formatPercentile = (value: number | null) => (value === null ? 'n/a' : `${value.toFixed(2)}%`)
+    const describeBasis = (basis: MarketOverlayMarkerDeltaBasis) => {
+      const values = marketOverlayAgreementScopedTimelineAnnotations
+        .map((annotation) => resolveDelta(annotation, basis))
+        .filter((value): value is number => value !== null)
+      const previousDelta = resolveDelta(previousAnnotation, basis)
+      const activeDelta = resolveDelta(marketOverlayActiveTimelineAnnotation, basis)
+      const nextDelta = resolveDelta(nextAnnotation, basis)
+      return `${basis}:prev:${formatPercentile(toPercentile(previousDelta, values))}|active:${formatPercentile(toPercentile(activeDelta, values))}|next:${formatPercentile(toPercentile(nextDelta, values))}`
+    }
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · ${describeBasis('latest')} · ${describeBasis('average')} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAgreementScopedTimelineAnnotations,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
   const marketOverlayActiveMarkerNeighborDeltaSummary = useMemo(() => {
     if (
       !marketOverlayActiveTimelineAnnotation ||
@@ -6534,6 +6597,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Active Delta Range Context Summary">
               Active delta range context: {marketOverlayActiveMarkerDeltaRangeContextSummary}
+            </p>
+            <p aria-label="Overlay Marker Active Neighbor Percentile Summary">
+              Active neighbor percentiles: {marketOverlayActiveMarkerNeighborPercentileSummary}
             </p>
             <p aria-label="Overlay Marker Active Delta Neighbors">
               Active delta neighbors: {marketOverlayActiveMarkerNeighborDeltaSummary}

@@ -80,6 +80,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Active Delta Range Context Summary')).toHaveTextContent(
       'Active delta range context: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Active Neighbor Percentile Summary')).toHaveTextContent(
+      'Active neighbor percentiles: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Active Delta Neighbors')).toHaveTextContent(
       'Active delta neighbors: none',
     )
@@ -759,6 +762,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Active Delta Range Context Summary')).toHaveTextContent(
       'Active delta range context: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Active Neighbor Percentile Summary')).toHaveTextContent(
+      'Active neighbor percentiles: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Active Delta Neighbors')).toHaveTextContent(
       'Active delta neighbors: none',
     )
@@ -920,6 +926,9 @@ describe('Dashboard shell', () => {
       )
       expect(screen.getByLabelText('Overlay Marker Active Delta Range Context Summary')).toHaveTextContent(
         'Active delta range context: latest:active:+0.00|min:-1.00|max:+0.00|pct:100.00% · average:active:+0.50|min:-0.50|max:+0.50|pct:100.00% · scope:all · mode:all',
+      )
+      expect(screen.getByLabelText('Overlay Marker Active Neighbor Percentile Summary')).toHaveTextContent(
+        'Active neighbor percentiles: active:risk:live_trading_disabled:raised · latest:prev:0.00%|active:100.00%|next:n/a · average:prev:0.00%|active:100.00%|next:n/a · basis:latest · mode:all',
       )
       expect(screen.getByLabelText('Overlay Marker Active Delta Neighbors')).toHaveTextContent(
         'Active delta neighbors: active:risk:live_trading_disabled:raised · prev:trade:closed:queued(Δl:-1.00|Δa:-0.50) · next:none · scope:all/all',
@@ -1168,6 +1177,9 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Overlay Marker Active Delta Range Context Summary')).toHaveTextContent(
       'Active delta range context: latest:active:-1.00|min:-1.00|max:+0.00|pct:0.00% · average:active:-0.50|min:-0.50|max:+0.50|pct:0.00% · scope:all · mode:all',
+    )
+    expect(screen.getByLabelText('Overlay Marker Active Neighbor Percentile Summary')).toHaveTextContent(
+      'Active neighbor percentiles: active:trade:closed:queued · latest:prev:n/a|active:0.00%|next:100.00% · average:prev:n/a|active:0.00%|next:100.00% · basis:latest · mode:all',
     )
     expect(screen.getByLabelText('Overlay Marker Active Delta Neighbors')).toHaveTextContent(
       'Active delta neighbors: active:trade:closed:queued · prev:none · next:risk:live_trading_disabled:raised(Δl:+0.00|Δa:+0.50) · scope:all/all',
