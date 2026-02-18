@@ -6421,6 +6421,79 @@ function App() {
     marketOverlayMarkerVisualProfiles,
     marketOverlayScopedTimelineAnnotations,
   ])
+  const marketOverlayMarkerVisualRolePulseSummary = useMemo(() => {
+    if (!marketOverlayActiveTimelineAnnotation || marketOverlayActiveTimelineIndex < 0) {
+      return 'none'
+    }
+    const activeProfile = marketOverlayMarkerVisualProfiles.get(marketOverlayActiveTimelineAnnotation.id) ?? null
+    if (!activeProfile) {
+      return 'none'
+    }
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    const previousProfile = previousAnnotation
+      ? marketOverlayMarkerVisualProfiles.get(previousAnnotation.id) ?? null
+      : null
+    const nextProfile = nextAnnotation ? marketOverlayMarkerVisualProfiles.get(nextAnnotation.id) ?? null : null
+    const toneScore = (tone: MarketOverlayMarkerVisualProfile['tone']) => {
+      if (tone === 'up') {
+        return 1
+      }
+      if (tone === 'down') {
+        return -1
+      }
+      return 0
+    }
+    const weights: Record<MarketOverlayMarkerVisualRole, number> = {
+      active: 3,
+      prev: 2,
+      next: 2,
+      context: 1,
+    }
+    const entries = [
+      { label: 'active', profile: activeProfile },
+      { label: 'prev', profile: previousProfile },
+      { label: 'next', profile: nextProfile },
+    ] as const
+    const formatSigned = (value: number) => `${value >= 0 ? '+' : ''}${value}`
+    let weightedPulse = 0
+    let weightedEnergy = 0
+    let resolvedCount = 0
+    let availableCount = 0
+    const components = entries.map((entry) => {
+      if (!entry.profile) {
+        return `${entry.label}:n/a`
+      }
+      availableCount += 1
+      const score = toneScore(entry.profile.tone)
+      const weightedScore = score * weights[entry.profile.role]
+      weightedPulse += weightedScore
+      weightedEnergy += Math.abs(weightedScore)
+      if (score !== 0) {
+        resolvedCount += 1
+      }
+      return `${entry.label}:${entry.profile.tone}|score:${formatSigned(score)}|weighted:${formatSigned(weightedScore)}`
+    })
+    const normalized = weightedEnergy === 0 ? 0 : weightedPulse / weightedEnergy
+    const bias = normalized === 0 ? 'balanced' : normalized > 0 ? 'up' : 'down'
+    const conviction =
+      Math.abs(normalized) < 1e-9
+        ? 'idle'
+        : Math.abs(normalized) < 0.34
+          ? 'light'
+          : Math.abs(normalized) < 0.67
+            ? 'moderate'
+            : 'strong'
+    return `${components.join(' · ')} · pulse:${formatSigned(weightedPulse)}|energy:${weightedEnergy}|normalized:${normalized >= 0 ? '+' : ''}${normalized.toFixed(2)}|bias:${bias}|conviction:${conviction} · resolved:${resolvedCount}/${availableCount} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayMarkerVisualProfiles,
+    marketOverlayScopedTimelineAnnotations,
+  ])
 
   useEffect(() => {
     if (marketOverlayScopedVisibleAnnotations.length === 0) {
@@ -9511,6 +9584,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Visual Context Drift Summary">
               Marker visual context drift: {marketOverlayMarkerVisualContextDriftSummary}
+            </p>
+            <p aria-label="Overlay Marker Visual Role Pulse Summary">
+              Marker visual role pulse: {marketOverlayMarkerVisualRolePulseSummary}
             </p>
             <p
               aria-label="Overlay Chart Runtime"
