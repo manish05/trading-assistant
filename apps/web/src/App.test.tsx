@@ -167,6 +167,9 @@ describe('Dashboard shell', () => {
     expect(
       screen.getByLabelText('Overlay Marker Active Neighbor Magnitude Side Consensus Index Summary'),
     ).toHaveTextContent('Active neighbor magnitude side consensus index: none')
+    expect(
+      screen.getByLabelText('Overlay Marker Active Neighbor Magnitude Side Conflict Score Summary'),
+    ).toHaveTextContent('Active neighbor magnitude side conflict score: none')
     expect(screen.getByLabelText('Overlay Marker Active Delta Neighbors')).toHaveTextContent(
       'Active delta neighbors: none',
     )
@@ -933,6 +936,9 @@ describe('Dashboard shell', () => {
     expect(
       screen.getByLabelText('Overlay Marker Active Neighbor Magnitude Side Consensus Index Summary'),
     ).toHaveTextContent('Active neighbor magnitude side consensus index: none')
+    expect(
+      screen.getByLabelText('Overlay Marker Active Neighbor Magnitude Side Conflict Score Summary'),
+    ).toHaveTextContent('Active neighbor magnitude side conflict score: none')
     expect(screen.getByLabelText('Overlay Marker Active Delta Neighbors')).toHaveTextContent(
       'Active delta neighbors: none',
     )
@@ -1203,6 +1209,11 @@ describe('Dashboard shell', () => {
         screen.getByLabelText('Overlay Marker Active Neighbor Magnitude Side Consensus Index Summary'),
       ).toHaveTextContent(
         'Active neighbor magnitude side consensus index: active:risk:live_trading_disabled:raised · latest:none|score:+0 · average:prev|score:+1 · coverage:1/2|agreement:+0.00 · index:+0.00|class:mixed · basis:latest · mode:all',
+      )
+      expect(
+        screen.getByLabelText('Overlay Marker Active Neighbor Magnitude Side Conflict Score Summary'),
+      ).toHaveTextContent(
+        'Active neighbor magnitude side conflict score: active:risk:live_trading_disabled:raised · latest:none|score:+0 · average:prev|score:+1 · conflict:0.50|band:moderate|resolution:one-sided · coverage:1/2 · basis:latest · mode:all',
       )
       expect(screen.getByLabelText('Overlay Marker Active Delta Neighbors')).toHaveTextContent(
         'Active delta neighbors: active:risk:live_trading_disabled:raised · prev:trade:closed:queued(Δl:-1.00|Δa:-0.50) · next:none · scope:all/all',
@@ -1560,6 +1571,11 @@ describe('Dashboard shell', () => {
       screen.getByLabelText('Overlay Marker Active Neighbor Magnitude Side Consensus Index Summary'),
     ).toHaveTextContent(
       'Active neighbor magnitude side consensus index: active:trade:closed:queued · latest:next|score:-1 · average:next|score:-1 · coverage:2/2|agreement:+1.00 · index:+1.00|class:strong-consensus · basis:latest · mode:all',
+    )
+    expect(
+      screen.getByLabelText('Overlay Marker Active Neighbor Magnitude Side Conflict Score Summary'),
+    ).toHaveTextContent(
+      'Active neighbor magnitude side conflict score: active:trade:closed:queued · latest:next|score:-1 · average:next|score:-1 · conflict:0.00|band:aligned|resolution:same-direction · coverage:2/2 · basis:latest · mode:all',
     )
     expect(screen.getByLabelText('Overlay Marker Active Delta Neighbors')).toHaveTextContent(
       'Active delta neighbors: active:trade:closed:queued · prev:none · next:risk:live_trading_disabled:raised(Δl:+0.00|Δa:+0.50) · scope:all/all',
