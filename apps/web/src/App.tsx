@@ -3027,6 +3027,64 @@ function App() {
     marketOverlayTimelineCount,
     marketOverlayTimelineOrder,
   ])
+  const marketOverlayMarkerTimelineInteractionParitySummary = useMemo(() => {
+    if (isMarketOverlayNavigationLocked) {
+      return 'locked'
+    }
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayTimelineCount === 0
+    ) {
+      return 'none'
+    }
+    const backwardCount =
+      Number(canSelectPreviousMarketOverlayMarker) +
+      Number(canSelectSkipBackwardMarketOverlayMarker) +
+      Number(canSelectPreviousSameKindMarketOverlayMarker) +
+      Number(canSelectPreviousBucketMarketOverlayMarker) +
+      Number(canSelectOldestMarketOverlayMarker)
+    const forwardCount =
+      Number(canSelectNextMarketOverlayMarker) +
+      Number(canSelectSkipForwardMarketOverlayMarker) +
+      Number(canSelectNextSameKindMarketOverlayMarker) +
+      Number(canSelectNextBucketMarketOverlayMarker) +
+      Number(canSelectLatestMarketOverlayMarker)
+    const minimum = Math.min(backwardCount, forwardCount)
+    const maximum = Math.max(backwardCount, forwardCount)
+    const parityRatio = maximum === 0 ? null : minimum / maximum
+    const state =
+      backwardCount === forwardCount
+        ? 'equal'
+        : backwardCount > forwardCount
+          ? 'backward'
+          : 'forward'
+    const readyCount = backwardCount + forwardCount
+    const coverageClass =
+      readyCount >= 8 ? 'high' : readyCount >= 5 ? 'medium' : readyCount >= 2 ? 'light' : readyCount > 0 ? 'minimal' : 'none'
+    const phase =
+      parityRatio === null ? 'idle' : parityRatio >= 0.9 ? 'balanced' : parityRatio >= 0.5 ? 'tilted' : 'one-sided'
+    const stateLabel = (value: boolean) => (value ? 'on' : 'off')
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label}|slot:${marketOverlayActiveTimelineIndex + 1}/${marketOverlayTimelineCount} · parity:min:${minimum}|max:${maximum}|ratio:${parityRatio === null ? 'n/a' : parityRatio.toFixed(2)}|state:${state}|phase:${phase} · coverage:${readyCount}/10|class:${coverageClass} · edges:home:${stateLabel(canSelectOldestMarketOverlayMarker)}|end:${stateLabel(canSelectLatestMarketOverlayMarker)} · wrap:${marketOverlayMarkerWrap}|selection:${marketOverlaySelectionMode}|order:${marketOverlayTimelineOrder}`
+  }, [
+    canSelectLatestMarketOverlayMarker,
+    canSelectNextBucketMarketOverlayMarker,
+    canSelectNextMarketOverlayMarker,
+    canSelectNextSameKindMarketOverlayMarker,
+    canSelectOldestMarketOverlayMarker,
+    canSelectPreviousBucketMarketOverlayMarker,
+    canSelectPreviousMarketOverlayMarker,
+    canSelectPreviousSameKindMarketOverlayMarker,
+    canSelectSkipBackwardMarketOverlayMarker,
+    canSelectSkipForwardMarketOverlayMarker,
+    isMarketOverlayNavigationLocked,
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayMarkerWrap,
+    marketOverlaySelectionMode,
+    marketOverlayTimelineCount,
+    marketOverlayTimelineOrder,
+  ])
   const marketOverlayMarkerDrilldown = useMemo(() => {
     const latest =
       marketOverlayScopedTimelineAnnotations[marketOverlayScopedTimelineAnnotations.length - 1] ?? null
@@ -11628,6 +11686,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Timeline Interaction Drift Summary">
               Timeline interaction drift: {marketOverlayMarkerTimelineInteractionDriftSummary}
+            </p>
+            <p aria-label="Overlay Marker Timeline Interaction Parity Summary">
+              Timeline interaction parity: {marketOverlayMarkerTimelineInteractionParitySummary}
             </p>
             <div className="market-overlay-marker-navigation">
               <button
