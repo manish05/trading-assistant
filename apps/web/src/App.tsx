@@ -6118,6 +6118,108 @@ function App() {
     marketOverlayMarkerDeltaBasis,
     marketOverlayMarkerDeltaFilter,
   ])
+  const marketOverlayMarkerEventCandleTransitSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const pointIndexByTime = new Map(
+      marketOverlayChartPoints.map((point, index) => [point.time, index] as const),
+    )
+    const activePoint = pointByTime.get(marketOverlayActiveTimelineAnnotation.time) ?? null
+    if (!activePoint) {
+      return 'none'
+    }
+    const activePointIndex = pointIndexByTime.get(activePoint.time) ?? -1
+    if (activePointIndex < 0) {
+      return 'none'
+    }
+    const previousPoint = activePointIndex > 0 ? marketOverlayChartPoints[activePointIndex - 1] : null
+    const nextPoint =
+      activePointIndex < marketOverlayChartPoints.length - 1
+        ? marketOverlayChartPoints[activePointIndex + 1]
+        : null
+    const previousSlope = previousPoint ? activePoint.value - previousPoint.value : null
+    const nextSlope = nextPoint ? nextPoint.value - activePoint.value : null
+    const bridgeSlope =
+      previousPoint && nextPoint ? nextPoint.value - previousPoint.value : null
+    const previousGap = previousPoint ? Math.abs(activePoint.time - previousPoint.time) : null
+    const nextGap = nextPoint ? Math.abs(nextPoint.time - activePoint.time) : null
+    const cadence =
+      previousGap !== null && nextGap !== null
+        ? previousGap === nextGap
+          ? 'balanced'
+          : previousGap > nextGap
+            ? 'front-loaded'
+            : 'back-loaded'
+        : previousGap !== null || nextGap !== null
+          ? 'edge'
+          : 'isolated'
+    const phase = (() => {
+      if (previousSlope !== null && nextSlope !== null) {
+        if (Math.abs(previousSlope) < 1e-9 && Math.abs(nextSlope) < 1e-9) {
+          return 'through-flat'
+        }
+        if (previousSlope > 0 && nextSlope > 0) {
+          return 'through-rise'
+        }
+        if (previousSlope < 0 && nextSlope < 0) {
+          return 'through-fade'
+        }
+        return 'pivot'
+      }
+      if (previousSlope !== null) {
+        if (Math.abs(previousSlope) < 1e-9) {
+          return 'tail-flat'
+        }
+        return previousSlope > 0 ? 'tail-rise' : 'tail-fade'
+      }
+      if (nextSlope !== null) {
+        if (Math.abs(nextSlope) < 1e-9) {
+          return 'head-flat'
+        }
+        return nextSlope > 0 ? 'head-rise' : 'head-fade'
+      }
+      return 'isolated'
+    })()
+    const stepBalance = (nextGap ?? 0) - (previousGap ?? 0)
+    const intent =
+      canSelectPreviousMarketOverlayMarker && canSelectNextMarketOverlayMarker
+        ? 'cruise'
+        : canSelectPreviousMarketOverlayMarker
+          ? 'backtrack'
+          : canSelectNextMarketOverlayMarker
+            ? 'advance'
+            : 'hold'
+    const keys =
+      intent === 'backtrack'
+        ? 'ArrowLeft/Home'
+        : intent === 'advance'
+          ? 'ArrowRight/End'
+          : intent === 'cruise'
+            ? 'ArrowLeft/ArrowRight'
+            : 'idle'
+    const formatSigned = (value: number | null) =>
+      value === null ? 'n/a' : `${value >= 0 ? '+' : ''}${value.toFixed(2)}`
+    const formatStep = (value: number | null) => (value === null ? 'n/a' : String(value))
+    const formatBalance = (value: number) => `${value >= 0 ? '+' : ''}${value}`
+    const stateLabel = (value: boolean) => (value ? 'on' : 'off')
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · candle:t${activePoint.time}|close:${activePoint.value.toFixed(2)}|slot:${activePointIndex + 1}/${marketOverlayChartPoints.length} · slopes:prev:${formatSigned(previousSlope)}|next:${formatSigned(nextSlope)}|bridge:${formatSigned(bridgeSlope)} · steps:prev:${formatStep(previousGap)}|next:${formatStep(nextGap)}|balance:${formatBalance(stepBalance)}|cadence:${cadence}|phase:${phase} · intent:${intent}|keys:${keys}|home:${stateLabel(canSelectOldestMarketOverlayMarker)}|end:${stateLabel(canSelectLatestMarketOverlayMarker)} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    canSelectLatestMarketOverlayMarker,
+    canSelectNextMarketOverlayMarker,
+    canSelectOldestMarketOverlayMarker,
+    canSelectPreviousMarketOverlayMarker,
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+  ])
   const marketOverlayMarkerTimelineRows = useMemo(() => {
     if (marketOverlayScopedVisibleAnnotations.length === 0) {
       return [] as Array<{ id: string; text: string; isSelected: boolean }>
@@ -10304,6 +10406,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Event Candle Comparative Summary">
               Marker event candle comparative: {marketOverlayMarkerEventCandleComparativeSummary}
+            </p>
+            <p aria-label="Overlay Marker Event Candle Transit Summary">
+              Marker event candle transit: {marketOverlayMarkerEventCandleTransitSummary}
             </p>
             <p aria-label="Overlay Marker Visual Focus Summary">
               Marker visual focus: {marketOverlayMarkerVisualFocusSummary}
