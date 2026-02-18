@@ -2464,6 +2464,97 @@ function App() {
     const maxJump = Math.min(9, marketOverlayTimelineCount)
     return `keys:1-${maxJump} · selected:${marketOverlayActiveTimelineIndex + 1}/${marketOverlayTimelineCount}`
   }, [isMarketOverlayNavigationLocked, marketOverlayActiveTimelineIndex, marketOverlayTimelineCount])
+  const marketOverlayMarkerTimelineInteractionPolishSummary = useMemo(() => {
+    if (isMarketOverlayNavigationLocked) {
+      return 'locked'
+    }
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayTimelineCount === 0
+    ) {
+      return 'none'
+    }
+    const countEnabled = (values: boolean[]) => values.filter(Boolean).length
+    const describeDirection = (backward: boolean, forward: boolean) => {
+      if (backward && forward) {
+        return 'bidirectional'
+      }
+      if (backward) {
+        return 'backward'
+      }
+      if (forward) {
+        return 'forward'
+      }
+      return 'idle'
+    }
+    const enabledActions = countEnabled([
+      canSelectPreviousMarketOverlayMarker,
+      canSelectNextMarketOverlayMarker,
+      canSelectSkipBackwardMarketOverlayMarker,
+      canSelectSkipForwardMarketOverlayMarker,
+      canSelectPreviousSameKindMarketOverlayMarker,
+      canSelectNextSameKindMarketOverlayMarker,
+      canSelectPreviousBucketMarketOverlayMarker,
+      canSelectNextBucketMarketOverlayMarker,
+      canSelectOldestMarketOverlayMarker,
+      canSelectLatestMarketOverlayMarker,
+    ])
+    const oldestDistance = marketOverlayActiveTimelineIndex
+    const latestDistance = marketOverlayTimelineCount - 1 - marketOverlayActiveTimelineIndex
+    const edge =
+      oldestDistance === latestDistance
+        ? 'center'
+        : oldestDistance < latestDistance
+          ? 'oldest-edge'
+          : 'latest-edge'
+    const lane = describeDirection(
+      canSelectPreviousMarketOverlayMarker,
+      canSelectNextMarketOverlayMarker,
+    )
+    const skipLane = describeDirection(
+      canSelectSkipBackwardMarketOverlayMarker,
+      canSelectSkipForwardMarketOverlayMarker,
+    )
+    const kindLane = describeDirection(
+      canSelectPreviousSameKindMarketOverlayMarker,
+      canSelectNextSameKindMarketOverlayMarker,
+    )
+    const bucketLane = describeDirection(
+      canSelectPreviousBucketMarketOverlayMarker,
+      canSelectNextBucketMarketOverlayMarker,
+    )
+    const jumpEnabled = marketOverlayTimelineCount > 1
+    const mobility =
+      enabledActions >= 8
+        ? 'high'
+        : enabledActions >= 5
+          ? 'medium'
+          : enabledActions >= 3
+            ? 'light'
+            : enabledActions > 0
+              ? 'minimal'
+              : 'static'
+    const stateLabel = (enabled: boolean) => (enabled ? 'on' : 'off')
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label}|slot:${marketOverlayActiveTimelineIndex + 1}/${marketOverlayTimelineCount}|edge:${edge} · lane:${lane}|skip:${skipLane}|kind:${kindLane}|bucket:${bucketLane} · keys:home:${stateLabel(canSelectOldestMarketOverlayMarker)}|end:${stateLabel(canSelectLatestMarketOverlayMarker)}|jump:${stateLabel(jumpEnabled)} · actions:${enabledActions}/10|mobility:${mobility}|cadence:manual · wrap:${marketOverlayMarkerWrap} · order:${marketOverlayTimelineOrder}`
+  }, [
+    canSelectLatestMarketOverlayMarker,
+    canSelectNextBucketMarketOverlayMarker,
+    canSelectNextMarketOverlayMarker,
+    canSelectNextSameKindMarketOverlayMarker,
+    canSelectOldestMarketOverlayMarker,
+    canSelectPreviousBucketMarketOverlayMarker,
+    canSelectPreviousMarketOverlayMarker,
+    canSelectPreviousSameKindMarketOverlayMarker,
+    canSelectSkipBackwardMarketOverlayMarker,
+    canSelectSkipForwardMarketOverlayMarker,
+    isMarketOverlayNavigationLocked,
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayMarkerWrap,
+    marketOverlayTimelineCount,
+    marketOverlayTimelineOrder,
+  ])
   const marketOverlayMarkerDrilldown = useMemo(() => {
     const latest =
       marketOverlayScopedTimelineAnnotations[marketOverlayScopedTimelineAnnotations.length - 1] ?? null
@@ -10601,6 +10692,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Numeric Jump Summary">
               Jump keys: {marketOverlayMarkerNumericJumpSummary}
+            </p>
+            <p aria-label="Overlay Marker Timeline Interaction Polish Summary">
+              Timeline interaction polish: {marketOverlayMarkerTimelineInteractionPolishSummary}
             </p>
             <div className="market-overlay-marker-navigation">
               <button

@@ -362,6 +362,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Numeric Jump Summary')).toHaveTextContent(
       'Jump keys: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Timeline Interaction Polish Summary')).toHaveTextContent(
+      'Timeline interaction polish: none',
+    )
     expect(screen.getByRole('button', { name: 'Oldest Marker' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Previous Bucket' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Skip Back 2' })).toBeDisabled()
@@ -1134,6 +1137,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Numeric Jump Summary')).toHaveTextContent(
       'Jump keys: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Timeline Interaction Polish Summary')).toHaveTextContent(
+      'Timeline interaction polish: none',
+    )
     expect(screen.getByRole('button', { name: 'Oldest Marker' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Previous Bucket' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Skip Back 2' })).toBeDisabled()
@@ -1485,6 +1491,9 @@ describe('Dashboard shell', () => {
       expect(screen.getByLabelText('Overlay Marker Numeric Jump Summary')).toHaveTextContent(
         'Jump keys: keys:1-2 · selected:2/2',
       )
+      expect(screen.getByLabelText('Overlay Marker Timeline Interaction Polish Summary')).toHaveTextContent(
+        'Timeline interaction polish: active:risk:live_trading_disabled:raised|slot:2/2|edge:latest-edge · lane:backward|skip:idle|kind:idle|bucket:idle · keys:home:on|end:off|jump:on · actions:2/10|mobility:minimal|cadence:manual · wrap:bounded · order:newest-first',
+      )
       expect(screen.getByLabelText('Overlay Marker Behavior')).toHaveTextContent(
         'Marker behavior: wrap:bounded · selection:sticky · nav:manual',
       )
@@ -1593,6 +1602,9 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Overlay Marker Numeric Jump Summary')).toHaveTextContent(
       'Jump keys: keys:1-2 · selected:1/2',
+    )
+    expect(screen.getByLabelText('Overlay Marker Timeline Interaction Polish Summary')).toHaveTextContent(
+      'Timeline interaction polish: active:trade:closed:queued|slot:1/2|edge:oldest-edge · lane:forward|skip:idle|kind:idle|bucket:idle · keys:home:off|end:on|jump:on · actions:2/10|mobility:minimal|cadence:manual · wrap:bounded · order:newest-first',
     )
     expect(screen.getByRole('button', { name: 'trade:closed:queued' })).toHaveAttribute(
       'aria-pressed',
