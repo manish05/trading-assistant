@@ -2641,6 +2641,89 @@ function App() {
     marketOverlayTimelineCount,
     marketOverlayTimelineOrder,
   ])
+  const marketOverlayMarkerTimelineInteractionPressureSummary = useMemo(() => {
+    if (isMarketOverlayNavigationLocked) {
+      return 'locked'
+    }
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayTimelineCount === 0
+    ) {
+      return 'none'
+    }
+    const toLane = (backward: boolean, forward: boolean) => {
+      if (backward && forward) {
+        return 'bidirectional'
+      }
+      if (backward) {
+        return 'backward'
+      }
+      if (forward) {
+        return 'forward'
+      }
+      return 'idle'
+    }
+    const backwardPressure =
+      Number(canSelectPreviousMarketOverlayMarker) +
+      Number(canSelectOldestMarketOverlayMarker) +
+      Number(canSelectSkipBackwardMarketOverlayMarker) +
+      Number(canSelectPreviousSameKindMarketOverlayMarker) +
+      Number(canSelectPreviousBucketMarketOverlayMarker)
+    const forwardPressure =
+      Number(canSelectNextMarketOverlayMarker) +
+      Number(canSelectLatestMarketOverlayMarker) +
+      Number(canSelectSkipForwardMarketOverlayMarker) +
+      Number(canSelectNextSameKindMarketOverlayMarker) +
+      Number(canSelectNextBucketMarketOverlayMarker)
+    const netPressure = backwardPressure - forwardPressure
+    const bias =
+      netPressure === 0 ? 'balanced' : netPressure > 0 ? 'backward' : 'forward'
+    const intensity =
+      Math.abs(netPressure) >= 3
+        ? 'heavy'
+        : Math.abs(netPressure) >= 2
+          ? 'strong'
+          : Math.abs(netPressure) === 1
+            ? 'light'
+            : 'idle'
+    const enabledActions = backwardPressure + forwardPressure
+    const stepLane = toLane(canSelectPreviousMarketOverlayMarker, canSelectNextMarketOverlayMarker)
+    const kindLane = toLane(
+      canSelectPreviousSameKindMarketOverlayMarker,
+      canSelectNextSameKindMarketOverlayMarker,
+    )
+    const bucketLane = toLane(
+      canSelectPreviousBucketMarketOverlayMarker,
+      canSelectNextBucketMarketOverlayMarker,
+    )
+    const phase =
+      bias === 'balanced'
+        ? enabledActions === 0
+          ? 'static'
+          : 'balanced-ready'
+        : `${bias}-lean`
+    const stateLabel = (value: boolean) => (value ? 'on' : 'off')
+    const formatSigned = (value: number) => `${value >= 0 ? '+' : ''}${value}`
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label}|slot:${marketOverlayActiveTimelineIndex + 1}/${marketOverlayTimelineCount} · pressure:backward:${backwardPressure}|forward:${forwardPressure}|net:${formatSigned(netPressure)}|bias:${bias}|intensity:${intensity} · lanes:step:${stepLane}|kind:${kindLane}|bucket:${bucketLane} · edges:home:${stateLabel(canSelectOldestMarketOverlayMarker)}|end:${stateLabel(canSelectLatestMarketOverlayMarker)}|coverage:${enabledActions}/10|phase:${phase} · wrap:${marketOverlayMarkerWrap}|order:${marketOverlayTimelineOrder}`
+  }, [
+    canSelectLatestMarketOverlayMarker,
+    canSelectNextBucketMarketOverlayMarker,
+    canSelectNextMarketOverlayMarker,
+    canSelectNextSameKindMarketOverlayMarker,
+    canSelectOldestMarketOverlayMarker,
+    canSelectPreviousBucketMarketOverlayMarker,
+    canSelectPreviousMarketOverlayMarker,
+    canSelectPreviousSameKindMarketOverlayMarker,
+    canSelectSkipBackwardMarketOverlayMarker,
+    canSelectSkipForwardMarketOverlayMarker,
+    isMarketOverlayNavigationLocked,
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayMarkerWrap,
+    marketOverlayTimelineCount,
+    marketOverlayTimelineOrder,
+  ])
   const marketOverlayMarkerDrilldown = useMemo(() => {
     const latest =
       marketOverlayScopedTimelineAnnotations[marketOverlayScopedTimelineAnnotations.length - 1] ?? null
@@ -11054,6 +11137,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Timeline Interaction Route Summary">
               Timeline interaction route: {marketOverlayMarkerTimelineInteractionRouteSummary}
+            </p>
+            <p aria-label="Overlay Marker Timeline Interaction Pressure Summary">
+              Timeline interaction pressure: {marketOverlayMarkerTimelineInteractionPressureSummary}
             </p>
             <div className="market-overlay-marker-navigation">
               <button

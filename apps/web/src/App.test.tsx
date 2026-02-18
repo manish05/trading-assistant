@@ -377,6 +377,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Timeline Interaction Route Summary')).toHaveTextContent(
       'Timeline interaction route: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Timeline Interaction Pressure Summary')).toHaveTextContent(
+      'Timeline interaction pressure: none',
+    )
     expect(screen.getByRole('button', { name: 'Oldest Marker' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Previous Bucket' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Skip Back 2' })).toBeDisabled()
@@ -1164,6 +1167,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Timeline Interaction Route Summary')).toHaveTextContent(
       'Timeline interaction route: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Timeline Interaction Pressure Summary')).toHaveTextContent(
+      'Timeline interaction pressure: none',
+    )
     expect(screen.getByRole('button', { name: 'Oldest Marker' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Previous Bucket' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Skip Back 2' })).toBeDisabled()
@@ -1530,6 +1536,9 @@ describe('Dashboard shell', () => {
       expect(screen.getByLabelText('Overlay Marker Timeline Interaction Route Summary')).toHaveTextContent(
         'Timeline interaction route: active:risk:live_trading_disabled:raised|slot:2/2 · route:stepPrev:trade:closed:queued|stepNext:none|kindPrev:none|kindNext:none|bucketPrev:none|bucketNext:none · reachable:1/6|profile:single-path|suggested:ArrowLeft/Home · wrap:bounded|order:newest-first|selection:sticky',
       )
+      expect(screen.getByLabelText('Overlay Marker Timeline Interaction Pressure Summary')).toHaveTextContent(
+        'Timeline interaction pressure: active:risk:live_trading_disabled:raised|slot:2/2 · pressure:backward:2|forward:0|net:+2|bias:backward|intensity:strong · lanes:step:backward|kind:idle|bucket:idle · edges:home:on|end:off|coverage:2/10|phase:backward-lean · wrap:bounded|order:newest-first',
+      )
       expect(screen.getByLabelText('Overlay Marker Behavior')).toHaveTextContent(
         'Marker behavior: wrap:bounded · selection:sticky · nav:manual',
       )
@@ -1644,6 +1653,9 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Overlay Marker Timeline Interaction Route Summary')).toHaveTextContent(
       'Timeline interaction route: active:trade:closed:queued|slot:1/2 · route:stepPrev:none|stepNext:risk:live_trading_disabled:raised|kindPrev:none|kindNext:none|bucketPrev:none|bucketNext:none · reachable:1/6|profile:single-path|suggested:ArrowRight/End · wrap:bounded|order:newest-first|selection:sticky',
+    )
+    expect(screen.getByLabelText('Overlay Marker Timeline Interaction Pressure Summary')).toHaveTextContent(
+      'Timeline interaction pressure: active:trade:closed:queued|slot:1/2 · pressure:backward:0|forward:2|net:-2|bias:forward|intensity:strong · lanes:step:forward|kind:idle|bucket:idle · edges:home:off|end:on|coverage:2/10|phase:forward-lean · wrap:bounded|order:newest-first',
     )
     expect(screen.getByRole('button', { name: 'trade:closed:queued' })).toHaveAttribute(
       'aria-pressed',
