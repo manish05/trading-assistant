@@ -77,6 +77,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Active Delta Neighbors')).toHaveTextContent(
       'Active delta neighbors: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Active Neighbor Gap Summary')).toHaveTextContent(
+      'Active neighbor gaps: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
       'Timeline buckets: mode:none · scope:all-buckets · buckets:0 · latest:none · count:0',
     )
@@ -735,6 +738,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Active Delta Neighbors')).toHaveTextContent(
       'Active delta neighbors: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Active Neighbor Gap Summary')).toHaveTextContent(
+      'Active neighbor gaps: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
       'Timeline buckets: mode:none · scope:all-buckets · buckets:0 · latest:none · count:0',
     )
@@ -875,6 +881,9 @@ describe('Dashboard shell', () => {
       )
       expect(screen.getByLabelText('Overlay Marker Active Delta Neighbors')).toHaveTextContent(
         'Active delta neighbors: active:risk:live_trading_disabled:raised · prev:trade:closed:queued(Δl:-1.00|Δa:-0.50) · next:none · scope:all/all',
+      )
+      expect(screen.getByLabelText('Overlay Marker Active Neighbor Gap Summary')).toHaveTextContent(
+        'Active neighbor gaps: slot:2/2 · prev:trade:closed:queued|Δt:1 · next:none|Δt:n/a · order:newest-first',
       )
       expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
         'Timeline buckets: mode:none · scope:all-buckets · buckets:2 · latest:t2 · count:2',
@@ -1102,6 +1111,9 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Overlay Marker Active Delta Neighbors')).toHaveTextContent(
       'Active delta neighbors: active:trade:closed:queued · prev:none · next:risk:live_trading_disabled:raised(Δl:+0.00|Δa:+0.50) · scope:all/all',
+    )
+    expect(screen.getByLabelText('Overlay Marker Active Neighbor Gap Summary')).toHaveTextContent(
+      'Active neighbor gaps: slot:1/2 · prev:none|Δt:n/a · next:risk:live_trading_disabled:raised|Δt:1 · order:newest-first',
     )
 
     fireEvent.keyDown(screen.getByRole('button', { name: 'trade:closed:queued' }), { key: '2' })

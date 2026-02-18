@@ -3101,6 +3101,28 @@ function App() {
     marketOverlayMarkerDeltaFilter,
     marketOverlayScopedTimelineAnnotations,
   ])
+  const marketOverlayActiveMarkerNeighborGapSummary = useMemo(() => {
+    if (!marketOverlayActiveTimelineAnnotation || marketOverlayActiveTimelineIndex < 0) {
+      return 'none'
+    }
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    const previousGap = previousAnnotation
+      ? Math.abs(marketOverlayActiveTimelineAnnotation.time - previousAnnotation.time)
+      : null
+    const nextGap = nextAnnotation
+      ? Math.abs(nextAnnotation.time - marketOverlayActiveTimelineAnnotation.time)
+      : null
+    const describeAnnotation = (annotation: MarketOverlayTimelineAnnotation | null) =>
+      annotation ? `${annotation.kind}:${annotation.label}` : 'none'
+    return `slot:${marketOverlayActiveTimelineIndex + 1}/${marketOverlayScopedTimelineAnnotations.length} · prev:${describeAnnotation(previousAnnotation)}|Δt:${previousGap ?? 'n/a'} · next:${describeAnnotation(nextAnnotation)}|Δt:${nextGap ?? 'n/a'} · order:${marketOverlayTimelineOrder}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayScopedTimelineAnnotations,
+    marketOverlayTimelineOrder,
+  ])
   const marketOverlayMarkerTimelineRows = useMemo(() => {
     if (marketOverlayScopedVisibleAnnotations.length === 0) {
       return [] as Array<{ id: string; text: string; isSelected: boolean }>
@@ -6220,6 +6242,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Active Delta Neighbors">
               Active delta neighbors: {marketOverlayActiveMarkerNeighborDeltaSummary}
+            </p>
+            <p aria-label="Overlay Marker Active Neighbor Gap Summary">
+              Active neighbor gaps: {marketOverlayActiveMarkerNeighborGapSummary}
             </p>
             <p
               aria-label="Overlay Chart Runtime"
