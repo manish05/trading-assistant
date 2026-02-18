@@ -2849,6 +2849,58 @@ function App() {
     marketOverlayTimelineCount,
     marketOverlayTimelineOrder,
   ])
+  const marketOverlayMarkerTimelineInteractionVectorSummary = useMemo(() => {
+    if (isMarketOverlayNavigationLocked) {
+      return 'locked'
+    }
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayTimelineCount === 0
+    ) {
+      return 'none'
+    }
+    const backwardVector =
+      Number(canSelectPreviousMarketOverlayMarker) +
+      Number(canSelectSkipBackwardMarketOverlayMarker) +
+      Number(canSelectPreviousSameKindMarketOverlayMarker) +
+      Number(canSelectPreviousBucketMarketOverlayMarker) +
+      Number(canSelectOldestMarketOverlayMarker)
+    const forwardVector =
+      Number(canSelectNextMarketOverlayMarker) +
+      Number(canSelectSkipForwardMarketOverlayMarker) +
+      Number(canSelectNextSameKindMarketOverlayMarker) +
+      Number(canSelectNextBucketMarketOverlayMarker) +
+      Number(canSelectLatestMarketOverlayMarker)
+    const netVector = backwardVector - forwardVector
+    const laneVector = Number(canSelectPreviousMarketOverlayMarker) - Number(canSelectNextMarketOverlayMarker)
+    const edgeVector = Number(canSelectOldestMarketOverlayMarker) - Number(canSelectLatestMarketOverlayMarker)
+    const state = netVector === 0 ? 'balanced' : netVector > 0 ? 'backward' : 'forward'
+    const stability =
+      Math.abs(netVector) >= 3 ? 'strong' : Math.abs(netVector) >= 2 ? 'firm' : Math.abs(netVector) === 1 ? 'light' : 'neutral'
+    const coverage = backwardVector + forwardVector
+    const band = coverage >= 6 ? 'wide' : coverage >= 3 ? 'moderate' : coverage > 0 ? 'narrow' : 'none'
+    const formatSigned = (value: number) => `${value >= 0 ? '+' : ''}${value}`
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label}|slot:${marketOverlayActiveTimelineIndex + 1}/${marketOverlayTimelineCount} · vectors:backward:${backwardVector}|forward:${forwardVector}|net:${formatSigned(netVector)}|lane:${formatSigned(laneVector)}|edge:${formatSigned(edgeVector)} · state:${state}|stability:${stability}|coverage:${coverage}/10|band:${band} · wrap:${marketOverlayMarkerWrap}|selection:${marketOverlaySelectionMode}|order:${marketOverlayTimelineOrder}`
+  }, [
+    canSelectLatestMarketOverlayMarker,
+    canSelectNextBucketMarketOverlayMarker,
+    canSelectNextMarketOverlayMarker,
+    canSelectNextSameKindMarketOverlayMarker,
+    canSelectOldestMarketOverlayMarker,
+    canSelectPreviousBucketMarketOverlayMarker,
+    canSelectPreviousMarketOverlayMarker,
+    canSelectPreviousSameKindMarketOverlayMarker,
+    canSelectSkipBackwardMarketOverlayMarker,
+    canSelectSkipForwardMarketOverlayMarker,
+    isMarketOverlayNavigationLocked,
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayMarkerWrap,
+    marketOverlaySelectionMode,
+    marketOverlayTimelineCount,
+    marketOverlayTimelineOrder,
+  ])
   const marketOverlayMarkerDrilldown = useMemo(() => {
     const latest =
       marketOverlayScopedTimelineAnnotations[marketOverlayScopedTimelineAnnotations.length - 1] ?? null
@@ -11441,6 +11493,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Timeline Interaction Coherence Summary">
               Timeline interaction coherence: {marketOverlayMarkerTimelineInteractionCoherenceSummary}
+            </p>
+            <p aria-label="Overlay Marker Timeline Interaction Vector Summary">
+              Timeline interaction vector: {marketOverlayMarkerTimelineInteractionVectorSummary}
             </p>
             <div className="market-overlay-marker-navigation">
               <button
