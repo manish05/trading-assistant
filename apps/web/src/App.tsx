@@ -2555,6 +2555,92 @@ function App() {
     marketOverlayTimelineCount,
     marketOverlayTimelineOrder,
   ])
+  const marketOverlayMarkerTimelineInteractionRouteSummary = useMemo(() => {
+    if (isMarketOverlayNavigationLocked) {
+      return 'locked'
+    }
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayTimelineCount === 0
+    ) {
+      return 'none'
+    }
+    const formatTarget = (index: number) => {
+      if (index < 0 || index >= marketOverlayTimelineCount) {
+        return 'none'
+      }
+      const annotation = marketOverlayScopedTimelineAnnotations[index] ?? null
+      return annotation ? `${annotation.kind}:${annotation.label}` : 'none'
+    }
+    const resolveRelativeIndex = (offset: number, isAllowed: boolean) => {
+      if (!isAllowed) {
+        return -1
+      }
+      const rawTargetIndex = marketOverlayActiveTimelineIndex + offset
+      return marketOverlayMarkerWrap === 'wrap'
+        ? ((rawTargetIndex % marketOverlayTimelineCount) + marketOverlayTimelineCount) %
+            marketOverlayTimelineCount
+        : Math.max(0, Math.min(marketOverlayTimelineCount - 1, rawTargetIndex))
+    }
+    const stepPrevious = formatTarget(resolveRelativeIndex(-1, canSelectPreviousMarketOverlayMarker))
+    const stepNext = formatTarget(resolveRelativeIndex(1, canSelectNextMarketOverlayMarker))
+    const kindPrevious = formatTarget(
+      canSelectPreviousSameKindMarketOverlayMarker ? marketOverlayPreviousSameKindIndex : -1,
+    )
+    const kindNext = formatTarget(
+      canSelectNextSameKindMarketOverlayMarker ? marketOverlayNextSameKindIndex : -1,
+    )
+    const bucketPrevious = formatTarget(
+      canSelectPreviousBucketMarketOverlayMarker ? marketOverlayPreviousBucketIndex : -1,
+    )
+    const bucketNext = formatTarget(
+      canSelectNextBucketMarketOverlayMarker ? marketOverlayNextBucketIndex : -1,
+    )
+    const reachableCount = [stepPrevious, stepNext, kindPrevious, kindNext, bucketPrevious, bucketNext].filter(
+      (target) => target !== 'none',
+    ).length
+    const profile =
+      reachableCount === 0
+        ? 'dead-end'
+        : reachableCount === 1
+          ? 'single-path'
+          : reachableCount <= 3
+            ? 'branched'
+            : 'mesh'
+    const suggestedKey =
+      stepPrevious !== 'none' && stepNext === 'none'
+        ? 'ArrowLeft/Home'
+        : stepPrevious === 'none' && stepNext !== 'none'
+          ? 'ArrowRight/End'
+          : stepPrevious !== 'none' && stepNext !== 'none'
+            ? 'ArrowLeft/ArrowRight'
+            : kindPrevious !== 'none' || kindNext !== 'none'
+              ? '[/]'
+              : bucketPrevious !== 'none' || bucketNext !== 'none'
+                ? ',/.'
+                : 'none'
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label}|slot:${marketOverlayActiveTimelineIndex + 1}/${marketOverlayTimelineCount} · route:stepPrev:${stepPrevious}|stepNext:${stepNext}|kindPrev:${kindPrevious}|kindNext:${kindNext}|bucketPrev:${bucketPrevious}|bucketNext:${bucketNext} · reachable:${reachableCount}/6|profile:${profile}|suggested:${suggestedKey} · wrap:${marketOverlayMarkerWrap}|order:${marketOverlayTimelineOrder}|selection:${marketOverlaySelectionMode}`
+  }, [
+    canSelectNextBucketMarketOverlayMarker,
+    canSelectNextMarketOverlayMarker,
+    canSelectNextSameKindMarketOverlayMarker,
+    canSelectPreviousBucketMarketOverlayMarker,
+    canSelectPreviousMarketOverlayMarker,
+    canSelectPreviousSameKindMarketOverlayMarker,
+    isMarketOverlayNavigationLocked,
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayMarkerWrap,
+    marketOverlayNextBucketIndex,
+    marketOverlayNextSameKindIndex,
+    marketOverlayPreviousBucketIndex,
+    marketOverlayPreviousSameKindIndex,
+    marketOverlayScopedTimelineAnnotations,
+    marketOverlaySelectionMode,
+    marketOverlayTimelineCount,
+    marketOverlayTimelineOrder,
+  ])
   const marketOverlayMarkerDrilldown = useMemo(() => {
     const latest =
       marketOverlayScopedTimelineAnnotations[marketOverlayScopedTimelineAnnotations.length - 1] ?? null
@@ -10881,6 +10967,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Timeline Interaction Polish Summary">
               Timeline interaction polish: {marketOverlayMarkerTimelineInteractionPolishSummary}
+            </p>
+            <p aria-label="Overlay Marker Timeline Interaction Route Summary">
+              Timeline interaction route: {marketOverlayMarkerTimelineInteractionRouteSummary}
             </p>
             <div className="market-overlay-marker-navigation">
               <button
