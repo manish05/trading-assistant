@@ -6220,6 +6220,83 @@ function App() {
     marketOverlayMarkerDeltaBasis,
     marketOverlayMarkerDeltaFilter,
   ])
+  const marketOverlayMarkerEventCandleComparativeDriftSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const pointIndexByTime = new Map(
+      marketOverlayChartPoints.map((point, index) => [point.time, index] as const),
+    )
+    const activePoint = pointByTime.get(marketOverlayActiveTimelineAnnotation.time) ?? null
+    if (!activePoint) {
+      return 'none'
+    }
+    const activePointIndex = pointIndexByTime.get(activePoint.time) ?? -1
+    if (activePointIndex < 0) {
+      return 'none'
+    }
+    const previousPoint = activePointIndex > 0 ? marketOverlayChartPoints[activePointIndex - 1] : null
+    const nextPoint =
+      activePointIndex < marketOverlayChartPoints.length - 1
+        ? marketOverlayChartPoints[activePointIndex + 1]
+        : null
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const latestDelta = latestPoint ? activePoint.value - latestPoint.value : null
+    const averageDelta = baseline !== null ? activePoint.value - baseline : null
+    const basisDelta = marketOverlayMarkerDeltaBasis === 'latest' ? latestDelta : averageDelta
+    const alternateDelta = marketOverlayMarkerDeltaBasis === 'latest' ? averageDelta : latestDelta
+    const deltaDrift =
+      basisDelta !== null && alternateDelta !== null ? basisDelta - alternateDelta : null
+    const basisTone = resolveMarketOverlayDeltaTone(basisDelta)
+    const alternateTone = resolveMarketOverlayDeltaTone(alternateDelta)
+    const basisAgreement =
+      basisTone === 'unavailable' || alternateTone === 'unavailable'
+        ? 'n/a'
+        : basisTone === alternateTone
+          ? 'agree'
+          : 'diverge'
+    const previousSlope = previousPoint ? activePoint.value - previousPoint.value : null
+    const nextSlope = nextPoint ? nextPoint.value - activePoint.value : null
+    const neighborVector = (previousSlope ?? 0) + (nextSlope ?? 0)
+    const neighborCoverage = Number(previousSlope !== null) + Number(nextSlope !== null)
+    const neighborDirection =
+      neighborCoverage === 0
+        ? 'isolated'
+        : Math.abs(neighborVector) < 1e-9
+          ? 'balanced'
+          : neighborVector > 0
+            ? 'warming'
+            : 'cooling'
+    const navBias =
+      canSelectPreviousMarketOverlayMarker && canSelectNextMarketOverlayMarker
+        ? 'bidirectional'
+        : canSelectPreviousMarketOverlayMarker
+          ? 'backward'
+          : canSelectNextMarketOverlayMarker
+            ? 'forward'
+            : 'stalled'
+    const formatSigned = (value: number | null) =>
+      value === null ? 'n/a' : `${value >= 0 ? '+' : ''}${value.toFixed(2)}`
+    const stateLabel = (enabled: boolean) => (enabled ? 'on' : 'off')
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · basis:${marketOverlayMarkerDeltaBasis}:${formatSigned(basisDelta)}|alt:${formatSigned(alternateDelta)}|drift:${formatSigned(deltaDrift)}|agreement:${basisAgreement} · neighbors:prevSlope:${formatSigned(previousSlope)}|nextSlope:${formatSigned(nextSlope)}|vector:${formatSigned(neighborVector)}|direction:${neighborDirection}|coverage:${neighborCoverage}/2 · navBias:${navBias}|home:${stateLabel(canSelectOldestMarketOverlayMarker)}|end:${stateLabel(canSelectLatestMarketOverlayMarker)} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    canSelectLatestMarketOverlayMarker,
+    canSelectNextMarketOverlayMarker,
+    canSelectOldestMarketOverlayMarker,
+    canSelectPreviousMarketOverlayMarker,
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+  ])
   const marketOverlayMarkerTimelineRows = useMemo(() => {
     if (marketOverlayScopedVisibleAnnotations.length === 0) {
       return [] as Array<{ id: string; text: string; isSelected: boolean }>
@@ -10409,6 +10486,10 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Event Candle Transit Summary">
               Marker event candle transit: {marketOverlayMarkerEventCandleTransitSummary}
+            </p>
+            <p aria-label="Overlay Marker Event Candle Comparative Drift Summary">
+              Marker event candle comparative drift:{' '}
+              {marketOverlayMarkerEventCandleComparativeDriftSummary}
             </p>
             <p aria-label="Overlay Marker Visual Focus Summary">
               Marker visual focus: {marketOverlayMarkerVisualFocusSummary}
