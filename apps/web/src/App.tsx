@@ -4404,6 +4404,106 @@ function App() {
     marketOverlayMarkerDeltaFilter,
     marketOverlayScopedTimelineAnnotations,
   ])
+  const marketOverlayActiveMarkerNeighborMagnitudeSideDriftSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const resolveDelta = (
+      annotation: MarketOverlayTimelineAnnotation | null,
+      basis: MarketOverlayMarkerDeltaBasis,
+    ): number | null => {
+      if (!annotation) {
+        return null
+      }
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point) {
+        return null
+      }
+      if (basis === 'latest') {
+        return latestPoint ? point.value - latestPoint.value : null
+      }
+      return baseline !== null ? point.value - baseline : null
+    }
+    const computeRatio = (neighbor: number | null, active: number | null) => {
+      if (neighbor === null || active === null || Math.abs(active) < 1e-9) {
+        return null
+      }
+      return Math.abs(neighbor) / Math.abs(active)
+    }
+    const describeBasis = (basis: MarketOverlayMarkerDeltaBasis) => {
+      const previousAnnotation =
+        marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+      const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+      const active = resolveDelta(marketOverlayActiveTimelineAnnotation, basis)
+      const previous = resolveDelta(previousAnnotation, basis)
+      const next = resolveDelta(nextAnnotation, basis)
+      const previousRatio = computeRatio(previous, active)
+      const nextRatio = computeRatio(next, active)
+      const availableCount = Number(previousRatio !== null) + Number(nextRatio !== null)
+      let side: 'none' | 'prev' | 'next' | 'balanced' = 'none'
+      if (previousRatio !== null && nextRatio === null) {
+        side = 'prev'
+      } else if (previousRatio === null && nextRatio !== null) {
+        side = 'next'
+      } else if (previousRatio !== null && nextRatio !== null) {
+        side = Math.abs(previousRatio - nextRatio) < 1e-9 ? 'balanced' : previousRatio > nextRatio ? 'prev' : 'next'
+      }
+      return { side, availableCount }
+    }
+    const sideScore = (side: 'none' | 'prev' | 'next' | 'balanced') => {
+      if (side === 'prev') {
+        return 1
+      }
+      if (side === 'next') {
+        return -1
+      }
+      return 0
+    }
+    const toWeightedVote = (
+      side: 'none' | 'prev' | 'next' | 'balanced',
+      availableCount: number,
+    ): number => sideScore(side) * availableCount
+    const formatVote = (vote: number) => `${vote >= 0 ? '+' : ''}${vote}`
+    const latestSummary = describeBasis('latest')
+    const averageSummary = describeBasis('average')
+    const latestVote = toWeightedVote(latestSummary.side, latestSummary.availableCount)
+    const averageVote = toWeightedVote(averageSummary.side, averageSummary.availableCount)
+    const driftVote = averageVote - latestVote
+    const driftDirection = driftVote === 0 ? 'stable' : driftVote > 0 ? 'toward-prev' : 'toward-next'
+    const dominance =
+      Math.abs(latestVote) === Math.abs(averageVote)
+        ? 'balanced'
+        : Math.abs(latestVote) > Math.abs(averageVote)
+          ? 'latest'
+          : 'average'
+    const sign = (value: number) => (value === 0 ? 0 : value > 0 ? 1 : -1)
+    const latestSign = sign(latestVote)
+    const averageSign = sign(averageVote)
+    const alignment =
+      latestSign === 0 && averageSign === 0
+        ? 'neutral'
+        : latestSign === averageSign
+          ? 'aligned'
+          : latestSign === 0 || averageSign === 0
+            ? 'partial'
+            : 'opposed'
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · latest:vote:${formatVote(latestVote)}|side:${latestSummary.side}|available:${latestSummary.availableCount}/2 · average:vote:${formatVote(averageVote)}|side:${averageSummary.side}|available:${averageSummary.availableCount}/2 · drift:${formatVote(driftVote)}|${driftDirection} · dominance:${dominance} · alignment:${alignment} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
   const marketOverlayActiveMarkerNeighborDeltaSummary = useMemo(() => {
     if (
       !marketOverlayActiveTimelineAnnotation ||
@@ -7802,6 +7902,9 @@ function App() {
             <p aria-label="Overlay Marker Active Neighbor Magnitude Side Transition Summary">
               Active neighbor magnitude side transition:{' '}
               {marketOverlayActiveMarkerNeighborMagnitudeSideTransitionSummary}
+            </p>
+            <p aria-label="Overlay Marker Active Neighbor Magnitude Side Drift Summary">
+              Active neighbor magnitude side drift: {marketOverlayActiveMarkerNeighborMagnitudeSideDriftSummary}
             </p>
             <p aria-label="Overlay Marker Active Delta Neighbors">
               Active delta neighbors: {marketOverlayActiveMarkerNeighborDeltaSummary}
