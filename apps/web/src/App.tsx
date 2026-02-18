@@ -98,6 +98,11 @@ type MarketOverlayChartMarker = {
   shape: 'circle' | 'square' | 'arrowUp' | 'arrowDown'
   text: string
 }
+type MarketOverlayMarkerVisualRole = 'active' | 'prev' | 'next' | 'context'
+type MarketOverlayMarkerVisualProfile = MarketOverlayChartMarker & {
+  role: MarketOverlayMarkerVisualRole
+  tone: 'up' | 'down' | 'flat' | 'unavailable'
+}
 type MarketOverlayChartSeries = {
   setData: (data: MarketOverlayChartPoint[]) => void
   setMarkers?: (markers: MarketOverlayChartMarker[]) => void
@@ -6065,15 +6070,36 @@ function App() {
       sortedTimestamps[sortedTimestamps.length - 1] - sortedTimestamps[sortedTimestamps.length - 2]
     return `count:${sortedTimestamps.length} · span:${formatElapsedMs(spanMs)} · avgGap:${formatElapsedMs(averageGapMs)} · latestGap:${formatElapsedMs(latestGapMs)}`
   }, [marketOverlayScopedTimelineAnnotations])
-  const marketOverlayChartMarkers = useMemo(() => {
+  const marketOverlayMarkerVisualProfiles = useMemo(() => {
+    const profiles = new Map<string, MarketOverlayMarkerVisualProfile>()
     if (marketOverlayChartPoints.length === 0 || marketOverlayScopedTimelineAnnotations.length === 0) {
-      return [] as MarketOverlayChartMarker[]
+      return profiles
     }
-    return marketOverlayScopedTimelineAnnotations.map((annotation): MarketOverlayChartMarker => {
-      const time = annotation.time
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const previousAnnotation =
+      marketOverlayActiveTimelineIndex >= 0
+        ? marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+        : null
+    const nextAnnotation =
+      marketOverlayActiveTimelineIndex >= 0
+        ? marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+        : null
+    const resolveDelta = (annotation: MarketOverlayTimelineAnnotation): number | null => {
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point) {
+        return null
+      }
+      if (marketOverlayMarkerDeltaBasis === 'latest') {
+        return latestPoint ? point.value - latestPoint.value : null
+      }
+      return baseline !== null ? point.value - baseline : null
+    }
+    const resolveBaseMarker = (annotation: MarketOverlayTimelineAnnotation): MarketOverlayChartMarker => {
       if (annotation.kind === 'trade') {
         return {
-          time,
+          time: annotation.time,
           position: 'belowBar',
           color: annotation.tone === 'positive' ? '#71d48c' : '#e9cf7a',
           shape: annotation.tone === 'positive' ? 'arrowUp' : 'arrowDown',
@@ -6082,7 +6108,7 @@ function App() {
       }
       if (annotation.kind === 'risk') {
         return {
-          time,
+          time: annotation.time,
           position: 'aboveBar',
           color: '#ee8d8d',
           shape: 'circle',
@@ -6090,14 +6116,132 @@ function App() {
         }
       }
       return {
-        time,
+        time: annotation.time,
+        position: 'inBar',
+        color: '#84d3f8',
+        shape: 'square',
+        text: `feed:${annotation.label}`,
+      }
+    }
+    const activePalette: Record<MarketOverlayMarkerVisualProfile['tone'], string> = {
+      up: '#59c98d',
+      down: '#e06f6f',
+      flat: '#e5c453',
+      unavailable: '#84d3f8',
+    }
+    const neighborPalette: Record<MarketOverlayMarkerVisualProfile['tone'], string> = {
+      up: '#8de2ab',
+      down: '#f2a5a5',
+      flat: '#f2dd98',
+      unavailable: '#a7ddf9',
+    }
+    const resolveToneShape = (
+      tone: MarketOverlayMarkerVisualProfile['tone'],
+    ): MarketOverlayMarkerVisualProfile['shape'] => {
+      if (tone === 'up') {
+        return 'arrowUp'
+      }
+      if (tone === 'down') {
+        return 'arrowDown'
+      }
+      if (tone === 'flat') {
+        return 'circle'
+      }
+      return 'square'
+    }
+    marketOverlayScopedTimelineAnnotations.forEach((annotation) => {
+      const baseMarker = resolveBaseMarker(annotation)
+      const role: MarketOverlayMarkerVisualRole =
+        annotation.id === marketOverlayActiveTimelineAnnotation?.id
+          ? 'active'
+          : annotation.id === previousAnnotation?.id
+            ? 'prev'
+            : annotation.id === nextAnnotation?.id
+              ? 'next'
+              : 'context'
+      const tone = resolveMarketOverlayDeltaTone(resolveDelta(annotation))
+      if (role === 'context') {
+        profiles.set(annotation.id, { ...baseMarker, role, tone })
+        return
+      }
+      const color = role === 'active' ? activePalette[tone] : neighborPalette[tone]
+      const shape = resolveToneShape(tone)
+      profiles.set(annotation.id, {
+        ...baseMarker,
+        role,
+        tone,
+        color,
+        shape,
+        text: `${role}:${annotation.kind}:${annotation.label}:${tone}`,
+      })
+    })
+    return profiles
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayChartMarkers = useMemo(() => {
+    if (marketOverlayScopedTimelineAnnotations.length === 0) {
+      return [] as MarketOverlayChartMarker[]
+    }
+    return marketOverlayScopedTimelineAnnotations.map((annotation): MarketOverlayChartMarker => {
+      const profile = marketOverlayMarkerVisualProfiles.get(annotation.id)
+      if (profile) {
+        return {
+          time: profile.time,
+          position: profile.position,
+          color: profile.color,
+          shape: profile.shape,
+          text: profile.text,
+        }
+      }
+      return {
+        time: annotation.time,
         position: 'inBar',
         color: '#84d3f8',
         shape: 'square',
         text: `feed:${annotation.label}`,
       }
     })
-  }, [marketOverlayChartPoints.length, marketOverlayScopedTimelineAnnotations])
+  }, [marketOverlayMarkerVisualProfiles, marketOverlayScopedTimelineAnnotations])
+  const marketOverlayMarkerVisualFocusSummary = useMemo(() => {
+    if (!marketOverlayActiveTimelineAnnotation || marketOverlayActiveTimelineIndex < 0) {
+      return 'none'
+    }
+    const activeProfile = marketOverlayMarkerVisualProfiles.get(marketOverlayActiveTimelineAnnotation.id)
+    if (!activeProfile) {
+      return 'none'
+    }
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    const previousProfile = previousAnnotation
+      ? marketOverlayMarkerVisualProfiles.get(previousAnnotation.id) ?? null
+      : null
+    const nextProfile = nextAnnotation ? marketOverlayMarkerVisualProfiles.get(nextAnnotation.id) ?? null : null
+    const describe = (
+      scope: 'active' | 'prev' | 'next',
+      annotation: MarketOverlayTimelineAnnotation | null,
+      profile: MarketOverlayMarkerVisualProfile | null,
+    ) => {
+      if (!annotation || !profile) {
+        return `${scope}:none`
+      }
+      return `${scope}:${annotation.kind}:${annotation.label}|role:${profile.role}|tone:${profile.tone}|color:${profile.color}|shape:${profile.shape}`
+    }
+    return `${describe('active', marketOverlayActiveTimelineAnnotation, activeProfile)} · ${describe('prev', previousAnnotation, previousProfile)} · ${describe('next', nextAnnotation, nextProfile)} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayMarkerVisualProfiles,
+    marketOverlayScopedTimelineAnnotations,
+  ])
 
   useEffect(() => {
     if (marketOverlayScopedVisibleAnnotations.length === 0) {
@@ -9176,6 +9320,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Active Neighbor Tone Summary">
               Active neighbor tones: {marketOverlayActiveMarkerNeighborToneSummary}
+            </p>
+            <p aria-label="Overlay Marker Visual Focus Summary">
+              Marker visual focus: {marketOverlayMarkerVisualFocusSummary}
             </p>
             <p
               aria-label="Overlay Chart Runtime"
