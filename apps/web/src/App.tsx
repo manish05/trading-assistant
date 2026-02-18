@@ -2724,6 +2724,59 @@ function App() {
     marketOverlayTimelineCount,
     marketOverlayTimelineOrder,
   ])
+  const marketOverlayMarkerTimelineInteractionReadinessSummary = useMemo(() => {
+    if (isMarketOverlayNavigationLocked) {
+      return 'locked'
+    }
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayTimelineCount === 0
+    ) {
+      return 'none'
+    }
+    const backwardReady =
+      Number(canSelectPreviousMarketOverlayMarker) +
+      Number(canSelectSkipBackwardMarketOverlayMarker) +
+      Number(canSelectPreviousSameKindMarketOverlayMarker) +
+      Number(canSelectPreviousBucketMarketOverlayMarker) +
+      Number(canSelectOldestMarketOverlayMarker)
+    const forwardReady =
+      Number(canSelectNextMarketOverlayMarker) +
+      Number(canSelectSkipForwardMarketOverlayMarker) +
+      Number(canSelectNextSameKindMarketOverlayMarker) +
+      Number(canSelectNextBucketMarketOverlayMarker) +
+      Number(canSelectLatestMarketOverlayMarker)
+    const totalReady = backwardReady + forwardReady
+    const tilt =
+      backwardReady === forwardReady
+        ? 'balanced'
+        : backwardReady > forwardReady
+          ? 'backward'
+          : 'forward'
+    const readiness =
+      totalReady >= 8 ? 'high' : totalReady >= 5 ? 'medium' : totalReady >= 2 ? 'light' : totalReady > 0 ? 'minimal' : 'none'
+    const stateLabel = (value: boolean) => (value ? '1' : '0')
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label}|slot:${marketOverlayActiveTimelineIndex + 1}/${marketOverlayTimelineCount} · matrix:step:${stateLabel(canSelectPreviousMarketOverlayMarker)}/${stateLabel(canSelectNextMarketOverlayMarker)}|skip:${stateLabel(canSelectSkipBackwardMarketOverlayMarker)}/${stateLabel(canSelectSkipForwardMarketOverlayMarker)}|kind:${stateLabel(canSelectPreviousSameKindMarketOverlayMarker)}/${stateLabel(canSelectNextSameKindMarketOverlayMarker)}|bucket:${stateLabel(canSelectPreviousBucketMarketOverlayMarker)}/${stateLabel(canSelectNextBucketMarketOverlayMarker)}|edge:${stateLabel(canSelectOldestMarketOverlayMarker)}/${stateLabel(canSelectLatestMarketOverlayMarker)} · readiness:backward:${backwardReady}|forward:${forwardReady}|total:${totalReady}/10|tilt:${tilt}|band:${readiness} · wrap:${marketOverlayMarkerWrap}|selection:${marketOverlaySelectionMode}|order:${marketOverlayTimelineOrder}`
+  }, [
+    canSelectLatestMarketOverlayMarker,
+    canSelectNextBucketMarketOverlayMarker,
+    canSelectNextMarketOverlayMarker,
+    canSelectNextSameKindMarketOverlayMarker,
+    canSelectOldestMarketOverlayMarker,
+    canSelectPreviousBucketMarketOverlayMarker,
+    canSelectPreviousMarketOverlayMarker,
+    canSelectPreviousSameKindMarketOverlayMarker,
+    canSelectSkipBackwardMarketOverlayMarker,
+    canSelectSkipForwardMarketOverlayMarker,
+    isMarketOverlayNavigationLocked,
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayMarkerWrap,
+    marketOverlaySelectionMode,
+    marketOverlayTimelineCount,
+    marketOverlayTimelineOrder,
+  ])
   const marketOverlayMarkerDrilldown = useMemo(() => {
     const latest =
       marketOverlayScopedTimelineAnnotations[marketOverlayScopedTimelineAnnotations.length - 1] ?? null
@@ -11140,6 +11193,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Timeline Interaction Pressure Summary">
               Timeline interaction pressure: {marketOverlayMarkerTimelineInteractionPressureSummary}
+            </p>
+            <p aria-label="Overlay Marker Timeline Interaction Readiness Summary">
+              Timeline interaction readiness: {marketOverlayMarkerTimelineInteractionReadinessSummary}
             </p>
             <div className="market-overlay-marker-navigation">
               <button
