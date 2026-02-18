@@ -3123,6 +3123,44 @@ function App() {
     marketOverlayScopedTimelineAnnotations,
     marketOverlayTimelineOrder,
   ])
+  const marketOverlayActiveMarkerBasisSpreadSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const resolveSpread = (annotation: MarketOverlayTimelineAnnotation | null): number | null => {
+      if (!annotation) {
+        return null
+      }
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point || !latestPoint || baseline === null) {
+        return null
+      }
+      const latestDelta = point.value - latestPoint.value
+      const averageDelta = point.value - baseline
+      return latestDelta - averageDelta
+    }
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    const formatSpread = (value: number | null) =>
+      value === null ? 'n/a' : `${value >= 0 ? '+' : ''}${value.toFixed(2)}`
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label}:${formatSpread(resolveSpread(marketOverlayActiveTimelineAnnotation))} · prev:${formatSpread(resolveSpread(previousAnnotation))} · next:${formatSpread(resolveSpread(nextAnnotation))} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
   const marketOverlayMarkerTimelineRows = useMemo(() => {
     if (marketOverlayScopedVisibleAnnotations.length === 0) {
       return [] as Array<{ id: string; text: string; isSelected: boolean }>
@@ -6245,6 +6283,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Active Neighbor Gap Summary">
               Active neighbor gaps: {marketOverlayActiveMarkerNeighborGapSummary}
+            </p>
+            <p aria-label="Overlay Marker Active Basis Spread">
+              Active basis spread: {marketOverlayActiveMarkerBasisSpreadSummary}
             </p>
             <p
               aria-label="Overlay Chart Runtime"
