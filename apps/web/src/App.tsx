@@ -3644,6 +3644,58 @@ function App() {
     marketOverlayMarkerDeltaFilter,
     marketOverlayScopedTimelineAnnotations,
   ])
+  const marketOverlayActiveMarkerNeighborConsensusBalanceSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const resolveRelation = (annotation: MarketOverlayTimelineAnnotation | null): 'agree' | 'diverge' | null => {
+      if (!annotation) {
+        return null
+      }
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point) {
+        return null
+      }
+      const latestDelta = latestPoint ? point.value - latestPoint.value : null
+      const averageDelta = baseline !== null ? point.value - baseline : null
+      const latestTone = resolveMarketOverlayDeltaTone(latestDelta)
+      const averageTone = resolveMarketOverlayDeltaTone(averageDelta)
+      if (latestTone === 'unavailable' || averageTone === 'unavailable') {
+        return null
+      }
+      return latestTone === averageTone ? 'agree' : 'diverge'
+    }
+    const toScore = (relation: 'agree' | 'diverge' | null) =>
+      relation === 'agree' ? 1 : relation === 'diverge' ? -1 : 0
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    const previousRelation = resolveRelation(previousAnnotation)
+    const activeRelation = resolveRelation(marketOverlayActiveTimelineAnnotation)
+    const nextRelation = resolveRelation(nextAnnotation)
+    const previousScore = toScore(previousRelation)
+    const activeScore = toScore(activeRelation)
+    const nextScore = toScore(nextRelation)
+    const totalScore = previousScore + activeScore + nextScore
+    const sentiment = totalScore > 0 ? 'agree-leaning' : totalScore < 0 ? 'diverge-leaning' : 'balanced'
+    const formatScore = (value: number) => `${value >= 0 ? '+' : ''}${value}`
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · prev:${previousRelation ?? 'n/a'}(${formatScore(previousScore)}) · active:${activeRelation ?? 'n/a'}(${formatScore(activeScore)}) · next:${nextRelation ?? 'n/a'}(${formatScore(nextScore)}) · total:${formatScore(totalScore)} · sentiment:${sentiment} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
   const marketOverlayActiveMarkerNeighborDeltaRelationSummary = useMemo(() => {
     if (
       !marketOverlayActiveTimelineAnnotation ||
@@ -7312,6 +7364,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Active Neighbor Consensus Summary">
               Active neighbor consensus: {marketOverlayActiveMarkerNeighborConsensusSummary}
+            </p>
+            <p aria-label="Overlay Marker Active Neighbor Consensus Balance Summary">
+              Active neighbor consensus balance: {marketOverlayActiveMarkerNeighborConsensusBalanceSummary}
             </p>
             <p aria-label="Overlay Marker Active Neighbor Delta Relation Summary">
               Active neighbor delta relation: {marketOverlayActiveMarkerNeighborDeltaRelationSummary}
