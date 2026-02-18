@@ -3299,6 +3299,67 @@ function App() {
     marketOverlayMarkerDeltaFilter,
     marketOverlayScopedTimelineAnnotations,
   ])
+  const marketOverlayActiveMarkerNeighborSpreadChangeSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const resolveSpread = (annotation: MarketOverlayTimelineAnnotation | null): number | null => {
+      if (!annotation) {
+        return null
+      }
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point || !latestPoint || baseline === null) {
+        return null
+      }
+      const latestDelta = point.value - latestPoint.value
+      const averageDelta = point.value - baseline
+      return latestDelta - averageDelta
+    }
+    const formatValue = (value: number | null) =>
+      value === null ? 'n/a' : `${value >= 0 ? '+' : ''}${value.toFixed(2)}`
+    const describeChange = (from: number | null, to: number | null) => {
+      if (from === null || to === null) {
+        return 'n/a'
+      }
+      const change = to - from
+      return `${change >= 0 ? '+' : ''}${change.toFixed(2)}`
+    }
+    const describeSlope = (from: number | null, to: number | null) => {
+      if (from === null || to === null) {
+        return 'n/a'
+      }
+      const change = to - from
+      if (change > 0) {
+        return 'rising'
+      }
+      if (change < 0) {
+        return 'falling'
+      }
+      return 'flat'
+    }
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    const previousSpread = resolveSpread(previousAnnotation)
+    const activeSpread = resolveSpread(marketOverlayActiveTimelineAnnotation)
+    const nextSpread = resolveSpread(nextAnnotation)
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label}:${formatValue(activeSpread)} · latest:prev->active:${describeChange(previousSpread, activeSpread)}|active->next:${describeChange(activeSpread, nextSpread)} · slope:prev->active:${describeSlope(previousSpread, activeSpread)}|active->next:${describeSlope(activeSpread, nextSpread)} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
   const marketOverlayActiveMarkerNeighborDeltaSummary = useMemo(() => {
     if (
       !marketOverlayActiveTimelineAnnotation ||
@@ -6642,6 +6703,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Active Neighbor Basis Relation Summary">
               Active neighbor basis relation: {marketOverlayActiveMarkerNeighborBasisRelationSummary}
+            </p>
+            <p aria-label="Overlay Marker Active Neighbor Spread Change Summary">
+              Active neighbor spread change: {marketOverlayActiveMarkerNeighborSpreadChangeSummary}
             </p>
             <p aria-label="Overlay Marker Active Delta Neighbors">
               Active delta neighbors: {marketOverlayActiveMarkerNeighborDeltaSummary}
