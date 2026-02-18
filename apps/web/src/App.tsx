@@ -6703,6 +6703,65 @@ function App() {
     marketOverlayMarkerVisualProfiles,
     marketOverlayScopedTimelineAnnotations,
   ])
+  const marketOverlayMarkerVisualNeighborPhaseSummary = useMemo(() => {
+    if (!marketOverlayActiveTimelineAnnotation || marketOverlayActiveTimelineIndex < 0) {
+      return 'none'
+    }
+    const activeProfile = marketOverlayMarkerVisualProfiles.get(marketOverlayActiveTimelineAnnotation.id) ?? null
+    if (!activeProfile) {
+      return 'none'
+    }
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    const previousProfile = previousAnnotation
+      ? marketOverlayMarkerVisualProfiles.get(previousAnnotation.id) ?? null
+      : null
+    const nextProfile = nextAnnotation ? marketOverlayMarkerVisualProfiles.get(nextAnnotation.id) ?? null : null
+    const toneScore = (tone: MarketOverlayMarkerVisualProfile['tone']) => {
+      if (tone === 'up') {
+        return 1
+      }
+      if (tone === 'down') {
+        return -1
+      }
+      return 0
+    }
+    const formatSigned = (value: number) => `${value >= 0 ? '+' : ''}${value}`
+    const activeScore = toneScore(activeProfile.tone)
+    const prevScore = previousProfile ? toneScore(previousProfile.tone) : null
+    const nextScore = nextProfile ? toneScore(nextProfile.tone) : null
+    const prevStep = prevScore === null ? null : prevScore - activeScore
+    const nextStep = nextScore === null ? null : nextScore - activeScore
+    const availableCount = Number(prevStep !== null) + Number(nextStep !== null)
+    const netStep = (prevStep ?? 0) + (nextStep ?? 0)
+    const bias = netStep === 0 ? 'flat' : netStep > 0 ? 'warming' : 'cooling'
+    const phase =
+      availableCount === 0
+        ? 'isolated'
+        : availableCount === 1
+          ? (prevStep ?? nextStep ?? 0) === 0
+            ? 'anchored-edge'
+            : (prevStep ?? nextStep ?? 0) > 0
+              ? 'warming-edge'
+              : 'cooling-edge'
+          : (prevStep ?? 0) === 0 && (nextStep ?? 0) === 0
+            ? 'locked'
+            : Math.sign(prevStep ?? 0) === Math.sign(nextStep ?? 0)
+              ? 'tilted'
+              : (prevStep ?? 0) === -(nextStep ?? 0)
+                ? 'balanced-swing'
+                : 'mixed'
+    const spread = prevStep === null || nextStep === null ? 'n/a' : formatSigned(prevStep - nextStep)
+    return `active:${activeProfile.tone}|score:${formatSigned(activeScore)} · prev:${prevScore === null ? 'n/a' : `${previousProfile?.tone ?? 'n/a'}|step:${formatSigned(prevStep ?? 0)}`} · next:${nextScore === null ? 'n/a' : `${nextProfile?.tone ?? 'n/a'}|step:${formatSigned(nextStep ?? 0)}`} · netStep:${formatSigned(netStep)}|bias:${bias}|spread:${spread}|phase:${phase}|coverage:${availableCount}/2 · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayMarkerVisualProfiles,
+    marketOverlayScopedTimelineAnnotations,
+  ])
 
   useEffect(() => {
     if (marketOverlayScopedVisibleAnnotations.length === 0) {
@@ -9805,6 +9864,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Visual Neighbor Polarity Summary">
               Marker visual neighbor polarity: {marketOverlayMarkerVisualNeighborPolaritySummary}
+            </p>
+            <p aria-label="Overlay Marker Visual Neighbor Phase Summary">
+              Marker visual neighbor phase: {marketOverlayMarkerVisualNeighborPhaseSummary}
             </p>
             <p
               aria-label="Overlay Chart Runtime"
