@@ -3148,6 +3148,55 @@ function App() {
     marketOverlayMarkerBasisAgreement,
     marketOverlayMarkerDeltaFilter,
   ])
+  const marketOverlayActiveMarkerDeltaRangeContextSummary = useMemo(() => {
+    if (!marketOverlayActiveTimelineAnnotation || marketOverlayChartPoints.length === 0) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const resolveDelta = (
+      annotation: MarketOverlayTimelineAnnotation,
+      basis: MarketOverlayMarkerDeltaBasis,
+    ): number | null => {
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point) {
+        return null
+      }
+      if (basis === 'latest') {
+        return latestPoint ? point.value - latestPoint.value : null
+      }
+      return baseline !== null ? point.value - baseline : null
+    }
+    const formatDelta = (value: number | null) =>
+      value === null ? 'n/a' : `${value >= 0 ? '+' : ''}${value.toFixed(2)}`
+    const describeBasisRangeContext = (basis: MarketOverlayMarkerDeltaBasis) => {
+      const target = resolveDelta(marketOverlayActiveTimelineAnnotation, basis)
+      if (target === null) {
+        return `${basis}:n/a`
+      }
+      const values = marketOverlayAgreementScopedTimelineAnnotations
+        .map((annotation) => resolveDelta(annotation, basis))
+        .filter((value): value is number => value !== null)
+      if (values.length === 0) {
+        return `${basis}:n/a`
+      }
+      const min = Math.min(...values)
+      const max = Math.max(...values)
+      const range = max - min
+      const percentile = range === 0 ? null : ((target - min) / range) * 100
+      const formattedPercentile = percentile === null ? 'n/a' : `${percentile.toFixed(2)}%`
+      return `${basis}:active:${formatDelta(target)}|min:${formatDelta(min)}|max:${formatDelta(max)}|pct:${formattedPercentile}`
+    }
+    return `${describeBasisRangeContext('latest')} · ${describeBasisRangeContext('average')} · scope:${marketOverlayMarkerBasisAgreement} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayAgreementScopedTimelineAnnotations,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerBasisAgreement,
+    marketOverlayMarkerDeltaFilter,
+  ])
   const marketOverlayActiveMarkerNeighborDeltaSummary = useMemo(() => {
     if (
       !marketOverlayActiveTimelineAnnotation ||
@@ -6482,6 +6531,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Active Delta Position Summary">
               Active delta position: {marketOverlayActiveMarkerDeltaPositionSummary}
+            </p>
+            <p aria-label="Overlay Marker Active Delta Range Context Summary">
+              Active delta range context: {marketOverlayActiveMarkerDeltaRangeContextSummary}
             </p>
             <p aria-label="Overlay Marker Active Delta Neighbors">
               Active delta neighbors: {marketOverlayActiveMarkerNeighborDeltaSummary}

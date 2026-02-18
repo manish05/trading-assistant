@@ -77,6 +77,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Active Delta Position Summary')).toHaveTextContent(
       'Active delta position: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Active Delta Range Context Summary')).toHaveTextContent(
+      'Active delta range context: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Active Delta Neighbors')).toHaveTextContent(
       'Active delta neighbors: none',
     )
@@ -753,6 +756,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Active Delta Position Summary')).toHaveTextContent(
       'Active delta position: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Active Delta Range Context Summary')).toHaveTextContent(
+      'Active delta range context: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Active Delta Neighbors')).toHaveTextContent(
       'Active delta neighbors: none',
     )
@@ -911,6 +917,9 @@ describe('Dashboard shell', () => {
       )
       expect(screen.getByLabelText('Overlay Marker Active Delta Position Summary')).toHaveTextContent(
         'Active delta position: latest:slot:1/2|Δleader:+0.00|Δmedian:+0.50 · average:slot:1/2|Δleader:+0.00|Δmedian:+0.50 · scope:all · mode:all',
+      )
+      expect(screen.getByLabelText('Overlay Marker Active Delta Range Context Summary')).toHaveTextContent(
+        'Active delta range context: latest:active:+0.00|min:-1.00|max:+0.00|pct:100.00% · average:active:+0.50|min:-0.50|max:+0.50|pct:100.00% · scope:all · mode:all',
       )
       expect(screen.getByLabelText('Overlay Marker Active Delta Neighbors')).toHaveTextContent(
         'Active delta neighbors: active:risk:live_trading_disabled:raised · prev:trade:closed:queued(Δl:-1.00|Δa:-0.50) · next:none · scope:all/all',
@@ -1156,6 +1165,9 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Overlay Marker Active Delta Position Summary')).toHaveTextContent(
       'Active delta position: latest:slot:2/2|Δleader:-1.00|Δmedian:-0.50 · average:slot:2/2|Δleader:-1.00|Δmedian:-0.50 · scope:all · mode:all',
+    )
+    expect(screen.getByLabelText('Overlay Marker Active Delta Range Context Summary')).toHaveTextContent(
+      'Active delta range context: latest:active:-1.00|min:-1.00|max:+0.00|pct:0.00% · average:active:-0.50|min:-0.50|max:+0.50|pct:0.00% · scope:all · mode:all',
     )
     expect(screen.getByLabelText('Overlay Marker Active Delta Neighbors')).toHaveTextContent(
       'Active delta neighbors: active:trade:closed:queued · prev:none · next:risk:live_trading_disabled:raised(Δl:+0.00|Δa:+0.50) · scope:all/all',
