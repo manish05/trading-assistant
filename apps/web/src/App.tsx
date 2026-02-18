@@ -2901,6 +2901,72 @@ function App() {
     marketOverlayTimelineCount,
     marketOverlayTimelineOrder,
   ])
+  const marketOverlayMarkerTimelineInteractionEntropySummary = useMemo(() => {
+    if (isMarketOverlayNavigationLocked) {
+      return 'locked'
+    }
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayTimelineCount === 0
+    ) {
+      return 'none'
+    }
+    const backwardCount =
+      Number(canSelectPreviousMarketOverlayMarker) +
+      Number(canSelectSkipBackwardMarketOverlayMarker) +
+      Number(canSelectPreviousSameKindMarketOverlayMarker) +
+      Number(canSelectPreviousBucketMarketOverlayMarker) +
+      Number(canSelectOldestMarketOverlayMarker)
+    const forwardCount =
+      Number(canSelectNextMarketOverlayMarker) +
+      Number(canSelectSkipForwardMarketOverlayMarker) +
+      Number(canSelectNextSameKindMarketOverlayMarker) +
+      Number(canSelectNextBucketMarketOverlayMarker) +
+      Number(canSelectLatestMarketOverlayMarker)
+    const total = backwardCount + forwardCount
+    const pBackward = total === 0 ? 0 : backwardCount / total
+    const pForward = total === 0 ? 0 : forwardCount / total
+    const entropy = [pBackward, pForward]
+      .filter((value) => value > 0)
+      .reduce((sum, value) => sum - value * Math.log2(value), 0)
+    const normalizedEntropy = entropy / 1
+    const direction =
+      backwardCount === forwardCount
+        ? 'balanced'
+        : backwardCount > forwardCount
+          ? 'backward'
+          : 'forward'
+    const diversity =
+      total === 0
+        ? 'none'
+        : normalizedEntropy < 0.2
+          ? 'concentrated'
+          : normalizedEntropy < 0.8
+            ? 'mixed'
+            : 'even'
+    const edgeCount = Number(canSelectOldestMarketOverlayMarker) + Number(canSelectLatestMarketOverlayMarker)
+    const formatRatio = (value: number) => value.toFixed(2)
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label}|slot:${marketOverlayActiveTimelineIndex + 1}/${marketOverlayTimelineCount} · counts:backward:${backwardCount}|forward:${forwardCount}|total:${total} · probs:b:${formatRatio(pBackward)}|f:${formatRatio(pForward)}|entropy:${formatRatio(entropy)}|norm:${formatRatio(normalizedEntropy)} · direction:${direction}|diversity:${diversity}|edges:${edgeCount}/2 · wrap:${marketOverlayMarkerWrap}|selection:${marketOverlaySelectionMode}|order:${marketOverlayTimelineOrder}`
+  }, [
+    canSelectLatestMarketOverlayMarker,
+    canSelectNextBucketMarketOverlayMarker,
+    canSelectNextMarketOverlayMarker,
+    canSelectNextSameKindMarketOverlayMarker,
+    canSelectOldestMarketOverlayMarker,
+    canSelectPreviousBucketMarketOverlayMarker,
+    canSelectPreviousMarketOverlayMarker,
+    canSelectPreviousSameKindMarketOverlayMarker,
+    canSelectSkipBackwardMarketOverlayMarker,
+    canSelectSkipForwardMarketOverlayMarker,
+    isMarketOverlayNavigationLocked,
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayMarkerWrap,
+    marketOverlaySelectionMode,
+    marketOverlayTimelineCount,
+    marketOverlayTimelineOrder,
+  ])
   const marketOverlayMarkerDrilldown = useMemo(() => {
     const latest =
       marketOverlayScopedTimelineAnnotations[marketOverlayScopedTimelineAnnotations.length - 1] ?? null
@@ -11496,6 +11562,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Timeline Interaction Vector Summary">
               Timeline interaction vector: {marketOverlayMarkerTimelineInteractionVectorSummary}
+            </p>
+            <p aria-label="Overlay Marker Timeline Interaction Entropy Summary">
+              Timeline interaction entropy: {marketOverlayMarkerTimelineInteractionEntropySummary}
             </p>
             <div className="market-overlay-marker-navigation">
               <button
