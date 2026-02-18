@@ -155,6 +155,9 @@ describe('Dashboard shell', () => {
     expect(
       screen.getByLabelText('Overlay Marker Active Neighbor Magnitude Side Coherence Summary'),
     ).toHaveTextContent('Active neighbor magnitude side coherence: none')
+    expect(
+      screen.getByLabelText('Overlay Marker Active Neighbor Magnitude Side Vector Summary'),
+    ).toHaveTextContent('Active neighbor magnitude side vector: none')
     expect(screen.getByLabelText('Overlay Marker Active Delta Neighbors')).toHaveTextContent(
       'Active delta neighbors: none',
     )
@@ -909,6 +912,9 @@ describe('Dashboard shell', () => {
     expect(
       screen.getByLabelText('Overlay Marker Active Neighbor Magnitude Side Coherence Summary'),
     ).toHaveTextContent('Active neighbor magnitude side coherence: none')
+    expect(
+      screen.getByLabelText('Overlay Marker Active Neighbor Magnitude Side Vector Summary'),
+    ).toHaveTextContent('Active neighbor magnitude side vector: none')
     expect(screen.getByLabelText('Overlay Marker Active Delta Neighbors')).toHaveTextContent(
       'Active delta neighbors: none',
     )
@@ -1159,6 +1165,11 @@ describe('Dashboard shell', () => {
         screen.getByLabelText('Overlay Marker Active Neighbor Magnitude Side Coherence Summary'),
       ).toHaveTextContent(
         'Active neighbor magnitude side coherence: active:risk:live_trading_disabled:raised · latest:weighted:+0|side:none|available:0/2 · average:weighted:+1|side:prev|available:1/2 · coherence:+1.00|label:prev-lean · dispersion:1|coupling:assistive · basis:latest · mode:all',
+      )
+      expect(
+        screen.getByLabelText('Overlay Marker Active Neighbor Magnitude Side Vector Summary'),
+      ).toHaveTextContent(
+        'Active neighbor magnitude side vector: active:risk:live_trading_disabled:raised · latest:none|vector:+0 · average:prev|vector:+1 · vector:+1|normalized:+0.50|bias:prev · resolved:1/2|stability:forming · basis:latest · mode:all',
       )
       expect(screen.getByLabelText('Overlay Marker Active Delta Neighbors')).toHaveTextContent(
         'Active delta neighbors: active:risk:live_trading_disabled:raised · prev:trade:closed:queued(Δl:-1.00|Δa:-0.50) · next:none · scope:all/all',
@@ -1496,6 +1507,11 @@ describe('Dashboard shell', () => {
       screen.getByLabelText('Overlay Marker Active Neighbor Magnitude Side Coherence Summary'),
     ).toHaveTextContent(
       'Active neighbor magnitude side coherence: active:trade:closed:queued · latest:weighted:-1|side:next|available:1/2 · average:weighted:-1|side:next|available:1/2 · coherence:-1.00|label:next-lean · dispersion:0|coupling:coupled · basis:latest · mode:all',
+    )
+    expect(
+      screen.getByLabelText('Overlay Marker Active Neighbor Magnitude Side Vector Summary'),
+    ).toHaveTextContent(
+      'Active neighbor magnitude side vector: active:trade:closed:queued · latest:next|vector:-1 · average:next|vector:-1 · vector:-2|normalized:-1.00|bias:next · resolved:2/2|stability:locked · basis:latest · mode:all',
     )
     expect(screen.getByLabelText('Overlay Marker Active Delta Neighbors')).toHaveTextContent(
       'Active delta neighbors: active:trade:closed:queued · prev:none · next:risk:live_trading_disabled:raised(Δl:+0.00|Δa:+0.50) · scope:all/all',
