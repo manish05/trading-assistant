@@ -6359,6 +6359,68 @@ function App() {
     marketOverlayMarkerVisualProfiles,
     marketOverlayScopedTimelineAnnotations,
   ])
+  const marketOverlayMarkerVisualContextDriftSummary = useMemo(() => {
+    if (!marketOverlayActiveTimelineAnnotation || marketOverlayActiveTimelineIndex < 0) {
+      return 'none'
+    }
+    const activeProfile = marketOverlayMarkerVisualProfiles.get(marketOverlayActiveTimelineAnnotation.id) ?? null
+    if (!activeProfile) {
+      return 'none'
+    }
+    const toneScore = (tone: MarketOverlayMarkerVisualProfile['tone']) => {
+      if (tone === 'up') {
+        return 1
+      }
+      if (tone === 'down') {
+        return -1
+      }
+      return 0
+    }
+    const activeScore = toneScore(activeProfile.tone)
+    let contextCount = 0
+    let agreementCount = 0
+    let oppositionCount = 0
+    let neutralCount = 0
+    let driftTotal = 0
+    marketOverlayScopedTimelineAnnotations.forEach((annotation) => {
+      const profile = marketOverlayMarkerVisualProfiles.get(annotation.id)
+      if (!profile || profile.role !== 'context') {
+        return
+      }
+      contextCount += 1
+      const contextScore = toneScore(profile.tone)
+      driftTotal += contextScore - activeScore
+      if (contextScore === activeScore) {
+        agreementCount += 1
+        return
+      }
+      if (contextScore === 0 || activeScore === 0) {
+        neutralCount += 1
+        return
+      }
+      oppositionCount += 1
+    })
+    const averageDrift = contextCount > 0 ? driftTotal / contextCount : null
+    const pressure =
+      averageDrift === null ? 'none' : averageDrift > 0 ? 'toward-up' : averageDrift < 0 ? 'toward-down' : 'balanced'
+    const phase =
+      contextCount === 0
+        ? 'isolated'
+        : averageDrift === null || Math.abs(averageDrift) < 0.25
+          ? 'anchored'
+          : Math.abs(averageDrift) < 0.75
+            ? 'tilting'
+            : 'dislocated'
+    const formatSigned = (value: number) => `${value >= 0 ? '+' : ''}${value.toFixed(2)}`
+    return `activeTone:${activeProfile.tone}|score:${activeScore >= 0 ? '+' : ''}${activeScore} · context:${contextCount}|agreement:${agreementCount}|opposition:${oppositionCount}|neutral:${neutralCount} · drift:${averageDrift === null ? 'n/a' : formatSigned(averageDrift)}|pressure:${pressure}|phase:${phase} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayMarkerVisualProfiles,
+    marketOverlayScopedTimelineAnnotations,
+  ])
 
   useEffect(() => {
     if (marketOverlayScopedVisibleAnnotations.length === 0) {
@@ -9446,6 +9508,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Visual Transition Summary">
               Marker visual transition: {marketOverlayMarkerVisualTransitionSummary}
+            </p>
+            <p aria-label="Overlay Marker Visual Context Drift Summary">
+              Marker visual context drift: {marketOverlayMarkerVisualContextDriftSummary}
             </p>
             <p
               aria-label="Overlay Chart Runtime"
