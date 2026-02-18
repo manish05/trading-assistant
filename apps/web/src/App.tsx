@@ -4978,6 +4978,94 @@ function App() {
     marketOverlayMarkerDeltaFilter,
     marketOverlayScopedTimelineAnnotations,
   ])
+  const marketOverlayActiveMarkerNeighborMagnitudeSideEntropySummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const resolveDelta = (
+      annotation: MarketOverlayTimelineAnnotation | null,
+      basis: MarketOverlayMarkerDeltaBasis,
+    ): number | null => {
+      if (!annotation) {
+        return null
+      }
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point) {
+        return null
+      }
+      if (basis === 'latest') {
+        return latestPoint ? point.value - latestPoint.value : null
+      }
+      return baseline !== null ? point.value - baseline : null
+    }
+    const computeRatio = (neighbor: number | null, active: number | null) => {
+      if (neighbor === null || active === null || Math.abs(active) < 1e-9) {
+        return null
+      }
+      return Math.abs(neighbor) / Math.abs(active)
+    }
+    const resolveSide = (basis: MarketOverlayMarkerDeltaBasis): 'none' | 'prev' | 'next' | 'balanced' => {
+      const previousAnnotation =
+        marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+      const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+      const active = resolveDelta(marketOverlayActiveTimelineAnnotation, basis)
+      const previous = resolveDelta(previousAnnotation, basis)
+      const next = resolveDelta(nextAnnotation, basis)
+      const previousRatio = computeRatio(previous, active)
+      const nextRatio = computeRatio(next, active)
+      if (previousRatio !== null && nextRatio === null) {
+        return 'prev'
+      }
+      if (previousRatio === null && nextRatio !== null) {
+        return 'next'
+      }
+      if (previousRatio !== null && nextRatio !== null) {
+        return Math.abs(previousRatio - nextRatio) < 1e-9 ? 'balanced' : previousRatio > nextRatio ? 'prev' : 'next'
+      }
+      return 'none'
+    }
+    const sideByBasis = {
+      latest: resolveSide('latest'),
+      average: resolveSide('average'),
+    } as const
+    const counts = {
+      prev: Number(sideByBasis.latest === 'prev') + Number(sideByBasis.average === 'prev'),
+      next: Number(sideByBasis.latest === 'next') + Number(sideByBasis.average === 'next'),
+      neutral:
+        Number(sideByBasis.latest === 'none' || sideByBasis.latest === 'balanced') +
+        Number(sideByBasis.average === 'none' || sideByBasis.average === 'balanced'),
+    }
+    const total = 2
+    const probabilities = [counts.prev, counts.next, counts.neutral]
+      .map((count) => count / total)
+      .filter((value) => value > 0)
+    const entropy = probabilities.reduce((sum, probability) => sum - probability * Math.log2(probability), 0)
+    const maxEntropy = Math.log2(3)
+    const normalizedEntropy = maxEntropy > 0 ? entropy / maxEntropy : 0
+    const diversity =
+      normalizedEntropy < 0.2 ? 'concentrated' : normalizedEntropy < 0.6 ? 'leaning' : 'mixed'
+    const dominantEntries = Object.entries(counts).sort((a, b) => b[1] - a[1])
+    const highestCount = dominantEntries[0]?.[1] ?? 0
+    const highestTied = dominantEntries.filter((entry) => entry[1] === highestCount)
+    const dominant =
+      highestCount === 0 ? 'none' : highestTied.length > 1 ? 'tie' : (highestTied[0]?.[0] ?? 'none')
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · counts:prev:${counts.prev}|next:${counts.next}|neutral:${counts.neutral} · entropy:${entropy.toFixed(2)}|norm:${normalizedEntropy.toFixed(2)}|diversity:${diversity} · dominant:${dominant}(${highestCount}/2) · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
   const marketOverlayActiveMarkerNeighborDeltaSummary = useMemo(() => {
     if (
       !marketOverlayActiveTimelineAnnotation ||
@@ -8398,6 +8486,10 @@ function App() {
             <p aria-label="Overlay Marker Active Neighbor Magnitude Side Vector Summary">
               Active neighbor magnitude side vector:{' '}
               {marketOverlayActiveMarkerNeighborMagnitudeSideVectorSummary}
+            </p>
+            <p aria-label="Overlay Marker Active Neighbor Magnitude Side Entropy Summary">
+              Active neighbor magnitude side entropy:{' '}
+              {marketOverlayActiveMarkerNeighborMagnitudeSideEntropySummary}
             </p>
             <p aria-label="Overlay Marker Active Delta Neighbors">
               Active delta neighbors: {marketOverlayActiveMarkerNeighborDeltaSummary}
