@@ -3054,6 +3054,53 @@ function App() {
     marketOverlayMarkerBasisAgreement,
     marketOverlayMarkerDeltaFilter,
   ])
+  const marketOverlayActiveMarkerNeighborDeltaSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const resolveDelta = (
+      annotation: MarketOverlayTimelineAnnotation,
+      basis: MarketOverlayMarkerDeltaBasis,
+    ): number | null => {
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point) {
+        return null
+      }
+      if (basis === 'latest') {
+        return latestPoint ? point.value - latestPoint.value : null
+      }
+      return baseline !== null ? point.value - baseline : null
+    }
+    const formatDelta = (value: number | null) =>
+      value === null ? 'n/a' : `${value >= 0 ? '+' : ''}${value.toFixed(2)}`
+    const describeAnnotation = (annotation: MarketOverlayTimelineAnnotation | null) => {
+      if (!annotation) {
+        return 'none'
+      }
+      const latestDelta = resolveDelta(annotation, 'latest')
+      const averageDelta = resolveDelta(annotation, 'average')
+      return `${annotation.kind}:${annotation.label}(Δl:${formatDelta(latestDelta)}|Δa:${formatDelta(averageDelta)})`
+    }
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · prev:${describeAnnotation(previousAnnotation)} · next:${describeAnnotation(nextAnnotation)} · scope:${marketOverlayMarkerBasisAgreement}/${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerBasisAgreement,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
   const marketOverlayMarkerTimelineRows = useMemo(() => {
     if (marketOverlayScopedVisibleAnnotations.length === 0) {
       return [] as Array<{ id: string; text: string; isSelected: boolean }>
@@ -6170,6 +6217,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Active Delta Rank">
               Active delta rank: {marketOverlayActiveMarkerDeltaRank}
+            </p>
+            <p aria-label="Overlay Marker Active Delta Neighbors">
+              Active delta neighbors: {marketOverlayActiveMarkerNeighborDeltaSummary}
             </p>
             <p
               aria-label="Overlay Chart Runtime"
