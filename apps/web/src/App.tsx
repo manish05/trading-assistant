@@ -2248,6 +2248,67 @@ function App() {
     marketOverlayPreviousSameKindIndex,
     marketOverlayTimelineCount,
   ])
+  const marketOverlayMarkerBucketNavigationSummary = useMemo(() => {
+    if (isMarketOverlayNavigationLocked) {
+      return 'locked'
+    }
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayTimelineCount === 0
+    ) {
+      return `mode:${marketOverlayMarkerBucket} · keys:,/. · active:none · prev:,=none · next:.=none · buckets:0`
+    }
+    const resolveLabel = (index: number) => {
+      if (index < 0 || index >= marketOverlayScopedTimelineAnnotations.length) {
+        return 'none'
+      }
+      const annotation = marketOverlayScopedTimelineAnnotations[index]
+      if (!annotation) {
+        return 'none'
+      }
+      if (marketOverlayBucketSizeMs === null) {
+        return `t${annotation.time}(1)`
+      }
+      const bucketStart =
+        Math.floor(annotation.timestamp / marketOverlayBucketSizeMs) * marketOverlayBucketSizeMs
+      const bucketCount = marketOverlayScopedTimelineAnnotations.filter(
+        (candidate) =>
+          Math.floor(candidate.timestamp / marketOverlayBucketSizeMs) * marketOverlayBucketSizeMs ===
+          bucketStart,
+      ).length
+      return `${new Date(bucketStart).toISOString()}(${bucketCount})`
+    }
+    const activeLabel = resolveLabel(marketOverlayActiveTimelineIndex)
+    const previousLabel = canSelectPreviousBucketMarketOverlayMarker
+      ? resolveLabel(marketOverlayPreviousBucketIndex)
+      : 'none'
+    const nextLabel = canSelectNextBucketMarketOverlayMarker
+      ? resolveLabel(marketOverlayNextBucketIndex)
+      : 'none'
+    const bucketCount =
+      marketOverlayBucketSizeMs === null
+        ? marketOverlayScopedTimelineAnnotations.length
+        : new Set(
+            marketOverlayScopedTimelineAnnotations.map(
+              (annotation) =>
+                Math.floor(annotation.timestamp / marketOverlayBucketSizeMs) * marketOverlayBucketSizeMs,
+            ),
+          ).size
+    return `mode:${marketOverlayMarkerBucket} · keys:,/. · active:${activeLabel} · prev:,=${previousLabel} · next:.=${nextLabel} · buckets:${bucketCount}`
+  }, [
+    canSelectNextBucketMarketOverlayMarker,
+    canSelectPreviousBucketMarketOverlayMarker,
+    isMarketOverlayNavigationLocked,
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayBucketSizeMs,
+    marketOverlayMarkerBucket,
+    marketOverlayNextBucketIndex,
+    marketOverlayPreviousBucketIndex,
+    marketOverlayScopedTimelineAnnotations,
+    marketOverlayTimelineCount,
+  ])
   const marketOverlayMarkerKindNavigationSummary = useMemo(() => {
     if (isMarketOverlayNavigationLocked) {
       return 'locked'
@@ -6343,6 +6404,9 @@ function App() {
             </div>
             <p aria-label="Overlay Marker Timeline Bucket Summary">
               Timeline buckets: {marketOverlayMarkerBucketSummary}
+            </p>
+            <p aria-label="Overlay Marker Bucket Navigation Summary">
+              Bucket nav: {marketOverlayMarkerBucketNavigationSummary}
             </p>
             <p aria-label="Overlay Marker Bucket Delta Summary">
               Bucket deltas: {marketOverlayMarkerBucketDeltaSummary}

@@ -77,6 +77,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
       'Timeline buckets: mode:none · scope:all-buckets · buckets:0 · latest:none · count:0',
     )
+    expect(screen.getByLabelText('Overlay Marker Bucket Navigation Summary')).toHaveTextContent(
+      'Bucket nav: mode:none · keys:,/. · active:none · prev:,=none · next:.=none · buckets:0',
+    )
     expect(screen.getByLabelText('Overlay Marker Bucket Delta Summary')).toHaveTextContent(
       'Bucket deltas: mode:none · buckets:n/a · latestAvg:n/a · previousAvg:n/a · Δbucket:n/a',
     )
@@ -729,6 +732,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
       'Timeline buckets: mode:none · scope:all-buckets · buckets:0 · latest:none · count:0',
     )
+    expect(screen.getByLabelText('Overlay Marker Bucket Navigation Summary')).toHaveTextContent(
+      'Bucket nav: mode:none · keys:,/. · active:none · prev:,=none · next:.=none · buckets:0',
+    )
     expect(screen.getByLabelText('Overlay Marker Bucket Delta Summary')).toHaveTextContent(
       'Bucket deltas: mode:none · buckets:n/a · latestAvg:n/a · previousAvg:n/a · Δbucket:n/a',
     )
@@ -1368,6 +1374,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByRole('button', { name: 'Next Bucket' })).toBeDisabled()
     expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
       'Timeline buckets: mode:none · scope:all-buckets · buckets:2 · latest:t2 · count:2',
+    )
+    expect(screen.getByLabelText('Overlay Marker Bucket Navigation Summary')).toHaveTextContent(
+      'Bucket nav: mode:none · keys:,/. · active:t2(1) · prev:,=none · next:.=none · buckets:2',
     )
     expect(screen.getByLabelText('Overlay Marker Delta Filter Summary')).toHaveTextContent(
       'Delta filter: basis:latest · mode:all · matched:2/2 · up:0 · down:1 · flat:1 · n/a:0',
@@ -2032,6 +2041,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
       `Timeline buckets: mode:60s · scope:all-buckets · buckets:1 · latest:${expectedBucket} · count:2`,
     )
+    expect(screen.getByLabelText('Overlay Marker Bucket Navigation Summary')).toHaveTextContent(
+      `Bucket nav: mode:60s · keys:,/. · active:${expectedBucket}(2) · prev:,=none · next:.=none · buckets:1`,
+    )
     expect(screen.getByLabelText('Overlay Marker Bucket Delta Summary')).toHaveTextContent(
       'Bucket deltas: mode:60s · buckets:1 · latestAvg:1.50 · previousAvg:n/a · Δbucket:n/a',
     )
@@ -2336,6 +2348,9 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Overlay Marker Distance Summary')).toHaveTextContent(
       'Distance: locked',
+    )
+    expect(screen.getByLabelText('Overlay Marker Bucket Navigation Summary')).toHaveTextContent(
+      'Bucket nav: locked',
     )
     expect(screen.getByLabelText('Overlay Marker Kind Navigation Summary')).toHaveTextContent(
       'Kind nav: locked',
