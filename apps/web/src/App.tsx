@@ -3260,6 +3260,45 @@ function App() {
     marketOverlayMarkerDeltaFilter,
     marketOverlayScopedTimelineAnnotations,
   ])
+  const marketOverlayActiveMarkerNeighborBasisRelationSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const describeRelation = (annotation: MarketOverlayTimelineAnnotation | null) => {
+      if (!annotation) {
+        return 'n/a'
+      }
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point) {
+        return 'n/a'
+      }
+      const latestDelta = latestPoint ? point.value - latestPoint.value : null
+      const averageDelta = baseline !== null ? point.value - baseline : null
+      const latestTone = resolveMarketOverlayDeltaTone(latestDelta)
+      const averageTone = resolveMarketOverlayDeltaTone(averageDelta)
+      const relation = latestTone === averageTone ? 'agree' : 'diverge'
+      return `${relation}(${latestTone}/${averageTone})`
+    }
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    return `active:${describeRelation(marketOverlayActiveTimelineAnnotation)} · prev:${describeRelation(previousAnnotation)} · next:${describeRelation(nextAnnotation)} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
   const marketOverlayActiveMarkerNeighborDeltaSummary = useMemo(() => {
     if (
       !marketOverlayActiveTimelineAnnotation ||
@@ -6600,6 +6639,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Active Neighbor Percentile Summary">
               Active neighbor percentiles: {marketOverlayActiveMarkerNeighborPercentileSummary}
+            </p>
+            <p aria-label="Overlay Marker Active Neighbor Basis Relation Summary">
+              Active neighbor basis relation: {marketOverlayActiveMarkerNeighborBasisRelationSummary}
             </p>
             <p aria-label="Overlay Marker Active Delta Neighbors">
               Active delta neighbors: {marketOverlayActiveMarkerNeighborDeltaSummary}
