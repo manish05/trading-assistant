@@ -176,6 +176,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Distance Summary')).toHaveTextContent(
       'Distance: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Interval Summary')).toHaveTextContent(
+      'Intervals: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Shortcut Hint')).toHaveTextContent(
       'Shortcuts: steps:off/off · skip:off/off · kind:off/off · bucket:off/off',
     )
@@ -771,6 +774,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Distance Summary')).toHaveTextContent(
       'Distance: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Interval Summary')).toHaveTextContent(
+      'Intervals: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Shortcut Hint')).toHaveTextContent(
       'Shortcuts: steps:off/off · skip:off/off · kind:off/off · bucket:off/off',
     )
@@ -1341,6 +1347,9 @@ describe('Dashboard shell', () => {
     })
     expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
       'Marker nav: 2/2 · selected:risk:live_trading_disabled:raised',
+    )
+    expect(screen.getByLabelText('Overlay Marker Interval Summary')).toHaveTextContent(
+      'Intervals: count:2 · stepGap:min:1|max:1|avg:1.00 · active:prev:1|next:n/a',
     )
     expect(screen.getByRole('button', { name: 'Oldest Marker' })).toBeEnabled()
     expect(screen.getByRole('button', { name: 'Previous Bucket' })).toBeDisabled()

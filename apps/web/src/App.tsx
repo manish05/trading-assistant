@@ -2248,6 +2248,41 @@ function App() {
     marketOverlayPreviousSameKindIndex,
     marketOverlayTimelineCount,
   ])
+  const marketOverlayMarkerIntervalSummary = useMemo(() => {
+    if (marketOverlayScopedTimelineAnnotations.length < 2) {
+      return 'none'
+    }
+    const timeSortedAnnotations = marketOverlayScopedTimelineAnnotations
+      .slice()
+      .sort((left, right) => left.time - right.time)
+    const stepGaps = timeSortedAnnotations
+      .slice(1)
+      .map((annotation, index) => annotation.time - timeSortedAnnotations[index].time)
+      .filter((gap) => gap >= 0)
+    if (stepGaps.length === 0) {
+      return 'none'
+    }
+    const minGap = Math.min(...stepGaps)
+    const maxGap = Math.max(...stepGaps)
+    const averageGap = stepGaps.reduce((sum, gap) => sum + gap, 0) / stepGaps.length
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayActiveTimelineIndex >= marketOverlayScopedTimelineAnnotations.length
+    ) {
+      return `count:${marketOverlayScopedTimelineAnnotations.length} · stepGap:min:${minGap}|max:${maxGap}|avg:${averageGap.toFixed(2)} · active:prev:n/a|next:n/a`
+    }
+    const current = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex]
+    const previous = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const next = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    const previousGap = previous ? Math.abs(current.time - previous.time) : null
+    const nextGap = next ? Math.abs(next.time - current.time) : null
+    return `count:${marketOverlayScopedTimelineAnnotations.length} · stepGap:min:${minGap}|max:${maxGap}|avg:${averageGap.toFixed(2)} · active:prev:${previousGap ?? 'n/a'}|next:${nextGap ?? 'n/a'}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayScopedTimelineAnnotations,
+  ])
   const marketOverlayMarkerShortcutHint = useMemo(() => {
     if (isMarketOverlayNavigationLocked) {
       return 'locked'
@@ -6359,6 +6394,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Distance Summary">
               Distance: {marketOverlayMarkerDistanceSummary}
+            </p>
+            <p aria-label="Overlay Marker Interval Summary">
+              Intervals: {marketOverlayMarkerIntervalSummary}
             </p>
             <p aria-label="Overlay Marker Shortcut Hint">
               Shortcuts: {marketOverlayMarkerShortcutHint}
