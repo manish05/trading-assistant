@@ -83,6 +83,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Active Basis Spread')).toHaveTextContent(
       'Active basis spread: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Active Neighbor Delta Change')).toHaveTextContent(
+      'Active neighbor delta change: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
       'Timeline buckets: mode:none · scope:all-buckets · buckets:0 · latest:none · count:0',
     )
@@ -750,6 +753,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Active Basis Spread')).toHaveTextContent(
       'Active basis spread: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Active Neighbor Delta Change')).toHaveTextContent(
+      'Active neighbor delta change: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
       'Timeline buckets: mode:none · scope:all-buckets · buckets:0 · latest:none · count:0',
     )
@@ -899,6 +905,9 @@ describe('Dashboard shell', () => {
       )
       expect(screen.getByLabelText('Overlay Marker Active Basis Spread')).toHaveTextContent(
         'Active basis spread: active:risk:live_trading_disabled:raised:-0.50 · prev:-0.50 · next:n/a · basis:latest · mode:all',
+      )
+      expect(screen.getByLabelText('Overlay Marker Active Neighbor Delta Change')).toHaveTextContent(
+        'Active neighbor delta change: active:risk:live_trading_disabled:raised · latest:prev->active:+1.00|active->next:n/a · average:prev->active:+1.00|active->next:n/a · basis:latest · mode:all',
       )
       expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
         'Timeline buckets: mode:none · scope:all-buckets · buckets:2 · latest:t2 · count:2',
@@ -1135,6 +1144,9 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Overlay Marker Active Basis Spread')).toHaveTextContent(
       'Active basis spread: active:trade:closed:queued:-0.50 · prev:n/a · next:-0.50 · basis:latest · mode:all',
+    )
+    expect(screen.getByLabelText('Overlay Marker Active Neighbor Delta Change')).toHaveTextContent(
+      'Active neighbor delta change: active:trade:closed:queued · latest:prev->active:n/a|active->next:+1.00 · average:prev->active:n/a|active->next:+1.00 · basis:latest · mode:all',
     )
 
     fireEvent.keyDown(screen.getByRole('button', { name: 'trade:closed:queued' }), { key: '2' })
