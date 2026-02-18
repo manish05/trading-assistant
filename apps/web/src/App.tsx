@@ -6600,6 +6600,83 @@ function App() {
     marketOverlayMarkerDeltaFilter,
     marketOverlayScopedTimelineAnnotations,
   ])
+  const marketOverlayMarkerEventTimelineCouplingSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const pointIndexByTime = new Map(
+      marketOverlayChartPoints.map((point, index) => [point.time, index] as const),
+    )
+    const activePoint = pointByTime.get(marketOverlayActiveTimelineAnnotation.time) ?? null
+    if (!activePoint) {
+      return 'none'
+    }
+    const activePointIndex = pointIndexByTime.get(activePoint.time) ?? -1
+    if (activePointIndex < 0) {
+      return 'none'
+    }
+    const previousPoint = activePointIndex > 0 ? marketOverlayChartPoints[activePointIndex - 1] : null
+    const nextPoint =
+      activePointIndex < marketOverlayChartPoints.length - 1
+        ? marketOverlayChartPoints[activePointIndex + 1]
+        : null
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    const previousPointGap = previousPoint ? Math.abs(activePoint.time - previousPoint.time) : null
+    const nextPointGap = nextPoint ? Math.abs(nextPoint.time - activePoint.time) : null
+    const previousMarkerGap = previousAnnotation
+      ? Math.abs(marketOverlayActiveTimelineAnnotation.time - previousAnnotation.time)
+      : null
+    const nextMarkerGap = nextAnnotation
+      ? Math.abs(nextAnnotation.time - marketOverlayActiveTimelineAnnotation.time)
+      : null
+    const toCoupling = (markerGap: number | null, pointGap: number | null) => {
+      if (markerGap === null || pointGap === null) {
+        return null
+      }
+      return markerGap - pointGap
+    }
+    const previousCoupling = toCoupling(previousMarkerGap, previousPointGap)
+    const nextCoupling = toCoupling(nextMarkerGap, nextPointGap)
+    const coverage = Number(previousCoupling !== null) + Number(nextCoupling !== null)
+    const netCoupling = (previousCoupling ?? 0) + (nextCoupling ?? 0)
+    const direction =
+      coverage === 0
+        ? 'isolated'
+        : Math.abs(netCoupling) < 1e-9
+          ? 'balanced'
+          : netCoupling > 0
+            ? 'stretched'
+            : 'compressed'
+    const phase = coverage === 2 ? 'paired' : coverage === 1 ? 'edge' : 'none'
+    const navBias =
+      canSelectPreviousMarketOverlayMarker && canSelectNextMarketOverlayMarker
+        ? 'bidirectional'
+        : canSelectPreviousMarketOverlayMarker
+          ? 'backward'
+          : canSelectNextMarketOverlayMarker
+            ? 'forward'
+            : 'stalled'
+    const formatStep = (value: number | null) => (value === null ? 'n/a' : String(value))
+    const formatSigned = (value: number | null) =>
+      value === null ? 'n/a' : `${value >= 0 ? '+' : ''}${value.toFixed(2)}`
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label}|slot:${marketOverlayActiveTimelineIndex + 1}/${marketOverlayScopedTimelineAnnotations.length} · prev:step:${formatStep(previousPointGap)}|marker:${formatStep(previousMarkerGap)}|coupling:${formatSigned(previousCoupling)} · next:step:${formatStep(nextPointGap)}|marker:${formatStep(nextMarkerGap)}|coupling:${formatSigned(nextCoupling)} · net:${formatSigned(netCoupling)}|direction:${direction}|phase:${phase}|coverage:${coverage}/2|navBias:${navBias} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    canSelectNextMarketOverlayMarker,
+    canSelectPreviousMarketOverlayMarker,
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
   const marketOverlayMarkerTimelineRows = useMemo(() => {
     if (marketOverlayScopedVisibleAnnotations.length === 0) {
       return [] as Array<{ id: string; text: string; isSelected: boolean }>
@@ -10796,6 +10873,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Event Timeline Cadence Summary">
               Marker event timeline cadence: {marketOverlayMarkerEventTimelineCadenceSummary}
+            </p>
+            <p aria-label="Overlay Marker Event Timeline Coupling Summary">
+              Marker event timeline coupling: {marketOverlayMarkerEventTimelineCouplingSummary}
             </p>
             <p aria-label="Overlay Marker Visual Focus Summary">
               Marker visual focus: {marketOverlayMarkerVisualFocusSummary}
