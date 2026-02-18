@@ -1,0 +1,15 @@
+{
+  "id": "metaapi_mcp",
+  "name": "MetaAPI MCP Connector",
+  "version": "0.1.0",
+  "kinds": ["connector.broker", "connector.marketData"],
+  "entry": {
+    "type": "external.mcp",
+    "url": "http://localhost:3000/sse"
+  },
+  "capabilities": {
+    "orderTypes": ["market", "limit", "stop"],
+    "supportsTrailingSL": true,
+    "supportsTicks": true
+  }
+}

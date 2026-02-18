@@ -1,0 +1,13271 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import './App.css'
+
+type GatewayResponse = {
+  type: 'res'
+  id: string
+  ok: boolean
+  payload?: Record<string, unknown>
+  error?: { code: string; message: string }
+}
+
+type GatewayEvent = {
+  type: 'event'
+  event: string
+  payload?: Record<string, unknown>
+}
+
+type BlockItem = {
+  id: string
+  title: string
+  content: string
+  severity: 'info' | 'warn' | 'error'
+}
+
+type BlockRenderKind =
+  | 'Markdown'
+  | 'SystemStatus'
+  | 'TradeProposal'
+  | 'TradeExecution'
+  | 'RiskAlert'
+  | 'BacktestReport'
+  | 'RawPayload'
+
+type FeedLifecycleBadge = {
+  id: string
+  action: string
+  subscriptionId?: string
+}
+
+type TradeControlBadge = {
+  id: string
+  action: 'canceled' | 'closed'
+  status?: string
+}
+
+type RiskAlertBadge = {
+  id: string
+  kind: string
+  status?: string
+}
+
+type MarketOverlayAnnotationKind = 'trade' | 'risk' | 'feed'
+type MarketOverlayAnnotationTone = 'neutral' | 'warning' | 'positive'
+type MarketOverlayAnnotation = {
+  id: string
+  kind: MarketOverlayAnnotationKind
+  label: string
+  tone: MarketOverlayAnnotationTone
+  timestamp: number
+}
+
+type QuickActionHistory = {
+  id: string
+  method: string
+  status: 'sent' | 'ok' | 'error' | 'debounced' | 'skipped'
+  durationMs?: number
+  timestamp: number
+}
+
+type HistoryFilter = 'all' | QuickActionHistory['status']
+type TimestampFormat = 'absolute' | 'relative'
+type RiskEmergencyAction = 'pause_trading' | 'cancel_all' | 'close_all' | 'disable_live'
+type MarketOverlayMode = 'price-only' | 'with-trades' | 'with-risk'
+type MarketOverlayChartRuntime = 'loading' | 'ready' | 'fallback' | 'error'
+type MarketOverlayChartLens = 'price-only' | 'price-and-trend' | 'diagnostics'
+type MarketOverlayMarkerFocus = 'all' | 'trade' | 'risk' | 'feed'
+type MarketOverlayMarkerWindow = 3 | 5 | 8
+type MarketOverlayMarkerDivergencePreview = 3 | 5 | 8
+type MarketOverlayMarkerAgeFilter = 'all' | 'last-60s' | 'last-300s'
+type MarketOverlayMarkerBucket = 'none' | '30s' | '60s'
+type MarketOverlayMarkerDeltaFilter =
+  | 'all'
+  | 'latest-up'
+  | 'latest-down'
+  | 'latest-flat'
+  | 'latest-unavailable'
+type MarketOverlayMarkerDeltaBasis = 'latest' | 'average'
+type MarketOverlayMarkerBasisAgreement = 'all' | 'agree' | 'diverge'
+type MarketOverlayBucketScope = 'all-buckets' | 'latest-bucket'
+type MarketOverlayTimelineOrder = 'newest-first' | 'oldest-first'
+type MarketOverlayMarkerWrap = 'bounded' | 'wrap'
+type MarketOverlaySelectionMode = 'sticky' | 'follow-latest'
+type MarketOverlayChartPoint = { time: number; value: number }
+type MarketOverlayChartMarker = {
+  time: number
+  position: 'aboveBar' | 'belowBar' | 'inBar'
+  color: string
+  shape: 'circle' | 'square' | 'arrowUp' | 'arrowDown'
+  text: string
+}
+type MarketOverlayMarkerVisualRole = 'active' | 'prev' | 'next' | 'context'
+type MarketOverlayMarkerVisualProfile = MarketOverlayChartMarker & {
+  role: MarketOverlayMarkerVisualRole
+  tone: 'up' | 'down' | 'flat' | 'unavailable'
+}
+type MarketOverlayChartSeries = {
+  setData: (data: MarketOverlayChartPoint[]) => void
+  setMarkers?: (markers: MarketOverlayChartMarker[]) => void
+}
+type MarketOverlayTimelineAnnotation = MarketOverlayAnnotation & { time: number }
+type MarketOverlayChart = {
+  addLineSeries?: (options: { color: string; lineWidth: number }) => MarketOverlayChartSeries
+  addSeries?: (
+    seriesDefinition: unknown,
+    options: { color: string; lineWidth: number },
+  ) => MarketOverlayChartSeries
+  applyOptions: (options: { width?: number; height?: number }) => void
+  remove: () => void
+  timeScale: () => {
+    fitContent: () => void
+  }
+}
+type LightweightChartsModule = {
+  createChart: (container: HTMLElement, options: Record<string, unknown>) => MarketOverlayChart
+  LineSeries?: unknown
+}
+
+type QuickActionPreset = {
+  managedAccountId: string
+  managedProviderAccountId: string
+  managedAccountLabel: string
+  managedAccountSymbolsInput: string
+  managedDeviceId: string
+  managedDevicePlatform: string
+  managedDeviceLabel: string
+  managedDevicePairPushToken: string
+  managedDeviceRotatePushToken: string
+  managedDeviceNotifyMessage: string
+  riskEmergencyAction: RiskEmergencyAction
+  riskEmergencyReason: string
+  feedTopic: string
+  feedSymbol: string
+  feedTimeframe: string
+  refreshSecondsInput: string
+  minRequestGapMsInput: string
+}
+type PresetImportMode = 'overwrite' | 'merge'
+type ImportHintMode = 'detailed' | 'compact'
+type ShortcutLegendOrder = 'import-first' | 'clear-first'
+type ShortcutLegendDensity = 'chips' | 'inline'
+type HelperDiagnosticsDisplayMode = 'compact' | 'verbose'
+type ShortcutLegendItem = {
+  label: string
+  title: string
+  inlineLabel: string
+}
+type PresetImportReport = {
+  mode: PresetImportMode
+  accepted: string[]
+  rejected: string[]
+  createdCount: number
+  preservedCount: number
+  overwrittenCount: number
+  importedAt: string
+}
+
+const PRESETS_STORAGE_KEY = 'quick-action-presets-v1'
+const HISTORY_FILTER_STORAGE_KEY = 'quick-action-history-filter-v1'
+const TIMESTAMP_FORMAT_STORAGE_KEY = 'quick-action-timestamp-format-v1'
+const PRESET_IMPORT_MODE_STORAGE_KEY = 'quick-action-preset-import-mode-v1'
+const PRESET_IMPORT_REPORT_EXPANDED_STORAGE_KEY = 'quick-action-preset-import-report-expanded-v1'
+const IMPORT_HINT_VISIBILITY_STORAGE_KEY = 'quick-action-import-hint-visibility-v1'
+const IMPORT_HINT_MODE_STORAGE_KEY = 'quick-action-import-hint-mode-v1'
+const IMPORT_HELPER_DIAGNOSTICS_STORAGE_KEY = 'quick-action-import-helper-diagnostics-v1'
+const IMPORT_HELPER_DIAGNOSTICS_MODE_STORAGE_KEY = 'quick-action-import-helper-diagnostics-mode-v1'
+const STATUS_SHORTCUT_LEGEND_STORAGE_KEY = 'quick-action-status-shortcut-legend-v1'
+const STATUS_SHORTCUT_LEGEND_ORDER_STORAGE_KEY = 'quick-action-status-shortcut-legend-order-v1'
+const STATUS_SHORTCUT_LEGEND_DENSITY_STORAGE_KEY = 'quick-action-status-shortcut-legend-density-v1'
+const IMPORT_SNAPSHOT_TOGGLES_STORAGE_KEY = 'quick-action-import-snapshot-toggles-v1'
+const HELPER_DIAGNOSTICS_RESET_AT_STORAGE_KEY = 'quick-action-helper-diagnostics-reset-at-v1'
+const HELPER_RESET_TIMESTAMP_FORMAT_STORAGE_KEY = 'quick-action-helper-reset-timestamp-format-v1'
+const HELPER_RESET_BADGE_VISIBILITY_STORAGE_KEY = 'quick-action-helper-reset-badge-visibility-v1'
+const HELPER_RESET_STALE_THRESHOLD_HOURS_STORAGE_KEY =
+  'quick-action-helper-reset-stale-threshold-hours-v1'
+const HELPER_RESET_BADGE_SECTION_STORAGE_KEY = 'quick-action-helper-reset-badge-section-v1'
+const HELPER_RESET_LOCK_STORAGE_KEY = 'quick-action-helper-reset-lock-v1'
+const HELPER_LOCK_COUNTERS_RESET_AT_STORAGE_KEY = 'quick-action-helper-lock-counters-reset-at-v1'
+const BLOCK_TELEMETRY_VISIBILITY_STORAGE_KEY = 'quick-action-block-telemetry-visibility-v1'
+const MARKET_OVERLAY_MODE_STORAGE_KEY = 'quick-action-market-overlay-mode-v1'
+const MARKET_OVERLAY_CHART_LENS_STORAGE_KEY = 'quick-action-market-overlay-chart-lens-v1'
+const MARKET_OVERLAY_MARKER_FOCUS_STORAGE_KEY = 'quick-action-market-overlay-marker-focus-v1'
+const MARKET_OVERLAY_MARKER_WINDOW_STORAGE_KEY = 'quick-action-market-overlay-marker-window-v1'
+const MARKET_OVERLAY_MARKER_AGE_FILTER_STORAGE_KEY = 'quick-action-market-overlay-marker-age-filter-v1'
+const MARKET_OVERLAY_MARKER_DELTA_FILTER_STORAGE_KEY =
+  'quick-action-market-overlay-marker-delta-filter-v1'
+const MARKET_OVERLAY_MARKER_DELTA_BASIS_STORAGE_KEY =
+  'quick-action-market-overlay-marker-delta-basis-v1'
+const MARKET_OVERLAY_MARKER_DIVERGENCE_PREVIEW_STORAGE_KEY =
+  'quick-action-market-overlay-marker-divergence-preview-v1'
+const MARKET_OVERLAY_MARKER_BASIS_AGREEMENT_STORAGE_KEY =
+  'quick-action-market-overlay-marker-basis-agreement-v1'
+const MARKET_OVERLAY_MARKER_BUCKET_STORAGE_KEY = 'quick-action-market-overlay-marker-bucket-v1'
+const MARKET_OVERLAY_BUCKET_SCOPE_STORAGE_KEY = 'quick-action-market-overlay-bucket-scope-v1'
+const MARKET_OVERLAY_TIMELINE_ORDER_STORAGE_KEY = 'quick-action-market-overlay-timeline-order-v1'
+const MARKET_OVERLAY_MARKER_WRAP_STORAGE_KEY = 'quick-action-market-overlay-marker-wrap-v1'
+const MARKET_OVERLAY_SELECTION_MODE_STORAGE_KEY = 'quick-action-market-overlay-selection-mode-v1'
+const MARKET_OVERLAY_MARKER_FOCUS_SHORTCUTS = 'a/t/r/d'
+const MARKET_OVERLAY_MARKER_FOCUS_ORDER: MarketOverlayMarkerFocus[] = ['all', 'trade', 'risk', 'feed']
+const MARKET_OVERLAY_MARKER_AGE_FILTER_ORDER: MarketOverlayMarkerAgeFilter[] = [
+  'all',
+  'last-60s',
+  'last-300s',
+]
+const MARKET_OVERLAY_MARKER_WINDOW_ORDER: MarketOverlayMarkerWindow[] = [3, 5, 8]
+const MARKET_OVERLAY_MARKER_DIVERGENCE_PREVIEW_ORDER: MarketOverlayMarkerDivergencePreview[] = [3, 5, 8]
+const MARKET_OVERLAY_MARKER_BUCKET_ORDER: MarketOverlayMarkerBucket[] = ['none', '30s', '60s']
+const MARKET_OVERLAY_MARKER_DELTA_FILTER_ORDER: MarketOverlayMarkerDeltaFilter[] = [
+  'all',
+  'latest-up',
+  'latest-down',
+  'latest-flat',
+  'latest-unavailable',
+]
+const MARKET_OVERLAY_MARKER_DELTA_BASIS_ORDER: MarketOverlayMarkerDeltaBasis[] = [
+  'latest',
+  'average',
+]
+const MARKET_OVERLAY_MARKER_BASIS_AGREEMENT_ORDER: MarketOverlayMarkerBasisAgreement[] = [
+  'all',
+  'agree',
+  'diverge',
+]
+const MAX_IMPORT_REPORT_NAMES = 6
+const FEED_CANDLE_FETCH_LIMIT = 50
+const MARKET_OVERLAY_MARKER_SKIP_STEP = 2
+const DEVICE_NOTIFY_TEST_MESSAGE = 'Dashboard test notification'
+const DEFAULT_RISK_EMERGENCY_REASON = 'dashboard emergency stop trigger'
+const DEFAULT_AGENT_ID = 'agent_eth_5m'
+const DEFAULT_AGENT_LABEL = 'ETH Momentum Agent'
+const DEFAULT_AGENT_SOUL_TEMPLATE =
+  '# SOUL\nI am concise and risk-first. I explain decisions in clear, short blocks.'
+const DEFAULT_AGENT_MANUAL_TEMPLATE =
+  '# TRADING MANUAL\nOnly trade with stop loss and defined invalidation.'
+const TRADE_ORDER_REFERENCE_ID = 'order_demo_1'
+const TRADE_POSITION_REFERENCE_ID = 'position_demo_1'
+const COPYTRADE_PREVIEW_SIGNAL_ID = 'sig_dashboard_preview'
+const COPYTRADE_PREVIEW_STRATEGY_ID = 'strat_dashboard_1'
+const DEFAULT_PRESET_TEMPLATE: QuickActionPreset = {
+  managedAccountId: 'acct_demo_1',
+  managedProviderAccountId: 'provider_demo_1',
+  managedAccountLabel: 'Demo Account',
+  managedAccountSymbolsInput: 'ETHUSDm,BTCUSDm',
+  managedDeviceId: 'dev_iphone_1',
+  managedDevicePlatform: 'ios',
+  managedDeviceLabel: 'Dashboard iPhone',
+  managedDevicePairPushToken: 'push_dashboard_1',
+  managedDeviceRotatePushToken: 'push_dashboard_rotated',
+  managedDeviceNotifyMessage: DEVICE_NOTIFY_TEST_MESSAGE,
+  riskEmergencyAction: 'pause_trading',
+  riskEmergencyReason: DEFAULT_RISK_EMERGENCY_REASON,
+  feedTopic: 'market.candle.closed',
+  feedSymbol: 'ETHUSDm',
+  feedTimeframe: '5m',
+  refreshSecondsInput: '15',
+  minRequestGapMsInput: '400',
+}
+
+const readPresetStoreFromStorage = (): Record<string, QuickActionPreset> => {
+  if (typeof window === 'undefined') {
+    return {}
+  }
+  try {
+    const raw = window.localStorage.getItem(PRESETS_STORAGE_KEY)
+    if (!raw) {
+      return {}
+    }
+    const parsed = JSON.parse(raw) as Record<string, QuickActionPreset>
+    return typeof parsed === 'object' && parsed !== null ? parsed : {}
+  } catch {
+    return {}
+  }
+}
+
+const readHistoryFilterFromStorage = (): HistoryFilter => {
+  if (typeof window === 'undefined') {
+    return 'all'
+  }
+  const raw = window.localStorage.getItem(HISTORY_FILTER_STORAGE_KEY)
+  const allowed: HistoryFilter[] = ['all', 'sent', 'ok', 'error', 'debounced', 'skipped']
+  if (raw && allowed.includes(raw as HistoryFilter)) {
+    return raw as HistoryFilter
+  }
+  return 'all'
+}
+
+const readTimestampFormatFromStorage = (): TimestampFormat => {
+  if (typeof window === 'undefined') {
+    return 'absolute'
+  }
+  const raw = window.localStorage.getItem(TIMESTAMP_FORMAT_STORAGE_KEY)
+  return raw === 'relative' ? 'relative' : 'absolute'
+}
+
+const readPresetImportModeFromStorage = (): PresetImportMode => {
+  if (typeof window === 'undefined') {
+    return 'overwrite'
+  }
+  const raw = window.localStorage.getItem(PRESET_IMPORT_MODE_STORAGE_KEY)
+  return raw === 'merge' ? 'merge' : 'overwrite'
+}
+
+const readPresetImportReportExpandedFromStorage = (): boolean => {
+  if (typeof window === 'undefined') {
+    return true
+  }
+  const raw = window.localStorage.getItem(PRESET_IMPORT_REPORT_EXPANDED_STORAGE_KEY)
+  return raw !== 'collapsed'
+}
+
+const readImportHintVisibilityFromStorage = (): boolean => {
+  if (typeof window === 'undefined') {
+    return true
+  }
+  const raw = window.localStorage.getItem(IMPORT_HINT_VISIBILITY_STORAGE_KEY)
+  return raw !== 'hidden'
+}
+
+const readImportHintModeFromStorage = (): ImportHintMode => {
+  if (typeof window === 'undefined') {
+    return 'detailed'
+  }
+  const raw = window.localStorage.getItem(IMPORT_HINT_MODE_STORAGE_KEY)
+  return raw === 'compact' ? 'compact' : 'detailed'
+}
+
+const readImportHelperDiagnosticsExpandedFromStorage = (): boolean => {
+  if (typeof window === 'undefined') {
+    return true
+  }
+  return window.localStorage.getItem(IMPORT_HELPER_DIAGNOSTICS_STORAGE_KEY) !== 'collapsed'
+}
+
+const readImportHelperDiagnosticsModeFromStorage = (): HelperDiagnosticsDisplayMode => {
+  if (typeof window === 'undefined') {
+    return 'compact'
+  }
+  const raw = window.localStorage.getItem(IMPORT_HELPER_DIAGNOSTICS_MODE_STORAGE_KEY)
+  return raw === 'verbose' ? 'verbose' : 'compact'
+}
+
+const readStatusShortcutLegendFromStorage = (): boolean => {
+  if (typeof window === 'undefined') {
+    return false
+  }
+  return window.localStorage.getItem(STATUS_SHORTCUT_LEGEND_STORAGE_KEY) === 'visible'
+}
+
+const readStatusShortcutLegendOrderFromStorage = (): ShortcutLegendOrder => {
+  if (typeof window === 'undefined') {
+    return 'import-first'
+  }
+  const raw = window.localStorage.getItem(STATUS_SHORTCUT_LEGEND_ORDER_STORAGE_KEY)
+  return raw === 'clear-first' ? 'clear-first' : 'import-first'
+}
+
+const readStatusShortcutLegendDensityFromStorage = (): ShortcutLegendDensity => {
+  if (typeof window === 'undefined') {
+    return 'chips'
+  }
+  const raw = window.localStorage.getItem(STATUS_SHORTCUT_LEGEND_DENSITY_STORAGE_KEY)
+  return raw === 'inline' ? 'inline' : 'chips'
+}
+
+const readImportSnapshotTogglesExpandedFromStorage = (): boolean => {
+  if (typeof window === 'undefined') {
+    return true
+  }
+  return window.localStorage.getItem(IMPORT_SNAPSHOT_TOGGLES_STORAGE_KEY) !== 'collapsed'
+}
+
+const readHelperDiagnosticsResetAtFromStorage = (): string | null => {
+  if (typeof window === 'undefined') {
+    return null
+  }
+  const raw = window.localStorage.getItem(HELPER_DIAGNOSTICS_RESET_AT_STORAGE_KEY)
+  return raw && raw.length > 0 ? raw : null
+}
+
+const readHelperResetTimestampFormatFromStorage = (): TimestampFormat => {
+  if (typeof window === 'undefined') {
+    return 'absolute'
+  }
+  const raw = window.localStorage.getItem(HELPER_RESET_TIMESTAMP_FORMAT_STORAGE_KEY)
+  return raw === 'relative' ? 'relative' : 'absolute'
+}
+
+const readHelperResetBadgeVisibleFromStorage = (): boolean => {
+  if (typeof window === 'undefined') {
+    return true
+  }
+  return window.localStorage.getItem(HELPER_RESET_BADGE_VISIBILITY_STORAGE_KEY) !== 'hidden'
+}
+
+const readHelperResetStaleThresholdHoursFromStorage = (): number => {
+  if (typeof window === 'undefined') {
+    return 24
+  }
+  const raw = window.localStorage.getItem(HELPER_RESET_STALE_THRESHOLD_HOURS_STORAGE_KEY)
+  const parsed = raw ? Number.parseInt(raw, 10) : NaN
+  return parsed === 72 ? 72 : 24
+}
+
+const readHelperResetBadgeSectionExpandedFromStorage = (): boolean => {
+  if (typeof window === 'undefined') {
+    return true
+  }
+  return window.localStorage.getItem(HELPER_RESET_BADGE_SECTION_STORAGE_KEY) !== 'collapsed'
+}
+
+const readHelperResetLockFromStorage = (): boolean => {
+  if (typeof window === 'undefined') {
+    return true
+  }
+  return window.localStorage.getItem(HELPER_RESET_LOCK_STORAGE_KEY) !== 'unlocked'
+}
+
+const readHelperLockCountersResetAtFromStorage = (): string | null => {
+  if (typeof window === 'undefined') {
+    return null
+  }
+  const value = window.localStorage.getItem(HELPER_LOCK_COUNTERS_RESET_AT_STORAGE_KEY)
+  if (!value) {
+    return null
+  }
+  return Number.isNaN(Date.parse(value)) ? null : value
+}
+
+const readBlockTelemetryVisibilityFromStorage = (): boolean => {
+  if (typeof window === 'undefined') {
+    return true
+  }
+  return window.localStorage.getItem(BLOCK_TELEMETRY_VISIBILITY_STORAGE_KEY) !== 'hidden'
+}
+
+const readMarketOverlayModeFromStorage = (): MarketOverlayMode => {
+  if (typeof window === 'undefined') {
+    return 'price-only'
+  }
+  const raw = window.localStorage.getItem(MARKET_OVERLAY_MODE_STORAGE_KEY)
+  if (raw === 'with-trades' || raw === 'with-risk') {
+    return raw
+  }
+  return 'price-only'
+}
+
+const readMarketOverlayChartLensFromStorage = (): MarketOverlayChartLens => {
+  if (typeof window === 'undefined') {
+    return 'price-only'
+  }
+  const raw = window.localStorage.getItem(MARKET_OVERLAY_CHART_LENS_STORAGE_KEY)
+  if (raw === 'price-and-trend' || raw === 'diagnostics') {
+    return raw
+  }
+  return 'price-only'
+}
+
+const readMarketOverlayMarkerFocusFromStorage = (): MarketOverlayMarkerFocus => {
+  if (typeof window === 'undefined') {
+    return 'all'
+  }
+  const raw = window.localStorage.getItem(MARKET_OVERLAY_MARKER_FOCUS_STORAGE_KEY)
+  if (raw === 'trade' || raw === 'risk' || raw === 'feed') {
+    return raw
+  }
+  return 'all'
+}
+
+const readMarketOverlayMarkerWindowFromStorage = (): MarketOverlayMarkerWindow => {
+  if (typeof window === 'undefined') {
+    return 5
+  }
+  const raw = window.localStorage.getItem(MARKET_OVERLAY_MARKER_WINDOW_STORAGE_KEY)
+  if (raw === '3' || raw === '8') {
+    return Number.parseInt(raw, 10) as MarketOverlayMarkerWindow
+  }
+  return 5
+}
+
+const readMarketOverlayMarkerAgeFilterFromStorage = (): MarketOverlayMarkerAgeFilter => {
+  if (typeof window === 'undefined') {
+    return 'all'
+  }
+  const raw = window.localStorage.getItem(MARKET_OVERLAY_MARKER_AGE_FILTER_STORAGE_KEY)
+  if (raw === 'last-60s' || raw === 'last-300s') {
+    return raw
+  }
+  return 'all'
+}
+
+const readMarketOverlayMarkerDeltaFilterFromStorage = (): MarketOverlayMarkerDeltaFilter => {
+  if (typeof window === 'undefined') {
+    return 'all'
+  }
+  const raw = window.localStorage.getItem(MARKET_OVERLAY_MARKER_DELTA_FILTER_STORAGE_KEY)
+  if (
+    raw === 'latest-up' ||
+    raw === 'latest-down' ||
+    raw === 'latest-flat' ||
+    raw === 'latest-unavailable'
+  ) {
+    return raw
+  }
+  return 'all'
+}
+
+const readMarketOverlayMarkerDeltaBasisFromStorage = (): MarketOverlayMarkerDeltaBasis => {
+  if (typeof window === 'undefined') {
+    return 'latest'
+  }
+  return window.localStorage.getItem(MARKET_OVERLAY_MARKER_DELTA_BASIS_STORAGE_KEY) === 'average'
+    ? 'average'
+    : 'latest'
+}
+
+const readMarketOverlayMarkerDivergencePreviewFromStorage = (): MarketOverlayMarkerDivergencePreview => {
+  if (typeof window === 'undefined') {
+    return 3
+  }
+  const raw = window.localStorage.getItem(MARKET_OVERLAY_MARKER_DIVERGENCE_PREVIEW_STORAGE_KEY)
+  if (raw === '5' || raw === '8') {
+    return Number.parseInt(raw, 10) as MarketOverlayMarkerDivergencePreview
+  }
+  return 3
+}
+
+const readMarketOverlayMarkerBasisAgreementFromStorage = (): MarketOverlayMarkerBasisAgreement => {
+  if (typeof window === 'undefined') {
+    return 'all'
+  }
+  const raw = window.localStorage.getItem(MARKET_OVERLAY_MARKER_BASIS_AGREEMENT_STORAGE_KEY)
+  if (raw === 'agree' || raw === 'diverge') {
+    return raw
+  }
+  return 'all'
+}
+
+const readMarketOverlayMarkerBucketFromStorage = (): MarketOverlayMarkerBucket => {
+  if (typeof window === 'undefined') {
+    return 'none'
+  }
+  const raw = window.localStorage.getItem(MARKET_OVERLAY_MARKER_BUCKET_STORAGE_KEY)
+  if (raw === '30s' || raw === '60s') {
+    return raw
+  }
+  return 'none'
+}
+
+const readMarketOverlayBucketScopeFromStorage = (): MarketOverlayBucketScope => {
+  if (typeof window === 'undefined') {
+    return 'all-buckets'
+  }
+  return window.localStorage.getItem(MARKET_OVERLAY_BUCKET_SCOPE_STORAGE_KEY) === 'latest-bucket'
+    ? 'latest-bucket'
+    : 'all-buckets'
+}
+
+const readMarketOverlayTimelineOrderFromStorage = (): MarketOverlayTimelineOrder => {
+  if (typeof window === 'undefined') {
+    return 'newest-first'
+  }
+  return window.localStorage.getItem(MARKET_OVERLAY_TIMELINE_ORDER_STORAGE_KEY) === 'oldest-first'
+    ? 'oldest-first'
+    : 'newest-first'
+}
+
+const readMarketOverlayMarkerWrapFromStorage = (): MarketOverlayMarkerWrap => {
+  if (typeof window === 'undefined') {
+    return 'bounded'
+  }
+  return window.localStorage.getItem(MARKET_OVERLAY_MARKER_WRAP_STORAGE_KEY) === 'wrap'
+    ? 'wrap'
+    : 'bounded'
+}
+
+const readMarketOverlaySelectionModeFromStorage = (): MarketOverlaySelectionMode => {
+  if (typeof window === 'undefined') {
+    return 'sticky'
+  }
+  return window.localStorage.getItem(MARKET_OVERLAY_SELECTION_MODE_STORAGE_KEY) === 'follow-latest'
+    ? 'follow-latest'
+    : 'sticky'
+}
+
+const resolveMarketOverlayDeltaTone = (
+  delta: number | null,
+): 'up' | 'down' | 'flat' | 'unavailable' => {
+  if (delta === null) {
+    return 'unavailable'
+  }
+  if (delta > 0) {
+    return 'up'
+  }
+  if (delta < 0) {
+    return 'down'
+  }
+  return 'flat'
+}
+
+const sanitizePreset = (value: unknown): QuickActionPreset | null => {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return null
+  }
+  const raw = value as Record<string, unknown>
+  const pick = (key: keyof QuickActionPreset): string => {
+    const candidate = raw[key]
+    return typeof candidate === 'string' && candidate.length > 0
+      ? candidate
+      : DEFAULT_PRESET_TEMPLATE[key]
+  }
+  const riskEmergencyActionRaw = pick('riskEmergencyAction')
+  const riskEmergencyAction: RiskEmergencyAction =
+    riskEmergencyActionRaw === 'cancel_all' ||
+    riskEmergencyActionRaw === 'close_all' ||
+    riskEmergencyActionRaw === 'disable_live'
+      ? riskEmergencyActionRaw
+      : 'pause_trading'
+  return {
+    managedAccountId: pick('managedAccountId'),
+    managedProviderAccountId: pick('managedProviderAccountId'),
+    managedAccountLabel: pick('managedAccountLabel'),
+    managedAccountSymbolsInput: pick('managedAccountSymbolsInput'),
+    managedDeviceId: pick('managedDeviceId'),
+    managedDevicePlatform: pick('managedDevicePlatform'),
+    managedDeviceLabel: pick('managedDeviceLabel'),
+    managedDevicePairPushToken: pick('managedDevicePairPushToken'),
+    managedDeviceRotatePushToken: pick('managedDeviceRotatePushToken'),
+    managedDeviceNotifyMessage: pick('managedDeviceNotifyMessage'),
+    riskEmergencyAction,
+    riskEmergencyReason: pick('riskEmergencyReason'),
+    feedTopic: pick('feedTopic'),
+    feedSymbol: pick('feedSymbol'),
+    feedTimeframe: pick('feedTimeframe'),
+    refreshSecondsInput: pick('refreshSecondsInput'),
+    minRequestGapMsInput: pick('minRequestGapMsInput'),
+  }
+}
+
+const summarizeNames = (names: string[], maxNames = MAX_IMPORT_REPORT_NAMES): string => {
+  if (names.length === 0) {
+    return 'none'
+  }
+  if (names.length <= maxNames) {
+    return names.join(', ')
+  }
+  const visible = names.slice(0, maxNames).join(', ')
+  return `${visible} (+${names.length - maxNames} more)`
+}
+
+const formatTimestamp = (ts: string, format: TimestampFormat): string => {
+  if (format === 'absolute') {
+    return ts
+  }
+  const millis = Date.parse(ts)
+  if (Number.isNaN(millis)) {
+    return ts
+  }
+  const diffSeconds = Math.max(Math.floor((Date.now() - millis) / 1000), 0)
+  if (diffSeconds < 60) {
+    return `${diffSeconds}s ago`
+  }
+  const diffMinutes = Math.floor(diffSeconds / 60)
+  if (diffMinutes < 60) {
+    return `${diffMinutes}m ago`
+  }
+  const diffHours = Math.floor(diffMinutes / 60)
+  if (diffHours < 24) {
+    return `${diffHours}h ago`
+  }
+  const diffDays = Math.floor(diffHours / 24)
+  return `${diffDays}d ago`
+}
+
+const formatElapsedMs = (elapsedMs: number): string => {
+  const totalSeconds = Math.max(Math.floor(elapsedMs / 1000), 0)
+  if (totalSeconds < 60) {
+    return `${totalSeconds}s`
+  }
+  const minutes = Math.floor(totalSeconds / 60)
+  if (minutes < 60) {
+    return `${minutes}m`
+  }
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) {
+    return `${hours}h`
+  }
+  const days = Math.floor(hours / 24)
+  return `${days}d`
+}
+
+const resolveHelperResetTone = (
+  ts: string | null,
+  staleThresholdHours: number,
+): 'tone-none' | 'tone-fresh' | 'tone-stale' => {
+  if (!ts) {
+    return 'tone-none'
+  }
+  const millis = Date.parse(ts)
+  if (Number.isNaN(millis)) {
+    return 'tone-stale'
+  }
+  const ageMs = Math.max(Date.now() - millis, 0)
+  return ageMs >= staleThresholdHours * 60 * 60 * 1000 ? 'tone-stale' : 'tone-fresh'
+}
+
+const resolveLockCounterTone = (count: number): 'counter-tone-none' | 'counter-tone-active' | 'counter-tone-high' => {
+  if (count === 0) {
+    return 'counter-tone-none'
+  }
+  if (count >= 3) {
+    return 'counter-tone-high'
+  }
+  return 'counter-tone-active'
+}
+
+const BLOCK_TELEMETRY_SEGMENT_MARKER = '\n\n[LockTelemetry]'
+
+const stripBlockTelemetrySegment = (content: string): string => {
+  const markerIndex = content.indexOf(BLOCK_TELEMETRY_SEGMENT_MARKER)
+  if (markerIndex === -1) {
+    return content
+  }
+  return content.slice(0, markerIndex)
+}
+
+const parseStructuredBlockPayload = (content: string): Record<string, unknown> | null => {
+  const normalized = stripBlockTelemetrySegment(content).trim()
+  if (!normalized.startsWith('{')) {
+    return null
+  }
+  try {
+    const parsed = JSON.parse(normalized)
+    if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+      return parsed as Record<string, unknown>
+    }
+  } catch {
+    return null
+  }
+  return null
+}
+
+const resolveBlockRenderKind = (block: BlockItem): BlockRenderKind => {
+  const normalizedContent = stripBlockTelemetrySegment(block.content).trim()
+  if (/^#{1,6}\s+\S/m.test(normalizedContent)) {
+    return 'Markdown'
+  }
+
+  const payload = parseStructuredBlockPayload(block.content)
+  if (!payload) {
+    return 'SystemStatus'
+  }
+
+  if (
+    block.title === 'event.risk.alert' ||
+    ('decision' in payload &&
+      payload.decision &&
+      typeof payload.decision === 'object' &&
+      'violations' in (payload.decision as Record<string, unknown>))
+  ) {
+    return 'RiskAlert'
+  }
+
+  if (
+    block.title === 'event.trade.executed' ||
+    ('execution' in payload &&
+      payload.execution &&
+      typeof payload.execution === 'object' &&
+      'status' in (payload.execution as Record<string, unknown>))
+  ) {
+    return 'TradeExecution'
+  }
+
+  if (
+    block.title === 'event.risk.preview' ||
+    ('allowed' in payload && 'violations' in payload)
+  ) {
+    return 'TradeProposal'
+  }
+
+  if (
+    block.title === 'event.backtests.report' ||
+    ('metrics' in payload && ('equityCurve' in payload || 'trades' in payload))
+  ) {
+    return 'BacktestReport'
+  }
+
+  if (
+    block.title === 'gateway.status response' ||
+    ('protocolVersion' in payload && 'server' in payload)
+  ) {
+    return 'SystemStatus'
+  }
+
+  return 'RawPayload'
+}
+
+function App() {
+  const wsRef = useRef<WebSocket | null>(null)
+  const pendingRequestsRef = useRef<Map<string, (value: GatewayResponse) => void>>(new Map())
+  const requestGuardsRef = useRef<Map<string, number>>(new Map())
+  const requestCounter = useRef(0)
+  const blockIdCounterRef = useRef(0)
+  const marketOverlayChartContainerRef = useRef<HTMLDivElement | null>(null)
+  const marketOverlayChartRef = useRef<MarketOverlayChart | null>(null)
+  const marketOverlayPriceSeriesRef = useRef<MarketOverlayChartSeries | null>(null)
+  const marketOverlayTrendSeriesRef = useRef<MarketOverlayChartSeries | null>(null)
+  const marketOverlayBaselineSeriesRef = useRef<MarketOverlayChartSeries | null>(null)
+
+  const [connectionStatus, setConnectionStatus] = useState<
+    'connecting' | 'connected' | 'disconnected'
+  >('connecting')
+  const [protocolVersion, setProtocolVersion] = useState<number | null>(null)
+  const [sessionId, setSessionId] = useState<string | null>(null)
+  const [accountCount, setAccountCount] = useState<number | null>(null)
+  const [agentCount, setAgentCount] = useState<number | null>(null)
+  const [managedAccountId, setManagedAccountId] = useState<string>(
+    DEFAULT_PRESET_TEMPLATE.managedAccountId,
+  )
+  const [managedAgentId, setManagedAgentId] = useState<string>(DEFAULT_AGENT_ID)
+  const [managedAgentLabel, setManagedAgentLabel] = useState<string>(DEFAULT_AGENT_LABEL)
+  const [onboardingChecklist, setOnboardingChecklist] = useState<{
+    account: boolean
+    agent: boolean
+    feed: boolean
+  }>({
+    account: false,
+    agent: false,
+    feed: false,
+  })
+  const [managedProviderAccountId, setManagedProviderAccountId] = useState<string>(
+    DEFAULT_PRESET_TEMPLATE.managedProviderAccountId,
+  )
+  const [managedAccountLabel, setManagedAccountLabel] = useState<string>(
+    DEFAULT_PRESET_TEMPLATE.managedAccountLabel,
+  )
+  const [managedAccountSymbolsInput, setManagedAccountSymbolsInput] = useState<string>(
+    DEFAULT_PRESET_TEMPLATE.managedAccountSymbolsInput,
+  )
+  const [accountConnectionStatus, setAccountConnectionStatus] = useState<string>('unknown')
+  const [deviceCount, setDeviceCount] = useState<number | null>(null)
+  const [managedDeviceId, setManagedDeviceId] = useState<string>(
+    DEFAULT_PRESET_TEMPLATE.managedDeviceId,
+  )
+  const [managedDevicePlatform, setManagedDevicePlatform] = useState<string>(
+    DEFAULT_PRESET_TEMPLATE.managedDevicePlatform,
+  )
+  const [managedDeviceLabel, setManagedDeviceLabel] = useState<string>(
+    DEFAULT_PRESET_TEMPLATE.managedDeviceLabel,
+  )
+  const [managedDevicePairPushToken, setManagedDevicePairPushToken] = useState<string>(
+    DEFAULT_PRESET_TEMPLATE.managedDevicePairPushToken,
+  )
+  const [managedDeviceRotatePushToken, setManagedDeviceRotatePushToken] = useState<string>(
+    DEFAULT_PRESET_TEMPLATE.managedDeviceRotatePushToken,
+  )
+  const [managedDeviceNotifyMessage, setManagedDeviceNotifyMessage] = useState<string>(
+    DEFAULT_PRESET_TEMPLATE.managedDeviceNotifyMessage,
+  )
+  const [riskEmergencyAction, setRiskEmergencyAction] = useState<RiskEmergencyAction>(
+    DEFAULT_PRESET_TEMPLATE.riskEmergencyAction,
+  )
+  const [riskEmergencyReason, setRiskEmergencyReason] = useState<string>(
+    DEFAULT_PRESET_TEMPLATE.riskEmergencyReason,
+  )
+  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState<boolean>(false)
+  const [refreshSecondsInput, setRefreshSecondsInput] = useState<string>(
+    DEFAULT_PRESET_TEMPLATE.refreshSecondsInput,
+  )
+  const [minRequestGapMsInput, setMinRequestGapMsInput] = useState<string>(
+    DEFAULT_PRESET_TEMPLATE.minRequestGapMsInput,
+  )
+  const [presetNameInput, setPresetNameInput] = useState<string>('default')
+  const [selectedPresetName, setSelectedPresetName] = useState<string>('')
+  const [presetImportInput, setPresetImportInput] = useState<string>('')
+  const [presetImportMode, setPresetImportMode] = useState<PresetImportMode>(
+    readPresetImportModeFromStorage,
+  )
+  const [presetImportReport, setPresetImportReport] = useState<PresetImportReport | null>(null)
+  const [isPresetImportReportExpanded, setIsPresetImportReportExpanded] = useState<boolean>(
+    readPresetImportReportExpandedFromStorage,
+  )
+  const [isImportHintVisible, setIsImportHintVisible] = useState<boolean>(
+    readImportHintVisibilityFromStorage,
+  )
+  const [isImportHelperDiagnosticsExpanded, setIsImportHelperDiagnosticsExpanded] =
+    useState<boolean>(readImportHelperDiagnosticsExpandedFromStorage)
+  const [importHintMode, setImportHintMode] = useState<ImportHintMode>(readImportHintModeFromStorage)
+  const [hintModeLiveNote, setHintModeLiveNote] = useState<string>('')
+  const [showShortcutLegendInStatus, setShowShortcutLegendInStatus] = useState<boolean>(
+    readStatusShortcutLegendFromStorage,
+  )
+  const [isImportSnapshotTogglesExpanded, setIsImportSnapshotTogglesExpanded] = useState<boolean>(
+    readImportSnapshotTogglesExpandedFromStorage,
+  )
+  const [shortcutLegendOrder, setShortcutLegendOrder] = useState<ShortcutLegendOrder>(
+    readStatusShortcutLegendOrderFromStorage,
+  )
+  const [shortcutLegendDensity, setShortcutLegendDensity] = useState<ShortcutLegendDensity>(
+    readStatusShortcutLegendDensityFromStorage,
+  )
+  const [helperDiagnosticsDisplayMode, setHelperDiagnosticsDisplayMode] =
+    useState<HelperDiagnosticsDisplayMode>(readImportHelperDiagnosticsModeFromStorage)
+  const [helperDiagnosticsLastResetAt, setHelperDiagnosticsLastResetAt] = useState<string | null>(
+    readHelperDiagnosticsResetAtFromStorage,
+  )
+  const [helperResetTimestampFormat, setHelperResetTimestampFormat] = useState<TimestampFormat>(
+    readHelperResetTimestampFormatFromStorage,
+  )
+  const [isHelperResetBadgeVisible, setIsHelperResetBadgeVisible] = useState<boolean>(
+    readHelperResetBadgeVisibleFromStorage,
+  )
+  const [helperResetStaleThresholdHours, setHelperResetStaleThresholdHours] = useState<number>(
+    readHelperResetStaleThresholdHoursFromStorage,
+  )
+  const [isHelperResetBadgeSectionExpanded, setIsHelperResetBadgeSectionExpanded] =
+    useState<boolean>(readHelperResetBadgeSectionExpandedFromStorage)
+  const [isHelperResetLocked, setIsHelperResetLocked] = useState<boolean>(readHelperResetLockFromStorage)
+  const [helperLockCountersLastResetAt, setHelperLockCountersLastResetAt] = useState<string | null>(
+    readHelperLockCountersResetAtFromStorage,
+  )
+  const [isBlockTelemetryVisible, setIsBlockTelemetryVisible] = useState<boolean>(
+    readBlockTelemetryVisibilityFromStorage,
+  )
+  const [availablePresetNames, setAvailablePresetNames] = useState<string[]>(() =>
+    Object.keys(readPresetStoreFromStorage()).sort(),
+  )
+  const [feedCount, setFeedCount] = useState<number | null>(null)
+  const [marketplaceSignalCount, setMarketplaceSignalCount] = useState<number | null>(null)
+  const [marketplaceFollowsSummary, setMarketplaceFollowsSummary] = useState<string>('none')
+  const [copytradePreviewSummary, setCopytradePreviewSummary] = useState<string>('none')
+  const [copytradeControlSummary, setCopytradeControlSummary] = useState<string>('none')
+  const [feedTopic, setFeedTopic] = useState<string>(DEFAULT_PRESET_TEMPLATE.feedTopic)
+  const [feedSymbol, setFeedSymbol] = useState<string>(DEFAULT_PRESET_TEMPLATE.feedSymbol)
+  const [feedTimeframe, setFeedTimeframe] = useState<string>(DEFAULT_PRESET_TEMPLATE.feedTimeframe)
+  const [lastFetchedCandlesCount, setLastFetchedCandlesCount] = useState<number | null>(null)
+  const [marketOverlayRecentCloses, setMarketOverlayRecentCloses] = useState<number[]>([])
+  const [marketOverlayAnnotations, setMarketOverlayAnnotations] = useState<MarketOverlayAnnotation[]>(
+    [],
+  )
+  const [subscriptionCount, setSubscriptionCount] = useState<number | null>(null)
+  const [activeSubscriptionId, setActiveSubscriptionId] = useState<string | null>(null)
+  const [feedLifecycle, setFeedLifecycle] = useState<FeedLifecycleBadge[]>([])
+  const [tradeControlEvents, setTradeControlEvents] = useState<TradeControlBadge[]>([])
+  const [riskAlerts, setRiskAlerts] = useState<RiskAlertBadge[]>([])
+  const [riskEmergencyStopActive, setRiskEmergencyStopActive] = useState<boolean | null>(null)
+  const [riskLastEmergencyAction, setRiskLastEmergencyAction] = useState<string | null>(null)
+  const [riskLastEmergencyReason, setRiskLastEmergencyReason] = useState<string | null>(null)
+  const [riskLastEmergencyUpdatedAt, setRiskLastEmergencyUpdatedAt] = useState<string | null>(null)
+  const [riskEmergencyActionCounts, setRiskEmergencyActionCounts] = useState<
+    Record<'pause_trading' | 'cancel_all' | 'close_all' | 'disable_live', number>
+  >({
+    pause_trading: 0,
+    cancel_all: 0,
+    close_all: 0,
+    disable_live: 0,
+  })
+  const [quickActionHistory, setQuickActionHistory] = useState<QuickActionHistory[]>([])
+  const [historyFilter, setHistoryFilter] = useState<HistoryFilter>(readHistoryFilterFromStorage)
+  const [timestampFormat, setTimestampFormat] = useState<TimestampFormat>(
+    readTimestampFormatFromStorage,
+  )
+  const [lastSuccessByMethod, setLastSuccessByMethod] = useState<Record<string, string>>({})
+  const [lastErrorByMethod, setLastErrorByMethod] = useState<Record<string, string>>({})
+  const [blocks, setBlocks] = useState<BlockItem[]>([])
+  const [marketOverlayMode, setMarketOverlayMode] = useState<MarketOverlayMode>(
+    readMarketOverlayModeFromStorage,
+  )
+  const [marketOverlayChartLens, setMarketOverlayChartLens] = useState<MarketOverlayChartLens>(
+    readMarketOverlayChartLensFromStorage,
+  )
+  const [marketOverlayMarkerFocus, setMarketOverlayMarkerFocus] = useState<MarketOverlayMarkerFocus>(
+    readMarketOverlayMarkerFocusFromStorage,
+  )
+  const [marketOverlayMarkerWindow, setMarketOverlayMarkerWindow] =
+    useState<MarketOverlayMarkerWindow>(readMarketOverlayMarkerWindowFromStorage)
+  const [marketOverlayMarkerAgeFilter, setMarketOverlayMarkerAgeFilter] =
+    useState<MarketOverlayMarkerAgeFilter>(readMarketOverlayMarkerAgeFilterFromStorage)
+  const [marketOverlayMarkerDeltaFilter, setMarketOverlayMarkerDeltaFilter] =
+    useState<MarketOverlayMarkerDeltaFilter>(readMarketOverlayMarkerDeltaFilterFromStorage)
+  const [marketOverlayMarkerDeltaBasis, setMarketOverlayMarkerDeltaBasis] =
+    useState<MarketOverlayMarkerDeltaBasis>(readMarketOverlayMarkerDeltaBasisFromStorage)
+  const [marketOverlayMarkerDivergencePreview, setMarketOverlayMarkerDivergencePreview] =
+    useState<MarketOverlayMarkerDivergencePreview>(readMarketOverlayMarkerDivergencePreviewFromStorage)
+  const [marketOverlayMarkerBasisAgreement, setMarketOverlayMarkerBasisAgreement] =
+    useState<MarketOverlayMarkerBasisAgreement>(readMarketOverlayMarkerBasisAgreementFromStorage)
+  const [marketOverlayMarkerBucket, setMarketOverlayMarkerBucket] = useState<MarketOverlayMarkerBucket>(
+    readMarketOverlayMarkerBucketFromStorage,
+  )
+  const [marketOverlayBucketScope, setMarketOverlayBucketScope] = useState<MarketOverlayBucketScope>(
+    readMarketOverlayBucketScopeFromStorage,
+  )
+  const [marketOverlayTimelineOrder, setMarketOverlayTimelineOrder] = useState<MarketOverlayTimelineOrder>(
+    readMarketOverlayTimelineOrderFromStorage,
+  )
+  const [marketOverlayMarkerWrap, setMarketOverlayMarkerWrap] = useState<MarketOverlayMarkerWrap>(
+    readMarketOverlayMarkerWrapFromStorage,
+  )
+  const [marketOverlaySelectionMode, setMarketOverlaySelectionMode] = useState<MarketOverlaySelectionMode>(
+    readMarketOverlaySelectionModeFromStorage,
+  )
+  const [marketOverlaySelectedMarkerId, setMarketOverlaySelectedMarkerId] = useState<string | null>(
+    null,
+  )
+  const [marketOverlaySnapshotAt, setMarketOverlaySnapshotAt] = useState<string | null>(null)
+  const [marketOverlaySnapshotSummary, setMarketOverlaySnapshotSummary] = useState<string>('none')
+  const [marketOverlayChartRuntime, setMarketOverlayChartRuntime] =
+    useState<MarketOverlayChartRuntime>('loading')
+
+  const onboardingCompletedCount = useMemo(
+    () =>
+      Number(onboardingChecklist.account) +
+      Number(onboardingChecklist.agent) +
+      Number(onboardingChecklist.feed),
+    [onboardingChecklist],
+  )
+  const marketOverlayLiveSummary = useMemo(() => {
+    const candles = lastFetchedCandlesCount ?? 0
+    const tradeEvents = tradeControlEvents.length
+    const alerts = riskAlerts.length
+    if (marketOverlayMode === 'price-only') {
+      return `candles:${candles}`
+    }
+    if (marketOverlayMode === 'with-trades') {
+      return `candles:${candles} · tradeEvents:${tradeEvents}`
+    }
+    return `candles:${candles} · tradeEvents:${tradeEvents} · riskAlerts:${alerts}`
+  }, [lastFetchedCandlesCount, marketOverlayMode, riskAlerts.length, tradeControlEvents.length])
+  const marketOverlayWindowSummary = useMemo(() => {
+    const closesSummary =
+      marketOverlayRecentCloses.length > 0
+        ? `closes:${marketOverlayRecentCloses.join(',')}`
+        : 'closes:none'
+    if (marketOverlayMode === 'price-only') {
+      return closesSummary
+    }
+    if (marketOverlayMode === 'with-trades') {
+      return `${closesSummary} · trades:${tradeControlEvents.length}`
+    }
+    return `${closesSummary} · trades:${tradeControlEvents.length} · risk:${riskAlerts.length} · feed:${feedLifecycle.length}`
+  }, [
+    feedLifecycle.length,
+    marketOverlayMode,
+    marketOverlayRecentCloses,
+    riskAlerts.length,
+    tradeControlEvents.length,
+  ])
+  const marketOverlayTrend = useMemo(() => {
+    if (marketOverlayRecentCloses.length < 2) {
+      return {
+        label: 'neutral',
+        className: 'overlay-trend-neutral',
+      }
+    }
+
+    const firstClose = marketOverlayRecentCloses[0]
+    const lastClose = marketOverlayRecentCloses[marketOverlayRecentCloses.length - 1]
+    const delta = lastClose - firstClose
+    if (Math.abs(delta) < 0.000001) {
+      return {
+        label: 'flat (±0.00)',
+        className: 'overlay-trend-flat',
+      }
+    }
+
+    return {
+      label: `${delta > 0 ? 'up' : 'down'} (${delta > 0 ? '+' : ''}${delta.toFixed(2)})`,
+      className: delta > 0 ? 'overlay-trend-up' : 'overlay-trend-down',
+    }
+  }, [marketOverlayRecentCloses])
+  const marketOverlayVolatility = useMemo(() => {
+    if (marketOverlayRecentCloses.length < 2) {
+      return {
+        label: 'n/a',
+        summary: 'n/a',
+        className: 'overlay-volatility-none',
+      }
+    }
+
+    const high = Math.max(...marketOverlayRecentCloses)
+    const low = Math.min(...marketOverlayRecentCloses)
+    const range = high - low
+    const band = range < 0.5 ? 'low' : range < 2 ? 'moderate' : 'high'
+    const className =
+      band === 'low'
+        ? 'overlay-volatility-low'
+        : band === 'moderate'
+          ? 'overlay-volatility-moderate'
+          : 'overlay-volatility-high'
+
+    return {
+      label: `range:${range.toFixed(2)} · ${band}`,
+      summary: range.toFixed(2),
+      className,
+    }
+  }, [marketOverlayRecentCloses])
+  const marketOverlayPulse = useMemo(() => {
+    const score = tradeControlEvents.length * 2 + riskAlerts.length * 3 + feedLifecycle.length
+    if (score === 0) {
+      return {
+        label: 'quiet (0)',
+        summary: 'quiet(0)',
+        className: 'overlay-pulse-quiet',
+      }
+    }
+    if (score < 5) {
+      return {
+        label: `active (${score})`,
+        summary: `active(${score})`,
+        className: 'overlay-pulse-active',
+      }
+    }
+    return {
+      label: `intense (${score})`,
+      summary: `intense(${score})`,
+      className: 'overlay-pulse-intense',
+    }
+  }, [feedLifecycle.length, riskAlerts.length, tradeControlEvents.length])
+  const marketOverlayRegime = useMemo(() => {
+    const trendClass = marketOverlayTrend.className
+    const pulseClass = marketOverlayPulse.className
+    const volatilityClass = marketOverlayVolatility.className
+
+    const isTrendUp = trendClass === 'overlay-trend-up'
+    const isTrendDown = trendClass === 'overlay-trend-down'
+    const isTrendNeutral = trendClass === 'overlay-trend-neutral'
+    const isPulseIntense = pulseClass === 'overlay-pulse-intense'
+    const isPulseQuiet = pulseClass === 'overlay-pulse-quiet'
+    const hasVolatilitySignal = volatilityClass !== 'overlay-volatility-none'
+
+    if (isPulseIntense && isTrendUp && hasVolatilitySignal) {
+      return {
+        label: 'risk-on',
+        summary: 'risk_on',
+        className: 'overlay-regime-risk-on',
+      }
+    }
+    if (isPulseIntense && isTrendDown) {
+      return {
+        label: 'risk-off',
+        summary: 'risk_off',
+        className: 'overlay-regime-risk-off',
+      }
+    }
+    if (isPulseQuiet && isTrendNeutral) {
+      return {
+        label: 'observe',
+        summary: 'observe',
+        className: 'overlay-regime-observe',
+      }
+    }
+    return {
+      label: 'momentum-watch',
+      summary: 'momentum_watch',
+      className: 'overlay-regime-watch',
+    }
+  }, [marketOverlayPulse.className, marketOverlayTrend.className, marketOverlayVolatility.className])
+  const marketOverlayChartPoints = useMemo(
+    () => marketOverlayRecentCloses.map((value, index) => ({ time: index + 1, value })),
+    [marketOverlayRecentCloses],
+  )
+  const marketOverlayTrendLinePoints = useMemo(() => {
+    if (marketOverlayRecentCloses.length < 3) {
+      return [] as MarketOverlayChartPoint[]
+    }
+    return marketOverlayRecentCloses
+      .map((_, index, closes) => {
+        if (index < 2) {
+          return null
+        }
+        const window = closes.slice(index - 2, index + 1)
+        const average = window.reduce((sum, value) => sum + value, 0) / window.length
+        return {
+          time: index + 1,
+          value: average,
+        }
+      })
+      .filter((point): point is MarketOverlayChartPoint => point !== null)
+  }, [marketOverlayRecentCloses])
+  const marketOverlayAverageClose = useMemo(() => {
+    if (marketOverlayRecentCloses.length === 0) {
+      return null
+    }
+    return (
+      marketOverlayRecentCloses.reduce((sum, value) => sum + value, 0) / marketOverlayRecentCloses.length
+    )
+  }, [marketOverlayRecentCloses])
+  const marketOverlayBaselinePoints = useMemo(() => {
+    if (marketOverlayAverageClose === null) {
+      return [] as MarketOverlayChartPoint[]
+    }
+    return marketOverlayChartPoints.map((point) => ({
+      time: point.time,
+      value: marketOverlayAverageClose,
+    }))
+  }, [marketOverlayAverageClose, marketOverlayChartPoints])
+  const marketOverlayChartSummary = useMemo(() => {
+    if (marketOverlayChartPoints.length === 0) {
+      return `points:none · lens:${marketOverlayChartLens}`
+    }
+    const latest = marketOverlayChartPoints[marketOverlayChartPoints.length - 1]
+    if (marketOverlayChartLens === 'price-only') {
+      return `points:${marketOverlayChartPoints.length} · last:${latest.value.toFixed(2)} · lens:price-only`
+    }
+    if (marketOverlayChartLens === 'price-and-trend') {
+      return `points:${marketOverlayChartPoints.length} · last:${latest.value.toFixed(2)} · trendPoints:${marketOverlayTrendLinePoints.length} · lens:price-and-trend`
+    }
+    return `points:${marketOverlayChartPoints.length} · last:${latest.value.toFixed(2)} · trendPoints:${marketOverlayTrendLinePoints.length} · baseline:${(marketOverlayAverageClose ?? 0).toFixed(2)} · lens:diagnostics`
+  }, [
+    marketOverlayAverageClose,
+    marketOverlayChartLens,
+    marketOverlayChartPoints,
+    marketOverlayTrendLinePoints.length,
+  ])
+  const marketOverlayAnnotationSummary = useMemo(() => {
+    const tradeCount = marketOverlayAnnotations.filter((annotation) => annotation.kind === 'trade').length
+    const riskCount = marketOverlayAnnotations.filter((annotation) => annotation.kind === 'risk').length
+    const feedCount = marketOverlayAnnotations.filter((annotation) => annotation.kind === 'feed').length
+    const latest = marketOverlayAnnotations[0]
+    return {
+      tradeCount,
+      riskCount,
+      feedCount,
+      totalCount: marketOverlayAnnotations.length,
+      latestLabel: latest ? `${latest.kind}:${latest.label}` : 'none',
+    }
+  }, [marketOverlayAnnotations])
+  const marketOverlayFilteredAnnotations = useMemo(
+    () =>
+      marketOverlayMarkerFocus === 'all'
+        ? marketOverlayAnnotations
+        : marketOverlayAnnotations.filter((annotation) => annotation.kind === marketOverlayMarkerFocus),
+    [marketOverlayAnnotations, marketOverlayMarkerFocus],
+  )
+  const marketOverlayAgeFilteredAnnotations = useMemo(() => {
+    if (marketOverlayMarkerAgeFilter === 'all') {
+      return marketOverlayFilteredAnnotations
+    }
+    const maxAgeMs = marketOverlayMarkerAgeFilter === 'last-60s' ? 60_000 : 300_000
+    const now = Date.now()
+    return marketOverlayFilteredAnnotations.filter((annotation) => now - annotation.timestamp <= maxAgeMs)
+  }, [marketOverlayFilteredAnnotations, marketOverlayMarkerAgeFilter])
+  const marketOverlayVisibleAnnotations = useMemo(
+    () => marketOverlayAgeFilteredAnnotations.slice(0, marketOverlayMarkerWindow),
+    [marketOverlayAgeFilteredAnnotations, marketOverlayMarkerWindow],
+  )
+  const marketOverlayOrderedVisibleAnnotations = useMemo(
+    () =>
+      marketOverlayTimelineOrder === 'newest-first'
+        ? marketOverlayVisibleAnnotations
+        : marketOverlayVisibleAnnotations.slice().reverse(),
+    [marketOverlayTimelineOrder, marketOverlayVisibleAnnotations],
+  )
+  const marketOverlayTimelineAnnotations = useMemo(() => {
+    if (marketOverlayChartPoints.length === 0 || marketOverlayVisibleAnnotations.length === 0) {
+      return [] as MarketOverlayTimelineAnnotation[]
+    }
+    const latestTime = marketOverlayChartPoints[marketOverlayChartPoints.length - 1].time
+    const source = marketOverlayVisibleAnnotations.slice().reverse()
+    return source.map((annotation, index) => {
+      const offset = source.length - 1 - index
+      return {
+        ...annotation,
+        time: Math.max(1, latestTime - offset),
+      }
+    })
+  }, [marketOverlayChartPoints, marketOverlayVisibleAnnotations])
+  const marketOverlayLatestBucketStart = useMemo(() => {
+    if (marketOverlayMarkerBucket === 'none' || marketOverlayTimelineAnnotations.length === 0) {
+      return null
+    }
+    const bucketSizeMs = marketOverlayMarkerBucket === '30s' ? 30_000 : 60_000
+    return marketOverlayTimelineAnnotations.reduce((latest, annotation) => {
+      const bucketStart = Math.floor(annotation.timestamp / bucketSizeMs) * bucketSizeMs
+      return latest === null || bucketStart > latest ? bucketStart : latest
+    }, null as number | null)
+  }, [marketOverlayMarkerBucket, marketOverlayTimelineAnnotations])
+  const marketOverlayBucketScopedTimelineAnnotations = useMemo(() => {
+    if (
+      marketOverlayMarkerBucket === 'none' ||
+      marketOverlayBucketScope === 'all-buckets' ||
+      marketOverlayLatestBucketStart === null
+    ) {
+      return marketOverlayTimelineAnnotations
+    }
+    const bucketSizeMs = marketOverlayMarkerBucket === '30s' ? 30_000 : 60_000
+    return marketOverlayTimelineAnnotations.filter(
+      (annotation) =>
+        Math.floor(annotation.timestamp / bucketSizeMs) * bucketSizeMs === marketOverlayLatestBucketStart,
+    )
+  }, [
+    marketOverlayBucketScope,
+    marketOverlayLatestBucketStart,
+    marketOverlayMarkerBucket,
+    marketOverlayTimelineAnnotations,
+  ])
+  const marketOverlayAgreementScopedTimelineAnnotations = useMemo(() => {
+    if (marketOverlayMarkerBasisAgreement === 'all') {
+      return marketOverlayBucketScopedTimelineAnnotations
+    }
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const baseline = marketOverlayAverageClose
+    return marketOverlayBucketScopedTimelineAnnotations.filter((annotation) => {
+      const point = pointByTime.get(annotation.time) ?? null
+      const latestDelta = point && latestPoint ? point.value - latestPoint.value : null
+      const averageDelta = point && baseline !== null ? point.value - baseline : null
+      const latestTone = resolveMarketOverlayDeltaTone(latestDelta)
+      const averageTone = resolveMarketOverlayDeltaTone(averageDelta)
+      const isAgreement = latestTone === averageTone
+      return marketOverlayMarkerBasisAgreement === 'agree' ? isAgreement : !isAgreement
+    })
+  }, [
+    marketOverlayAverageClose,
+    marketOverlayBucketScopedTimelineAnnotations,
+    marketOverlayChartPoints,
+    marketOverlayMarkerBasisAgreement,
+  ])
+  const marketOverlayMarkerBasisAgreementSummary = useMemo(() => {
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const baseline = marketOverlayAverageClose
+    let agreementCount = 0
+    marketOverlayBucketScopedTimelineAnnotations.forEach((annotation) => {
+      const point = pointByTime.get(annotation.time) ?? null
+      const latestDelta = point && latestPoint ? point.value - latestPoint.value : null
+      const averageDelta = point && baseline !== null ? point.value - baseline : null
+      const latestTone = resolveMarketOverlayDeltaTone(latestDelta)
+      const averageTone = resolveMarketOverlayDeltaTone(averageDelta)
+      if (latestTone === averageTone) {
+        agreementCount += 1
+      }
+    })
+    const total = marketOverlayBucketScopedTimelineAnnotations.length
+    const divergenceCount = total - agreementCount
+    return `mode:${marketOverlayMarkerBasisAgreement} · matched:${marketOverlayAgreementScopedTimelineAnnotations.length}/${total} · agree:${agreementCount} · diverge:${divergenceCount}`
+  }, [
+    marketOverlayAgreementScopedTimelineAnnotations.length,
+    marketOverlayAverageClose,
+    marketOverlayBucketScopedTimelineAnnotations,
+    marketOverlayChartPoints,
+    marketOverlayMarkerBasisAgreement,
+  ])
+  const marketOverlayMarkerBasisAgreementShortcutSummary = useMemo(() => {
+    const cycleForwardTarget =
+      marketOverlayMarkerBasisAgreement === 'all'
+        ? 'agree'
+        : marketOverlayMarkerBasisAgreement === 'agree'
+          ? 'diverge'
+          : 'all'
+    const cycleBackwardTarget =
+      marketOverlayMarkerBasisAgreement === 'all'
+        ? 'diverge'
+        : marketOverlayMarkerBasisAgreement === 'agree'
+          ? 'all'
+          : 'agree'
+    return `keys:q/e/x/c/C · all:q · agree:e · diverge:x · cycle:c=${cycleForwardTarget} · reverse:C=${cycleBackwardTarget} · active:${marketOverlayMarkerBasisAgreement}`
+  }, [marketOverlayMarkerBasisAgreement])
+  const marketOverlayMarkerBasisAgreementCyclePreviewSummary = useMemo(() => {
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const baseline = marketOverlayAverageClose
+    const resolveToneForBasis = (
+      annotation: MarketOverlayTimelineAnnotation,
+      basis: MarketOverlayMarkerDeltaBasis,
+    ): 'up' | 'down' | 'flat' | 'unavailable' => {
+      const point = pointByTime.get(annotation.time) ?? null
+      const deltaValue =
+        basis === 'latest'
+          ? point && latestPoint
+            ? point.value - latestPoint.value
+            : null
+          : point && baseline !== null
+            ? point.value - baseline
+            : null
+      return resolveMarketOverlayDeltaTone(deltaValue)
+    }
+    const isToneMatch = (tone: 'up' | 'down' | 'flat' | 'unavailable') =>
+      marketOverlayMarkerDeltaFilter === 'all' ||
+      (marketOverlayMarkerDeltaFilter === 'latest-up' && tone === 'up') ||
+      (marketOverlayMarkerDeltaFilter === 'latest-down' && tone === 'down') ||
+      (marketOverlayMarkerDeltaFilter === 'latest-flat' && tone === 'flat') ||
+      (marketOverlayMarkerDeltaFilter === 'latest-unavailable' && tone === 'unavailable')
+    const visibleCountForMode = (mode: MarketOverlayMarkerBasisAgreement) => {
+      const scoped = marketOverlayBucketScopedTimelineAnnotations.filter((annotation) => {
+        if (mode === 'all') {
+          return true
+        }
+        const latestTone = resolveToneForBasis(annotation, 'latest')
+        const averageTone = resolveToneForBasis(annotation, 'average')
+        return mode === 'agree' ? latestTone === averageTone : latestTone !== averageTone
+      })
+      if (marketOverlayMarkerDeltaFilter === 'all') {
+        return scoped.length
+      }
+      return scoped.reduce((count, annotation) => {
+        const tone = resolveToneForBasis(annotation, marketOverlayMarkerDeltaBasis)
+        return isToneMatch(tone) ? count + 1 : count
+      }, 0)
+    }
+    const allVisible = visibleCountForMode('all')
+    const agreeVisible = visibleCountForMode('agree')
+    const divergeVisible = visibleCountForMode('diverge')
+    const cycleTarget =
+      marketOverlayMarkerBasisAgreement === 'all'
+        ? 'agree'
+        : marketOverlayMarkerBasisAgreement === 'agree'
+          ? 'diverge'
+          : 'all'
+    const reverseTarget =
+      marketOverlayMarkerBasisAgreement === 'all'
+        ? 'diverge'
+        : marketOverlayMarkerBasisAgreement === 'agree'
+          ? 'all'
+          : 'agree'
+    const activeVisible =
+      marketOverlayMarkerBasisAgreement === 'all'
+        ? allVisible
+        : marketOverlayMarkerBasisAgreement === 'agree'
+          ? agreeVisible
+          : divergeVisible
+    const cycleVisible =
+      cycleTarget === 'all' ? allVisible : cycleTarget === 'agree' ? agreeVisible : divergeVisible
+    const reverseVisible =
+      reverseTarget === 'all'
+        ? allVisible
+        : reverseTarget === 'agree'
+          ? agreeVisible
+          : divergeVisible
+    return `all:${allVisible} · agree:${agreeVisible} · diverge:${divergeVisible} · active:${marketOverlayMarkerBasisAgreement}(${activeVisible}) · next:c=${cycleTarget}(${cycleVisible}) · prev:C=${reverseTarget}(${reverseVisible})`
+  }, [
+    marketOverlayAverageClose,
+    marketOverlayBucketScopedTimelineAnnotations,
+    marketOverlayChartPoints,
+    marketOverlayMarkerBasisAgreement,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+  ])
+  const marketOverlayMarkerDivergencePreviewShortcutSummary = useMemo(() => {
+    const currentIndex = MARKET_OVERLAY_MARKER_DIVERGENCE_PREVIEW_ORDER.indexOf(
+      marketOverlayMarkerDivergencePreview,
+    )
+    const safeIndex = currentIndex < 0 ? 0 : currentIndex
+    const nextValue =
+      MARKET_OVERLAY_MARKER_DIVERGENCE_PREVIEW_ORDER[
+        (safeIndex + 1) % MARKET_OVERLAY_MARKER_DIVERGENCE_PREVIEW_ORDER.length
+      ]
+    const previousValue =
+      MARKET_OVERLAY_MARKER_DIVERGENCE_PREVIEW_ORDER[
+        (safeIndex - 1 + MARKET_OVERLAY_MARKER_DIVERGENCE_PREVIEW_ORDER.length) %
+          MARKET_OVERLAY_MARKER_DIVERGENCE_PREVIEW_ORDER.length
+      ]
+    return `keys:p/P · value:${marketOverlayMarkerDivergencePreview} · next:p=${nextValue} · prev:P=${previousValue}`
+  }, [marketOverlayMarkerDivergencePreview])
+  const marketOverlayMarkerRangeShortcutSummary = useMemo(() => {
+    const ageIndex = MARKET_OVERLAY_MARKER_AGE_FILTER_ORDER.indexOf(marketOverlayMarkerAgeFilter)
+    const safeAgeIndex = ageIndex < 0 ? 0 : ageIndex
+    const nextAge =
+      MARKET_OVERLAY_MARKER_AGE_FILTER_ORDER[
+        (safeAgeIndex + 1) % MARKET_OVERLAY_MARKER_AGE_FILTER_ORDER.length
+      ]
+    const previousAge =
+      MARKET_OVERLAY_MARKER_AGE_FILTER_ORDER[
+        (safeAgeIndex - 1 + MARKET_OVERLAY_MARKER_AGE_FILTER_ORDER.length) %
+          MARKET_OVERLAY_MARKER_AGE_FILTER_ORDER.length
+      ]
+    const windowIndex = MARKET_OVERLAY_MARKER_WINDOW_ORDER.indexOf(marketOverlayMarkerWindow)
+    const safeWindowIndex = windowIndex < 0 ? MARKET_OVERLAY_MARKER_WINDOW_ORDER.indexOf(5) : windowIndex
+    const nextWindow =
+      MARKET_OVERLAY_MARKER_WINDOW_ORDER[
+        (safeWindowIndex + 1) % MARKET_OVERLAY_MARKER_WINDOW_ORDER.length
+      ]
+    const previousWindow =
+      MARKET_OVERLAY_MARKER_WINDOW_ORDER[
+        (safeWindowIndex - 1 + MARKET_OVERLAY_MARKER_WINDOW_ORDER.length) %
+          MARKET_OVERLAY_MARKER_WINDOW_ORDER.length
+      ]
+    const bucketIndex = MARKET_OVERLAY_MARKER_BUCKET_ORDER.indexOf(marketOverlayMarkerBucket)
+    const safeBucketIndex = bucketIndex < 0 ? 0 : bucketIndex
+    const nextBucket =
+      MARKET_OVERLAY_MARKER_BUCKET_ORDER[
+        (safeBucketIndex + 1) % MARKET_OVERLAY_MARKER_BUCKET_ORDER.length
+      ]
+    const previousBucket =
+      MARKET_OVERLAY_MARKER_BUCKET_ORDER[
+        (safeBucketIndex - 1 + MARKET_OVERLAY_MARKER_BUCKET_ORDER.length) %
+          MARKET_OVERLAY_MARKER_BUCKET_ORDER.length
+      ]
+    return `keys:y/Y/v/V/b/B · age:y=${nextAge}|Y=${previousAge}|active:${marketOverlayMarkerAgeFilter} · window:v=${nextWindow}|V=${previousWindow}|active:${marketOverlayMarkerWindow} · bucket:b=${nextBucket}|B=${previousBucket}|active:${marketOverlayMarkerBucket}`
+  }, [marketOverlayMarkerAgeFilter, marketOverlayMarkerBucket, marketOverlayMarkerWindow])
+  const marketOverlayMarkerBasisPreviewCountSummary = useMemo(() => {
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const baseline =
+      marketOverlayChartPoints.length === 0
+        ? null
+        : marketOverlayChartPoints.reduce((sum, point) => sum + point.value, 0) /
+          marketOverlayChartPoints.length
+    const resolveToneForBasis = (
+      annotation: MarketOverlayTimelineAnnotation,
+      basis: MarketOverlayMarkerDeltaBasis,
+    ): 'up' | 'down' | 'flat' | 'unavailable' => {
+      const point = pointByTime.get(annotation.time) ?? null
+      const deltaValue =
+        basis === 'latest'
+          ? point && latestPoint
+            ? point.value - latestPoint.value
+            : null
+          : point && baseline !== null
+            ? point.value - baseline
+            : null
+      return resolveMarketOverlayDeltaTone(deltaValue)
+    }
+    const matchesDeltaFilter = (tone: 'up' | 'down' | 'flat' | 'unavailable') => {
+      if (marketOverlayMarkerDeltaFilter === 'all') {
+        return true
+      }
+      if (marketOverlayMarkerDeltaFilter === 'latest-up') {
+        return tone === 'up'
+      }
+      if (marketOverlayMarkerDeltaFilter === 'latest-down') {
+        return tone === 'down'
+      }
+      if (marketOverlayMarkerDeltaFilter === 'latest-flat') {
+        return tone === 'flat'
+      }
+      return tone === 'unavailable'
+    }
+    const scopedAnnotations = marketOverlayAgreementScopedTimelineAnnotations.filter((annotation) =>
+      matchesDeltaFilter(resolveToneForBasis(annotation, marketOverlayMarkerDeltaBasis)),
+    )
+    const divergenceTotal = scopedAnnotations.reduce((count, annotation) => {
+      const latestTone = resolveToneForBasis(annotation, 'latest')
+      const averageTone = resolveToneForBasis(annotation, 'average')
+      return latestTone !== averageTone ? count + 1 : count
+    }, 0)
+    const agreementTotal = scopedAnnotations.length - divergenceTotal
+    const previewSize = marketOverlayMarkerDivergencePreview
+    const divergenceShown = Math.min(divergenceTotal, previewSize)
+    const agreementShown = Math.min(agreementTotal, previewSize)
+    return `size:${previewSize} · diverge:show:${divergenceShown}/${divergenceTotal} · agree:show:${agreementShown}/${agreementTotal} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayAgreementScopedTimelineAnnotations,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayMarkerDivergencePreview,
+  ])
+  const marketOverlayMarkerBasisAgreementKindSummary = useMemo(() => {
+    type KindCounts = {
+      trade: number
+      risk: number
+      feed: number
+    }
+    const makeCounts = (): KindCounts => ({
+      trade: 0,
+      risk: 0,
+      feed: 0,
+    })
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const baseline = marketOverlayAverageClose
+    const agreeCounts = makeCounts()
+    const divergeCounts = makeCounts()
+    marketOverlayBucketScopedTimelineAnnotations.forEach((annotation) => {
+      const point = pointByTime.get(annotation.time) ?? null
+      const latestDelta = point && latestPoint ? point.value - latestPoint.value : null
+      const averageDelta = point && baseline !== null ? point.value - baseline : null
+      const latestTone = resolveMarketOverlayDeltaTone(latestDelta)
+      const averageTone = resolveMarketOverlayDeltaTone(averageDelta)
+      if (latestTone === averageTone) {
+        agreeCounts[annotation.kind] += 1
+      } else {
+        divergeCounts[annotation.kind] += 1
+      }
+    })
+    const scopedCounts = marketOverlayAgreementScopedTimelineAnnotations.reduce(
+      (counts, annotation) => {
+        counts[annotation.kind] += 1
+        return counts
+      },
+      makeCounts(),
+    )
+    return `mode:${marketOverlayMarkerBasisAgreement} · scoped:t${scopedCounts.trade}/r${scopedCounts.risk}/f${scopedCounts.feed} · agree:t${agreeCounts.trade}/r${agreeCounts.risk}/f${agreeCounts.feed} · diverge:t${divergeCounts.trade}/r${divergeCounts.risk}/f${divergeCounts.feed}`
+  }, [
+    marketOverlayAgreementScopedTimelineAnnotations,
+    marketOverlayAverageClose,
+    marketOverlayBucketScopedTimelineAnnotations,
+    marketOverlayChartPoints,
+    marketOverlayMarkerBasisAgreement,
+  ])
+  const marketOverlayMarkerDeltaFilterSummary = useMemo(() => {
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const baseline =
+      marketOverlayChartPoints.length === 0
+        ? null
+        : marketOverlayChartPoints.reduce((sum, point) => sum + point.value, 0) /
+          marketOverlayChartPoints.length
+    let upCount = 0
+    let downCount = 0
+    let flatCount = 0
+    let unavailableCount = 0
+    let matchedCount = 0
+    marketOverlayAgreementScopedTimelineAnnotations.forEach((annotation) => {
+      const point = pointByTime.get(annotation.time) ?? null
+      const deltaValue =
+        marketOverlayMarkerDeltaBasis === 'latest'
+          ? point && latestPoint
+            ? point.value - latestPoint.value
+            : null
+          : point && baseline !== null
+            ? point.value - baseline
+            : null
+      const tone = resolveMarketOverlayDeltaTone(deltaValue)
+      if (tone === 'up') {
+        upCount += 1
+      } else if (tone === 'down') {
+        downCount += 1
+      } else if (tone === 'flat') {
+        flatCount += 1
+      } else {
+        unavailableCount += 1
+      }
+      const isMatch =
+        marketOverlayMarkerDeltaFilter === 'all' ||
+        (marketOverlayMarkerDeltaFilter === 'latest-up' && tone === 'up') ||
+        (marketOverlayMarkerDeltaFilter === 'latest-down' && tone === 'down') ||
+        (marketOverlayMarkerDeltaFilter === 'latest-flat' && tone === 'flat') ||
+        (marketOverlayMarkerDeltaFilter === 'latest-unavailable' && tone === 'unavailable')
+      if (isMatch) {
+        matchedCount += 1
+      }
+    })
+    return `basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter} · matched:${matchedCount}/${marketOverlayAgreementScopedTimelineAnnotations.length} · up:${upCount} · down:${downCount} · flat:${flatCount} · n/a:${unavailableCount}`
+  }, [
+    marketOverlayAgreementScopedTimelineAnnotations,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+  ])
+  const marketOverlayScopedTimelineAnnotations = useMemo(() => {
+    if (marketOverlayMarkerDeltaFilter === 'all') {
+      return marketOverlayAgreementScopedTimelineAnnotations
+    }
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const baseline =
+      marketOverlayChartPoints.length === 0
+        ? null
+        : marketOverlayChartPoints.reduce((sum, point) => sum + point.value, 0) /
+          marketOverlayChartPoints.length
+    return marketOverlayAgreementScopedTimelineAnnotations.filter((annotation) => {
+      const point = pointByTime.get(annotation.time) ?? null
+      const deltaValue =
+        marketOverlayMarkerDeltaBasis === 'latest'
+          ? point && latestPoint
+            ? point.value - latestPoint.value
+            : null
+          : point && baseline !== null
+            ? point.value - baseline
+            : null
+      const tone = resolveMarketOverlayDeltaTone(deltaValue)
+      if (marketOverlayMarkerDeltaFilter === 'latest-up') {
+        return tone === 'up'
+      }
+      if (marketOverlayMarkerDeltaFilter === 'latest-down') {
+        return tone === 'down'
+      }
+      if (marketOverlayMarkerDeltaFilter === 'latest-flat') {
+        return tone === 'flat'
+      }
+      return tone === 'unavailable'
+    })
+  }, [
+    marketOverlayAgreementScopedTimelineAnnotations,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+  ])
+  const marketOverlayMarkerDeltaShortcutSummary = useMemo(
+    () =>
+      `keys:k/u/j/f/n/0/+/- · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter} · matched:${marketOverlayScopedTimelineAnnotations.length}/${marketOverlayAgreementScopedTimelineAnnotations.length} · active:${marketOverlayAgreementScopedTimelineAnnotations.length > 0 ? 'on' : 'off'}`,
+    [
+      marketOverlayAgreementScopedTimelineAnnotations.length,
+      marketOverlayMarkerDeltaBasis,
+      marketOverlayMarkerDeltaFilter,
+      marketOverlayScopedTimelineAnnotations.length,
+    ],
+  )
+  const marketOverlayMarkerDeltaBasisShortcutSummary = useMemo(() => {
+    const cycleHint =
+      marketOverlayMarkerDeltaBasis === 'latest'
+        ? 'cycle:k=average'
+        : 'cycle:k=latest'
+    return `keys:h/m/k · latest:h · average:m · ${cycleHint} · active:${marketOverlayMarkerDeltaBasis}`
+  }, [marketOverlayMarkerDeltaBasis])
+  const marketOverlayMarkerDeltaBasisComparisonSummary = useMemo(() => {
+    type DeltaToneStats = {
+      total: number
+      matched: number
+      up: number
+      down: number
+      flat: number
+      unavailable: number
+    }
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const baseline =
+      marketOverlayChartPoints.length === 0
+        ? null
+        : marketOverlayChartPoints.reduce((sum, point) => sum + point.value, 0) /
+          marketOverlayChartPoints.length
+    const resolveToneForBasis = (
+      annotation: MarketOverlayTimelineAnnotation,
+      basis: MarketOverlayMarkerDeltaBasis,
+    ): 'up' | 'down' | 'flat' | 'unavailable' => {
+      const point = pointByTime.get(annotation.time) ?? null
+      const deltaValue =
+        basis === 'latest'
+          ? point && latestPoint
+            ? point.value - latestPoint.value
+            : null
+          : point && baseline !== null
+            ? point.value - baseline
+            : null
+      return resolveMarketOverlayDeltaTone(deltaValue)
+    }
+    const computeStats = (basis: MarketOverlayMarkerDeltaBasis): DeltaToneStats => {
+      const stats: DeltaToneStats = {
+        total: marketOverlayBucketScopedTimelineAnnotations.length,
+        matched: 0,
+        up: 0,
+        down: 0,
+        flat: 0,
+        unavailable: 0,
+      }
+      marketOverlayBucketScopedTimelineAnnotations.forEach((annotation) => {
+        const tone = resolveToneForBasis(annotation, basis)
+        if (tone === 'up') {
+          stats.up += 1
+        } else if (tone === 'down') {
+          stats.down += 1
+        } else if (tone === 'flat') {
+          stats.flat += 1
+        } else {
+          stats.unavailable += 1
+        }
+        const isMatch =
+          marketOverlayMarkerDeltaFilter === 'all' ||
+          (marketOverlayMarkerDeltaFilter === 'latest-up' && tone === 'up') ||
+          (marketOverlayMarkerDeltaFilter === 'latest-down' && tone === 'down') ||
+          (marketOverlayMarkerDeltaFilter === 'latest-flat' && tone === 'flat') ||
+          (marketOverlayMarkerDeltaFilter === 'latest-unavailable' && tone === 'unavailable')
+        if (isMatch) {
+          stats.matched += 1
+        }
+      })
+      return stats
+    }
+    const latestStats = computeStats('latest')
+    const averageStats = computeStats('average')
+    const agreementCount = marketOverlayBucketScopedTimelineAnnotations.reduce((count, annotation) => {
+      const latestTone = resolveToneForBasis(annotation, 'latest')
+      const averageTone = resolveToneForBasis(annotation, 'average')
+      return latestTone === averageTone ? count + 1 : count
+    }, 0)
+    const divergenceCount = marketOverlayBucketScopedTimelineAnnotations.length - agreementCount
+    const formatStats = (label: 'latest' | 'average', stats: DeltaToneStats) =>
+      `${label}:m${stats.matched}/${stats.total}|u${stats.up}|d${stats.down}|f${stats.flat}|n${stats.unavailable}`
+    return `${formatStats('latest', latestStats)} · ${formatStats('average', averageStats)} · mode:${marketOverlayMarkerDeltaFilter} · active:${marketOverlayMarkerDeltaBasis} · agree:${agreementCount}/${marketOverlayBucketScopedTimelineAnnotations.length} · diverge:${divergenceCount}`
+  }, [
+    marketOverlayBucketScopedTimelineAnnotations,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+  ])
+  const marketOverlayMarkerDeltaBasisDivergenceSummary = useMemo(() => {
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const baseline =
+      marketOverlayChartPoints.length === 0
+        ? null
+        : marketOverlayChartPoints.reduce((sum, point) => sum + point.value, 0) /
+          marketOverlayChartPoints.length
+    const resolveToneForBasis = (
+      annotation: MarketOverlayTimelineAnnotation,
+      basis: MarketOverlayMarkerDeltaBasis,
+    ): 'up' | 'down' | 'flat' | 'unavailable' => {
+      const point = pointByTime.get(annotation.time) ?? null
+      const deltaValue =
+        basis === 'latest'
+          ? point && latestPoint
+            ? point.value - latestPoint.value
+            : null
+          : point && baseline !== null
+            ? point.value - baseline
+            : null
+      return resolveMarketOverlayDeltaTone(deltaValue)
+    }
+    const matchesDeltaFilter = (tone: 'up' | 'down' | 'flat' | 'unavailable') => {
+      if (marketOverlayMarkerDeltaFilter === 'all') {
+        return true
+      }
+      if (marketOverlayMarkerDeltaFilter === 'latest-up') {
+        return tone === 'up'
+      }
+      if (marketOverlayMarkerDeltaFilter === 'latest-down') {
+        return tone === 'down'
+      }
+      if (marketOverlayMarkerDeltaFilter === 'latest-flat') {
+        return tone === 'flat'
+      }
+      return tone === 'unavailable'
+    }
+    const scopedAnnotations = marketOverlayAgreementScopedTimelineAnnotations.filter((annotation) =>
+      matchesDeltaFilter(resolveToneForBasis(annotation, marketOverlayMarkerDeltaBasis)),
+    )
+    const divergentItems = scopedAnnotations
+      .map((annotation) => {
+        const latestTone = resolveToneForBasis(annotation, 'latest')
+        const averageTone = resolveToneForBasis(annotation, 'average')
+        if (latestTone === averageTone) {
+          return null
+        }
+        return `${annotation.kind}:${annotation.label}:${latestTone}->${averageTone}`
+      })
+      .filter((item): item is string => item !== null)
+    const previewItems = divergentItems.slice(0, marketOverlayMarkerDivergencePreview)
+    const overflowCount = divergentItems.length - previewItems.length
+    const itemsLabel =
+      previewItems.length === 0
+        ? 'none'
+        : overflowCount > 0
+          ? `${previewItems.join(', ')} (+${overflowCount} more)`
+          : previewItems.join(', ')
+    return `mode:${marketOverlayMarkerDeltaFilter} · diverge:${divergentItems.length}/${scopedAnnotations.length} · items:${itemsLabel}`
+  }, [
+    marketOverlayAgreementScopedTimelineAnnotations,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDivergencePreview,
+    marketOverlayMarkerDeltaFilter,
+  ])
+  const marketOverlayMarkerDeltaBasisAgreementItemsSummary = useMemo(() => {
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const baseline =
+      marketOverlayChartPoints.length === 0
+        ? null
+        : marketOverlayChartPoints.reduce((sum, point) => sum + point.value, 0) /
+          marketOverlayChartPoints.length
+    const resolveToneForBasis = (
+      annotation: MarketOverlayTimelineAnnotation,
+      basis: MarketOverlayMarkerDeltaBasis,
+    ): 'up' | 'down' | 'flat' | 'unavailable' => {
+      const point = pointByTime.get(annotation.time) ?? null
+      const deltaValue =
+        basis === 'latest'
+          ? point && latestPoint
+            ? point.value - latestPoint.value
+            : null
+          : point && baseline !== null
+            ? point.value - baseline
+            : null
+      return resolveMarketOverlayDeltaTone(deltaValue)
+    }
+    const matchesDeltaFilter = (tone: 'up' | 'down' | 'flat' | 'unavailable') => {
+      if (marketOverlayMarkerDeltaFilter === 'all') {
+        return true
+      }
+      if (marketOverlayMarkerDeltaFilter === 'latest-up') {
+        return tone === 'up'
+      }
+      if (marketOverlayMarkerDeltaFilter === 'latest-down') {
+        return tone === 'down'
+      }
+      if (marketOverlayMarkerDeltaFilter === 'latest-flat') {
+        return tone === 'flat'
+      }
+      return tone === 'unavailable'
+    }
+    const scopedAnnotations = marketOverlayAgreementScopedTimelineAnnotations.filter((annotation) =>
+      matchesDeltaFilter(resolveToneForBasis(annotation, marketOverlayMarkerDeltaBasis)),
+    )
+    const agreeingItems = scopedAnnotations
+      .map((annotation) => {
+        const latestTone = resolveToneForBasis(annotation, 'latest')
+        const averageTone = resolveToneForBasis(annotation, 'average')
+        if (latestTone !== averageTone) {
+          return null
+        }
+        return `${annotation.kind}:${annotation.label}:${latestTone}`
+      })
+      .filter((item): item is string => item !== null)
+    const previewItems = agreeingItems.slice(0, marketOverlayMarkerDivergencePreview)
+    const overflowCount = agreeingItems.length - previewItems.length
+    const itemsLabel =
+      previewItems.length === 0
+        ? 'none'
+        : overflowCount > 0
+          ? `${previewItems.join(', ')} (+${overflowCount} more)`
+          : previewItems.join(', ')
+    return `mode:${marketOverlayMarkerDeltaFilter} · agree:${agreeingItems.length}/${scopedAnnotations.length} · items:${itemsLabel}`
+  }, [
+    marketOverlayAgreementScopedTimelineAnnotations,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDivergencePreview,
+    marketOverlayMarkerDeltaFilter,
+  ])
+  const marketOverlayMarkerFocusShortcutSummary = useMemo(() => {
+    const currentIndex = MARKET_OVERLAY_MARKER_FOCUS_ORDER.indexOf(marketOverlayMarkerFocus)
+    const safeIndex = currentIndex < 0 ? 0 : currentIndex
+    const nextFocus =
+      MARKET_OVERLAY_MARKER_FOCUS_ORDER[(safeIndex + 1) % MARKET_OVERLAY_MARKER_FOCUS_ORDER.length]
+    const previousFocus =
+      MARKET_OVERLAY_MARKER_FOCUS_ORDER[
+        (safeIndex - 1 + MARKET_OVERLAY_MARKER_FOCUS_ORDER.length) %
+          MARKET_OVERLAY_MARKER_FOCUS_ORDER.length
+      ]
+    return `keys:z/Z · next:z=${nextFocus} · prev:Z=${previousFocus} · active:${marketOverlayMarkerFocus}`
+  }, [marketOverlayMarkerFocus])
+  const marketOverlayMarkerModeShortcutSummary = useMemo(
+    () => {
+      const isLocked = marketOverlaySelectionMode === 'follow-latest'
+      return `focus:${MARKET_OVERLAY_MARKER_FOCUS_SHORTCUTS}=${marketOverlayMarkerFocus} · age:y=${marketOverlayMarkerAgeFilter} · window:v=${marketOverlayMarkerWindow} · bucket:b=${marketOverlayMarkerBucket} · order:o/l=${marketOverlayTimelineOrder} · scope:g=${marketOverlayBucketScope} · wrap:w=${marketOverlayMarkerWrap} · selection:s=${marketOverlaySelectionMode} · agreement:q/e/x=${marketOverlayMarkerBasisAgreement} · basis:k=${marketOverlayMarkerDeltaBasis} · delta:u/j/f/n/0/+/-=${marketOverlayMarkerDeltaFilter} · nav:${isLocked ? 'locked' : 'manual'}`
+    },
+    [
+      marketOverlayMarkerAgeFilter,
+      marketOverlayMarkerBasisAgreement,
+      marketOverlayMarkerBucket,
+      marketOverlayBucketScope,
+      marketOverlayMarkerDeltaBasis,
+      marketOverlayMarkerDeltaFilter,
+      marketOverlayMarkerFocus,
+      marketOverlayMarkerWrap,
+      marketOverlayMarkerWindow,
+      marketOverlaySelectionMode,
+      marketOverlayTimelineOrder,
+    ],
+  )
+  const marketOverlayScopedVisibleAnnotations = useMemo(() => {
+    if (marketOverlayScopedTimelineAnnotations.length === 0) {
+      return [] as MarketOverlayAnnotation[]
+    }
+    const allowedIds = new Set(marketOverlayScopedTimelineAnnotations.map((annotation) => annotation.id))
+    return marketOverlayOrderedVisibleAnnotations.filter((annotation) => allowedIds.has(annotation.id))
+  }, [marketOverlayOrderedVisibleAnnotations, marketOverlayScopedTimelineAnnotations])
+  const marketOverlayActiveTimelineAnnotation = useMemo(() => {
+    if (marketOverlayScopedTimelineAnnotations.length === 0) {
+      return null
+    }
+    return (
+      marketOverlayScopedTimelineAnnotations.find(
+        (annotation) => annotation.id === marketOverlaySelectedMarkerId,
+      ) ?? marketOverlayScopedTimelineAnnotations[marketOverlayScopedTimelineAnnotations.length - 1]
+    )
+  }, [marketOverlayScopedTimelineAnnotations, marketOverlaySelectedMarkerId])
+  const marketOverlayActiveTimelineIndex = useMemo(() => {
+    if (!marketOverlayActiveTimelineAnnotation) {
+      return -1
+    }
+    return marketOverlayScopedTimelineAnnotations.findIndex(
+      (annotation) => annotation.id === marketOverlayActiveTimelineAnnotation.id,
+    )
+  }, [marketOverlayActiveTimelineAnnotation, marketOverlayScopedTimelineAnnotations])
+  const marketOverlayMarkerNavigationLabel = useMemo(() => {
+    if (!marketOverlayActiveTimelineAnnotation || marketOverlayActiveTimelineIndex < 0) {
+      return `0/0 · selected:none`
+    }
+    return `${marketOverlayActiveTimelineIndex + 1}/${marketOverlayScopedTimelineAnnotations.length} · selected:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayScopedTimelineAnnotations.length,
+  ])
+  const marketOverlayMarkerBehaviorLabel = useMemo(
+    () =>
+      `wrap:${marketOverlayMarkerWrap} · selection:${marketOverlaySelectionMode} · nav:${marketOverlaySelectionMode === 'follow-latest' ? 'locked' : 'manual'}`,
+    [marketOverlayMarkerWrap, marketOverlaySelectionMode],
+  )
+  const marketOverlayBucketSizeMs =
+    marketOverlayMarkerBucket === 'none'
+      ? null
+      : marketOverlayMarkerBucket === '30s'
+        ? 30_000
+        : 60_000
+  const marketOverlayTimelineCount = marketOverlayScopedTimelineAnnotations.length
+  const hasMultipleMarketOverlayMarkers = marketOverlayTimelineCount > 1
+  const isMarketOverlayNavigationLocked = marketOverlaySelectionMode === 'follow-latest'
+  const canSelectPreviousMarketOverlayMarker =
+    isMarketOverlayNavigationLocked
+      ? false
+      : marketOverlayMarkerWrap === 'wrap'
+      ? marketOverlayActiveTimelineIndex >= 0 && hasMultipleMarketOverlayMarkers
+      : marketOverlayActiveTimelineIndex > 0
+  const canSelectNextMarketOverlayMarker =
+    isMarketOverlayNavigationLocked
+      ? false
+      : marketOverlayMarkerWrap === 'wrap'
+      ? marketOverlayActiveTimelineIndex >= 0 && hasMultipleMarketOverlayMarkers
+      : marketOverlayActiveTimelineIndex >= 0 &&
+        marketOverlayActiveTimelineIndex < marketOverlayTimelineCount - 1
+  const canSelectOldestMarketOverlayMarker =
+    !isMarketOverlayNavigationLocked && marketOverlayActiveTimelineIndex > 0
+  const canSelectLatestMarketOverlayMarker =
+    !isMarketOverlayNavigationLocked &&
+    marketOverlayActiveTimelineIndex >= 0 &&
+    marketOverlayActiveTimelineIndex < marketOverlayTimelineCount - 1
+  const {
+    previousBucketIndex: marketOverlayPreviousBucketIndex,
+    nextBucketIndex: marketOverlayNextBucketIndex,
+  } = useMemo(() => {
+    if (
+      isMarketOverlayNavigationLocked ||
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayBucketSizeMs === null
+    ) {
+      return { previousBucketIndex: -1, nextBucketIndex: -1 }
+    }
+    const toBucketStart = (timestamp: number) =>
+      Math.floor(timestamp / marketOverlayBucketSizeMs) * marketOverlayBucketSizeMs
+    const activeBucketStart = toBucketStart(marketOverlayActiveTimelineAnnotation.timestamp)
+    let previousBucketIndex = -1
+    let nextBucketIndex = -1
+    for (let index = marketOverlayActiveTimelineIndex - 1; index >= 0; index -= 1) {
+      const candidate = marketOverlayScopedTimelineAnnotations[index]
+      if (candidate && toBucketStart(candidate.timestamp) !== activeBucketStart) {
+        previousBucketIndex = index
+        break
+      }
+    }
+    for (let index = marketOverlayActiveTimelineIndex + 1; index < marketOverlayTimelineCount; index += 1) {
+      const candidate = marketOverlayScopedTimelineAnnotations[index]
+      if (candidate && toBucketStart(candidate.timestamp) !== activeBucketStart) {
+        nextBucketIndex = index
+        break
+      }
+    }
+    if (marketOverlayMarkerWrap === 'wrap' && marketOverlayTimelineCount > 1) {
+      const uniqueBucketCount = new Set(
+        marketOverlayScopedTimelineAnnotations.map((annotation) => toBucketStart(annotation.timestamp)),
+      ).size
+      if (uniqueBucketCount > 1) {
+        if (previousBucketIndex < 0) {
+          for (let index = marketOverlayTimelineCount - 1; index > marketOverlayActiveTimelineIndex; index -= 1) {
+            const candidate = marketOverlayScopedTimelineAnnotations[index]
+            if (candidate && toBucketStart(candidate.timestamp) !== activeBucketStart) {
+              previousBucketIndex = index
+              break
+            }
+          }
+        }
+        if (nextBucketIndex < 0) {
+          for (let index = 0; index < marketOverlayActiveTimelineIndex; index += 1) {
+            const candidate = marketOverlayScopedTimelineAnnotations[index]
+            if (candidate && toBucketStart(candidate.timestamp) !== activeBucketStart) {
+              nextBucketIndex = index
+              break
+            }
+          }
+        }
+      }
+    }
+    return { previousBucketIndex, nextBucketIndex }
+  }, [
+    isMarketOverlayNavigationLocked,
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayBucketSizeMs,
+    marketOverlayMarkerWrap,
+    marketOverlayScopedTimelineAnnotations,
+    marketOverlayTimelineCount,
+  ])
+  const canSelectPreviousBucketMarketOverlayMarker = marketOverlayPreviousBucketIndex >= 0
+  const canSelectNextBucketMarketOverlayMarker = marketOverlayNextBucketIndex >= 0
+  const { previousSameKindIndex: marketOverlayPreviousSameKindIndex, nextSameKindIndex: marketOverlayNextSameKindIndex } =
+    useMemo(() => {
+      if (
+        isMarketOverlayNavigationLocked ||
+        !marketOverlayActiveTimelineAnnotation ||
+        marketOverlayActiveTimelineIndex < 0
+      ) {
+        return { previousSameKindIndex: -1, nextSameKindIndex: -1 }
+      }
+      const activeKind = marketOverlayActiveTimelineAnnotation.kind
+      let previousSameKindIndex = -1
+      let nextSameKindIndex = -1
+      for (let index = marketOverlayActiveTimelineIndex - 1; index >= 0; index -= 1) {
+        if (marketOverlayScopedTimelineAnnotations[index]?.kind === activeKind) {
+          previousSameKindIndex = index
+          break
+        }
+      }
+      for (
+        let index = marketOverlayActiveTimelineIndex + 1;
+        index < marketOverlayTimelineCount;
+        index += 1
+      ) {
+        if (marketOverlayScopedTimelineAnnotations[index]?.kind === activeKind) {
+          nextSameKindIndex = index
+          break
+        }
+      }
+      if (marketOverlayMarkerWrap === 'wrap' && marketOverlayTimelineCount > 1) {
+        if (previousSameKindIndex < 0) {
+          for (let index = marketOverlayTimelineCount - 1; index > marketOverlayActiveTimelineIndex; index -= 1) {
+            if (marketOverlayScopedTimelineAnnotations[index]?.kind === activeKind) {
+              previousSameKindIndex = index
+              break
+            }
+          }
+        }
+        if (nextSameKindIndex < 0) {
+          for (let index = 0; index < marketOverlayActiveTimelineIndex; index += 1) {
+            if (marketOverlayScopedTimelineAnnotations[index]?.kind === activeKind) {
+              nextSameKindIndex = index
+              break
+            }
+          }
+        }
+      }
+      return { previousSameKindIndex, nextSameKindIndex }
+    }, [
+      isMarketOverlayNavigationLocked,
+      marketOverlayActiveTimelineAnnotation,
+      marketOverlayActiveTimelineIndex,
+      marketOverlayMarkerWrap,
+      marketOverlayScopedTimelineAnnotations,
+      marketOverlayTimelineCount,
+    ])
+  const canSelectPreviousSameKindMarketOverlayMarker = marketOverlayPreviousSameKindIndex >= 0
+  const canSelectNextSameKindMarketOverlayMarker = marketOverlayNextSameKindIndex >= 0
+  const canSelectSkipBackwardMarketOverlayMarker =
+    isMarketOverlayNavigationLocked || marketOverlayActiveTimelineIndex < 0
+      ? false
+      : marketOverlayMarkerWrap === 'wrap'
+      ? hasMultipleMarketOverlayMarkers &&
+        MARKET_OVERLAY_MARKER_SKIP_STEP % marketOverlayTimelineCount !== 0
+      : marketOverlayActiveTimelineIndex - MARKET_OVERLAY_MARKER_SKIP_STEP >= 0
+  const canSelectSkipForwardMarketOverlayMarker =
+    isMarketOverlayNavigationLocked || marketOverlayActiveTimelineIndex < 0
+      ? false
+      : marketOverlayMarkerWrap === 'wrap'
+      ? hasMultipleMarketOverlayMarkers &&
+        MARKET_OVERLAY_MARKER_SKIP_STEP % marketOverlayTimelineCount !== 0
+      : marketOverlayActiveTimelineIndex + MARKET_OVERLAY_MARKER_SKIP_STEP <
+        marketOverlayTimelineCount
+  const marketOverlayMarkerNavigationTargets = useMemo(() => {
+    if (isMarketOverlayNavigationLocked) {
+      return 'locked'
+    }
+    if (marketOverlayActiveTimelineIndex < 0 || marketOverlayTimelineCount === 0) {
+      return 'none'
+    }
+    const formatTarget = (index: number) => {
+      if (index < 0) {
+        return 'none'
+      }
+      const annotation = marketOverlayScopedTimelineAnnotations[index]
+      return annotation ? `${annotation.kind}:${annotation.label}` : 'none'
+    }
+    const resolveRelativeIndex = (offset: number, isAllowed: boolean) => {
+      if (!isAllowed) {
+        return -1
+      }
+      const rawTargetIndex = marketOverlayActiveTimelineIndex + offset
+      return marketOverlayMarkerWrap === 'wrap'
+        ? ((rawTargetIndex % marketOverlayTimelineCount) + marketOverlayTimelineCount) %
+            marketOverlayTimelineCount
+        : Math.max(0, Math.min(marketOverlayTimelineCount - 1, rawTargetIndex))
+    }
+    const previousIndex = resolveRelativeIndex(-1, canSelectPreviousMarketOverlayMarker)
+    const nextIndex = resolveRelativeIndex(1, canSelectNextMarketOverlayMarker)
+    const skipBackwardIndex = resolveRelativeIndex(
+      -MARKET_OVERLAY_MARKER_SKIP_STEP,
+      canSelectSkipBackwardMarketOverlayMarker,
+    )
+    const skipForwardIndex = resolveRelativeIndex(
+      MARKET_OVERLAY_MARKER_SKIP_STEP,
+      canSelectSkipForwardMarketOverlayMarker,
+    )
+    const previousKindIndex = canSelectPreviousSameKindMarketOverlayMarker
+      ? marketOverlayPreviousSameKindIndex
+      : -1
+    const nextKindIndex = canSelectNextSameKindMarketOverlayMarker ? marketOverlayNextSameKindIndex : -1
+    const previousBucketIndex = canSelectPreviousBucketMarketOverlayMarker
+      ? marketOverlayPreviousBucketIndex
+      : -1
+    const nextBucketIndex = canSelectNextBucketMarketOverlayMarker ? marketOverlayNextBucketIndex : -1
+    return `prev:${formatTarget(previousIndex)} · next:${formatTarget(nextIndex)} · skipBack:${formatTarget(skipBackwardIndex)} · skipForward:${formatTarget(skipForwardIndex)} · prevKind:${formatTarget(previousKindIndex)} · nextKind:${formatTarget(nextKindIndex)} · prevBucket:${formatTarget(previousBucketIndex)} · nextBucket:${formatTarget(nextBucketIndex)}`
+  }, [
+    canSelectNextBucketMarketOverlayMarker,
+    canSelectNextMarketOverlayMarker,
+    canSelectNextSameKindMarketOverlayMarker,
+    canSelectPreviousBucketMarketOverlayMarker,
+    canSelectPreviousMarketOverlayMarker,
+    canSelectPreviousSameKindMarketOverlayMarker,
+    canSelectSkipBackwardMarketOverlayMarker,
+    canSelectSkipForwardMarketOverlayMarker,
+    isMarketOverlayNavigationLocked,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayMarkerWrap,
+    marketOverlayNextBucketIndex,
+    marketOverlayNextSameKindIndex,
+    marketOverlayPreviousBucketIndex,
+    marketOverlayPreviousSameKindIndex,
+    marketOverlayScopedTimelineAnnotations,
+    marketOverlayTimelineCount,
+  ])
+  const marketOverlayMarkerTimelineAnchorSummary = useMemo(() => {
+    if (isMarketOverlayNavigationLocked) {
+      return 'locked'
+    }
+    if (
+      marketOverlayTimelineCount === 0 ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      !marketOverlayActiveTimelineAnnotation
+    ) {
+      return 'none'
+    }
+    const firstAnnotation = marketOverlayScopedTimelineAnnotations[0] ?? null
+    const lastAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayScopedTimelineAnnotations.length - 1] ?? null
+    const describeAnnotation = (annotation: MarketOverlayTimelineAnnotation | null) =>
+      annotation ? `${annotation.kind}:${annotation.label}` : 'none'
+    const distanceToFirst = marketOverlayActiveTimelineIndex
+    const distanceToLast = marketOverlayTimelineCount - 1 - marketOverlayActiveTimelineIndex
+    return `first:${describeAnnotation(firstAnnotation)} · selected:${describeAnnotation(marketOverlayActiveTimelineAnnotation)}@${marketOverlayActiveTimelineIndex + 1}/${marketOverlayTimelineCount} · last:${describeAnnotation(lastAnnotation)} · Δfirst:${distanceToFirst} · Δlast:${distanceToLast} · order:${marketOverlayTimelineOrder}`
+  }, [
+    isMarketOverlayNavigationLocked,
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayScopedTimelineAnnotations,
+    marketOverlayTimelineCount,
+    marketOverlayTimelineOrder,
+  ])
+  const marketOverlayMarkerDistanceSummary = useMemo(() => {
+    if (isMarketOverlayNavigationLocked) {
+      return 'locked'
+    }
+    if (marketOverlayActiveTimelineIndex < 0 || marketOverlayTimelineCount === 0) {
+      return 'none'
+    }
+    const oldestDistance = marketOverlayActiveTimelineIndex
+    const latestDistance = marketOverlayTimelineCount - 1 - marketOverlayActiveTimelineIndex
+    const previousKindDistance =
+      marketOverlayPreviousSameKindIndex < 0
+        ? 'n/a'
+        : String(marketOverlayActiveTimelineIndex - marketOverlayPreviousSameKindIndex)
+    const nextKindDistance =
+      marketOverlayNextSameKindIndex < 0
+        ? 'n/a'
+        : String(marketOverlayNextSameKindIndex - marketOverlayActiveTimelineIndex)
+    const previousBucketDistance =
+      marketOverlayPreviousBucketIndex < 0
+        ? 'n/a'
+        : String(marketOverlayActiveTimelineIndex - marketOverlayPreviousBucketIndex)
+    const nextBucketDistance =
+      marketOverlayNextBucketIndex < 0
+        ? 'n/a'
+        : String(marketOverlayNextBucketIndex - marketOverlayActiveTimelineIndex)
+    return `edges:o${oldestDistance}/l${latestDistance} · kind:${previousKindDistance}/${nextKindDistance} · bucket:${previousBucketDistance}/${nextBucketDistance} · step:${MARKET_OVERLAY_MARKER_SKIP_STEP}`
+  }, [
+    isMarketOverlayNavigationLocked,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayNextBucketIndex,
+    marketOverlayNextSameKindIndex,
+    marketOverlayPreviousBucketIndex,
+    marketOverlayPreviousSameKindIndex,
+    marketOverlayTimelineCount,
+  ])
+  const marketOverlayMarkerBucketNavigationSummary = useMemo(() => {
+    if (isMarketOverlayNavigationLocked) {
+      return 'locked'
+    }
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayTimelineCount === 0
+    ) {
+      return `mode:${marketOverlayMarkerBucket} · keys:,/. · active:none · prev:,=none · next:.=none · buckets:0`
+    }
+    const resolveLabel = (index: number) => {
+      if (index < 0 || index >= marketOverlayScopedTimelineAnnotations.length) {
+        return 'none'
+      }
+      const annotation = marketOverlayScopedTimelineAnnotations[index]
+      if (!annotation) {
+        return 'none'
+      }
+      if (marketOverlayBucketSizeMs === null) {
+        return `t${annotation.time}(1)`
+      }
+      const bucketStart =
+        Math.floor(annotation.timestamp / marketOverlayBucketSizeMs) * marketOverlayBucketSizeMs
+      const bucketCount = marketOverlayScopedTimelineAnnotations.filter(
+        (candidate) =>
+          Math.floor(candidate.timestamp / marketOverlayBucketSizeMs) * marketOverlayBucketSizeMs ===
+          bucketStart,
+      ).length
+      return `${new Date(bucketStart).toISOString()}(${bucketCount})`
+    }
+    const activeLabel = resolveLabel(marketOverlayActiveTimelineIndex)
+    const previousLabel = canSelectPreviousBucketMarketOverlayMarker
+      ? resolveLabel(marketOverlayPreviousBucketIndex)
+      : 'none'
+    const nextLabel = canSelectNextBucketMarketOverlayMarker
+      ? resolveLabel(marketOverlayNextBucketIndex)
+      : 'none'
+    const bucketCount =
+      marketOverlayBucketSizeMs === null
+        ? marketOverlayScopedTimelineAnnotations.length
+        : new Set(
+            marketOverlayScopedTimelineAnnotations.map(
+              (annotation) =>
+                Math.floor(annotation.timestamp / marketOverlayBucketSizeMs) * marketOverlayBucketSizeMs,
+            ),
+          ).size
+    return `mode:${marketOverlayMarkerBucket} · keys:,/. · active:${activeLabel} · prev:,=${previousLabel} · next:.=${nextLabel} · buckets:${bucketCount}`
+  }, [
+    canSelectNextBucketMarketOverlayMarker,
+    canSelectPreviousBucketMarketOverlayMarker,
+    isMarketOverlayNavigationLocked,
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayBucketSizeMs,
+    marketOverlayMarkerBucket,
+    marketOverlayNextBucketIndex,
+    marketOverlayPreviousBucketIndex,
+    marketOverlayScopedTimelineAnnotations,
+    marketOverlayTimelineCount,
+  ])
+  const marketOverlayMarkerKindNavigationSummary = useMemo(() => {
+    if (isMarketOverlayNavigationLocked) {
+      return 'locked'
+    }
+    if (!marketOverlayActiveTimelineAnnotation || marketOverlayActiveTimelineIndex < 0) {
+      return 'none'
+    }
+    const activeKind = marketOverlayActiveTimelineAnnotation.kind
+    const kindScoped = marketOverlayScopedTimelineAnnotations.filter(
+      (annotation) => annotation.kind === activeKind,
+    )
+    if (kindScoped.length === 0) {
+      return 'none'
+    }
+    const activeKindIndex = kindScoped.findIndex(
+      (annotation) => annotation.id === marketOverlayActiveTimelineAnnotation.id,
+    )
+    const previousAnnotation =
+      marketOverlayPreviousSameKindIndex < 0
+        ? null
+        : marketOverlayScopedTimelineAnnotations[marketOverlayPreviousSameKindIndex] ?? null
+    const nextAnnotation =
+      marketOverlayNextSameKindIndex < 0
+        ? null
+        : marketOverlayScopedTimelineAnnotations[marketOverlayNextSameKindIndex] ?? null
+    const previousDistance =
+      marketOverlayPreviousSameKindIndex < 0
+        ? 'n/a'
+        : String(marketOverlayActiveTimelineIndex - marketOverlayPreviousSameKindIndex)
+    const nextDistance =
+      marketOverlayNextSameKindIndex < 0
+        ? 'n/a'
+        : String(marketOverlayNextSameKindIndex - marketOverlayActiveTimelineIndex)
+    return `kind:${activeKind} · slot:${activeKindIndex + 1}/${kindScoped.length} · prev:[=${previousAnnotation ? `${previousAnnotation.kind}:${previousAnnotation.label}` : 'none'}|Δ${previousDistance} · next:]=${nextAnnotation ? `${nextAnnotation.kind}:${nextAnnotation.label}` : 'none'}|Δ${nextDistance}`
+  }, [
+    isMarketOverlayNavigationLocked,
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayNextSameKindIndex,
+    marketOverlayPreviousSameKindIndex,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayMarkerIntervalSummary = useMemo(() => {
+    if (marketOverlayScopedTimelineAnnotations.length < 2) {
+      return 'none'
+    }
+    const timeSortedAnnotations = marketOverlayScopedTimelineAnnotations
+      .slice()
+      .sort((left, right) => left.time - right.time)
+    const stepGaps = timeSortedAnnotations
+      .slice(1)
+      .map((annotation, index) => annotation.time - timeSortedAnnotations[index].time)
+      .filter((gap) => gap >= 0)
+    if (stepGaps.length === 0) {
+      return 'none'
+    }
+    const minGap = Math.min(...stepGaps)
+    const maxGap = Math.max(...stepGaps)
+    const averageGap = stepGaps.reduce((sum, gap) => sum + gap, 0) / stepGaps.length
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayActiveTimelineIndex >= marketOverlayScopedTimelineAnnotations.length
+    ) {
+      return `count:${marketOverlayScopedTimelineAnnotations.length} · stepGap:min:${minGap}|max:${maxGap}|avg:${averageGap.toFixed(2)} · active:prev:n/a|next:n/a`
+    }
+    const current = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex]
+    const previous = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const next = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    const previousGap = previous ? Math.abs(current.time - previous.time) : null
+    const nextGap = next ? Math.abs(next.time - current.time) : null
+    return `count:${marketOverlayScopedTimelineAnnotations.length} · stepGap:min:${minGap}|max:${maxGap}|avg:${averageGap.toFixed(2)} · active:prev:${previousGap ?? 'n/a'}|next:${nextGap ?? 'n/a'}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayMarkerShortcutHint = useMemo(() => {
+    if (isMarketOverlayNavigationLocked) {
+      return 'locked'
+    }
+    const stateLabel = (enabled: boolean) => (enabled ? 'on' : 'off')
+    return `steps:${stateLabel(canSelectPreviousMarketOverlayMarker)}/${stateLabel(canSelectNextMarketOverlayMarker)} · skip:${stateLabel(canSelectSkipBackwardMarketOverlayMarker)}/${stateLabel(canSelectSkipForwardMarketOverlayMarker)} · kind:${stateLabel(canSelectPreviousSameKindMarketOverlayMarker)}/${stateLabel(canSelectNextSameKindMarketOverlayMarker)} · bucket:${stateLabel(canSelectPreviousBucketMarketOverlayMarker)}/${stateLabel(canSelectNextBucketMarketOverlayMarker)}`
+  }, [
+    canSelectNextBucketMarketOverlayMarker,
+    canSelectNextMarketOverlayMarker,
+    canSelectNextSameKindMarketOverlayMarker,
+    canSelectPreviousBucketMarketOverlayMarker,
+    canSelectPreviousMarketOverlayMarker,
+    canSelectPreviousSameKindMarketOverlayMarker,
+    canSelectSkipBackwardMarketOverlayMarker,
+    canSelectSkipForwardMarketOverlayMarker,
+    isMarketOverlayNavigationLocked,
+  ])
+  const marketOverlayMarkerBindingSummary = useMemo(() => {
+    if (isMarketOverlayNavigationLocked) {
+      return 'locked'
+    }
+    const stateLabel = (enabled: boolean) => (enabled ? 'on' : 'off')
+    return `steps:${stateLabel(canSelectPreviousMarketOverlayMarker)}/${stateLabel(canSelectNextMarketOverlayMarker)} · skip:${stateLabel(canSelectSkipBackwardMarketOverlayMarker)}/${stateLabel(canSelectSkipForwardMarketOverlayMarker)} · kind:${stateLabel(canSelectPreviousSameKindMarketOverlayMarker)}/${stateLabel(canSelectNextSameKindMarketOverlayMarker)} · bucket:${stateLabel(canSelectPreviousBucketMarketOverlayMarker)}/${stateLabel(canSelectNextBucketMarketOverlayMarker)} · edges:${stateLabel(canSelectOldestMarketOverlayMarker)}/${stateLabel(canSelectLatestMarketOverlayMarker)}`
+  }, [
+    canSelectLatestMarketOverlayMarker,
+    canSelectNextBucketMarketOverlayMarker,
+    canSelectNextMarketOverlayMarker,
+    canSelectNextSameKindMarketOverlayMarker,
+    canSelectOldestMarketOverlayMarker,
+    canSelectPreviousBucketMarketOverlayMarker,
+    canSelectPreviousMarketOverlayMarker,
+    canSelectPreviousSameKindMarketOverlayMarker,
+    canSelectSkipBackwardMarketOverlayMarker,
+    canSelectSkipForwardMarketOverlayMarker,
+    isMarketOverlayNavigationLocked,
+  ])
+  const marketOverlayMarkerNumericJumpSummary = useMemo(() => {
+    if (isMarketOverlayNavigationLocked) {
+      return 'locked'
+    }
+    if (marketOverlayTimelineCount === 0 || marketOverlayActiveTimelineIndex < 0) {
+      return 'none'
+    }
+    const maxJump = Math.min(9, marketOverlayTimelineCount)
+    return `keys:1-${maxJump} · selected:${marketOverlayActiveTimelineIndex + 1}/${marketOverlayTimelineCount}`
+  }, [isMarketOverlayNavigationLocked, marketOverlayActiveTimelineIndex, marketOverlayTimelineCount])
+  const marketOverlayMarkerTimelineInteractionPolishSummary = useMemo(() => {
+    if (isMarketOverlayNavigationLocked) {
+      return 'locked'
+    }
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayTimelineCount === 0
+    ) {
+      return 'none'
+    }
+    const countEnabled = (values: boolean[]) => values.filter(Boolean).length
+    const describeDirection = (backward: boolean, forward: boolean) => {
+      if (backward && forward) {
+        return 'bidirectional'
+      }
+      if (backward) {
+        return 'backward'
+      }
+      if (forward) {
+        return 'forward'
+      }
+      return 'idle'
+    }
+    const enabledActions = countEnabled([
+      canSelectPreviousMarketOverlayMarker,
+      canSelectNextMarketOverlayMarker,
+      canSelectSkipBackwardMarketOverlayMarker,
+      canSelectSkipForwardMarketOverlayMarker,
+      canSelectPreviousSameKindMarketOverlayMarker,
+      canSelectNextSameKindMarketOverlayMarker,
+      canSelectPreviousBucketMarketOverlayMarker,
+      canSelectNextBucketMarketOverlayMarker,
+      canSelectOldestMarketOverlayMarker,
+      canSelectLatestMarketOverlayMarker,
+    ])
+    const oldestDistance = marketOverlayActiveTimelineIndex
+    const latestDistance = marketOverlayTimelineCount - 1 - marketOverlayActiveTimelineIndex
+    const edge =
+      oldestDistance === latestDistance
+        ? 'center'
+        : oldestDistance < latestDistance
+          ? 'oldest-edge'
+          : 'latest-edge'
+    const lane = describeDirection(
+      canSelectPreviousMarketOverlayMarker,
+      canSelectNextMarketOverlayMarker,
+    )
+    const skipLane = describeDirection(
+      canSelectSkipBackwardMarketOverlayMarker,
+      canSelectSkipForwardMarketOverlayMarker,
+    )
+    const kindLane = describeDirection(
+      canSelectPreviousSameKindMarketOverlayMarker,
+      canSelectNextSameKindMarketOverlayMarker,
+    )
+    const bucketLane = describeDirection(
+      canSelectPreviousBucketMarketOverlayMarker,
+      canSelectNextBucketMarketOverlayMarker,
+    )
+    const jumpEnabled = marketOverlayTimelineCount > 1
+    const mobility =
+      enabledActions >= 8
+        ? 'high'
+        : enabledActions >= 5
+          ? 'medium'
+          : enabledActions >= 3
+            ? 'light'
+            : enabledActions > 0
+              ? 'minimal'
+              : 'static'
+    const stateLabel = (enabled: boolean) => (enabled ? 'on' : 'off')
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label}|slot:${marketOverlayActiveTimelineIndex + 1}/${marketOverlayTimelineCount}|edge:${edge} · lane:${lane}|skip:${skipLane}|kind:${kindLane}|bucket:${bucketLane} · keys:home:${stateLabel(canSelectOldestMarketOverlayMarker)}|end:${stateLabel(canSelectLatestMarketOverlayMarker)}|jump:${stateLabel(jumpEnabled)} · actions:${enabledActions}/10|mobility:${mobility}|cadence:manual · wrap:${marketOverlayMarkerWrap} · order:${marketOverlayTimelineOrder}`
+  }, [
+    canSelectLatestMarketOverlayMarker,
+    canSelectNextBucketMarketOverlayMarker,
+    canSelectNextMarketOverlayMarker,
+    canSelectNextSameKindMarketOverlayMarker,
+    canSelectOldestMarketOverlayMarker,
+    canSelectPreviousBucketMarketOverlayMarker,
+    canSelectPreviousMarketOverlayMarker,
+    canSelectPreviousSameKindMarketOverlayMarker,
+    canSelectSkipBackwardMarketOverlayMarker,
+    canSelectSkipForwardMarketOverlayMarker,
+    isMarketOverlayNavigationLocked,
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayMarkerWrap,
+    marketOverlayTimelineCount,
+    marketOverlayTimelineOrder,
+  ])
+  const marketOverlayMarkerTimelineInteractionRouteSummary = useMemo(() => {
+    if (isMarketOverlayNavigationLocked) {
+      return 'locked'
+    }
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayTimelineCount === 0
+    ) {
+      return 'none'
+    }
+    const formatTarget = (index: number) => {
+      if (index < 0 || index >= marketOverlayTimelineCount) {
+        return 'none'
+      }
+      const annotation = marketOverlayScopedTimelineAnnotations[index] ?? null
+      return annotation ? `${annotation.kind}:${annotation.label}` : 'none'
+    }
+    const resolveRelativeIndex = (offset: number, isAllowed: boolean) => {
+      if (!isAllowed) {
+        return -1
+      }
+      const rawTargetIndex = marketOverlayActiveTimelineIndex + offset
+      return marketOverlayMarkerWrap === 'wrap'
+        ? ((rawTargetIndex % marketOverlayTimelineCount) + marketOverlayTimelineCount) %
+            marketOverlayTimelineCount
+        : Math.max(0, Math.min(marketOverlayTimelineCount - 1, rawTargetIndex))
+    }
+    const stepPrevious = formatTarget(resolveRelativeIndex(-1, canSelectPreviousMarketOverlayMarker))
+    const stepNext = formatTarget(resolveRelativeIndex(1, canSelectNextMarketOverlayMarker))
+    const kindPrevious = formatTarget(
+      canSelectPreviousSameKindMarketOverlayMarker ? marketOverlayPreviousSameKindIndex : -1,
+    )
+    const kindNext = formatTarget(
+      canSelectNextSameKindMarketOverlayMarker ? marketOverlayNextSameKindIndex : -1,
+    )
+    const bucketPrevious = formatTarget(
+      canSelectPreviousBucketMarketOverlayMarker ? marketOverlayPreviousBucketIndex : -1,
+    )
+    const bucketNext = formatTarget(
+      canSelectNextBucketMarketOverlayMarker ? marketOverlayNextBucketIndex : -1,
+    )
+    const reachableCount = [stepPrevious, stepNext, kindPrevious, kindNext, bucketPrevious, bucketNext].filter(
+      (target) => target !== 'none',
+    ).length
+    const profile =
+      reachableCount === 0
+        ? 'dead-end'
+        : reachableCount === 1
+          ? 'single-path'
+          : reachableCount <= 3
+            ? 'branched'
+            : 'mesh'
+    const suggestedKey =
+      stepPrevious !== 'none' && stepNext === 'none'
+        ? 'ArrowLeft/Home'
+        : stepPrevious === 'none' && stepNext !== 'none'
+          ? 'ArrowRight/End'
+          : stepPrevious !== 'none' && stepNext !== 'none'
+            ? 'ArrowLeft/ArrowRight'
+            : kindPrevious !== 'none' || kindNext !== 'none'
+              ? '[/]'
+              : bucketPrevious !== 'none' || bucketNext !== 'none'
+                ? ',/.'
+                : 'none'
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label}|slot:${marketOverlayActiveTimelineIndex + 1}/${marketOverlayTimelineCount} · route:stepPrev:${stepPrevious}|stepNext:${stepNext}|kindPrev:${kindPrevious}|kindNext:${kindNext}|bucketPrev:${bucketPrevious}|bucketNext:${bucketNext} · reachable:${reachableCount}/6|profile:${profile}|suggested:${suggestedKey} · wrap:${marketOverlayMarkerWrap}|order:${marketOverlayTimelineOrder}|selection:${marketOverlaySelectionMode}`
+  }, [
+    canSelectNextBucketMarketOverlayMarker,
+    canSelectNextMarketOverlayMarker,
+    canSelectNextSameKindMarketOverlayMarker,
+    canSelectPreviousBucketMarketOverlayMarker,
+    canSelectPreviousMarketOverlayMarker,
+    canSelectPreviousSameKindMarketOverlayMarker,
+    isMarketOverlayNavigationLocked,
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayMarkerWrap,
+    marketOverlayNextBucketIndex,
+    marketOverlayNextSameKindIndex,
+    marketOverlayPreviousBucketIndex,
+    marketOverlayPreviousSameKindIndex,
+    marketOverlayScopedTimelineAnnotations,
+    marketOverlaySelectionMode,
+    marketOverlayTimelineCount,
+    marketOverlayTimelineOrder,
+  ])
+  const marketOverlayMarkerTimelineInteractionPressureSummary = useMemo(() => {
+    if (isMarketOverlayNavigationLocked) {
+      return 'locked'
+    }
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayTimelineCount === 0
+    ) {
+      return 'none'
+    }
+    const toLane = (backward: boolean, forward: boolean) => {
+      if (backward && forward) {
+        return 'bidirectional'
+      }
+      if (backward) {
+        return 'backward'
+      }
+      if (forward) {
+        return 'forward'
+      }
+      return 'idle'
+    }
+    const backwardPressure =
+      Number(canSelectPreviousMarketOverlayMarker) +
+      Number(canSelectOldestMarketOverlayMarker) +
+      Number(canSelectSkipBackwardMarketOverlayMarker) +
+      Number(canSelectPreviousSameKindMarketOverlayMarker) +
+      Number(canSelectPreviousBucketMarketOverlayMarker)
+    const forwardPressure =
+      Number(canSelectNextMarketOverlayMarker) +
+      Number(canSelectLatestMarketOverlayMarker) +
+      Number(canSelectSkipForwardMarketOverlayMarker) +
+      Number(canSelectNextSameKindMarketOverlayMarker) +
+      Number(canSelectNextBucketMarketOverlayMarker)
+    const netPressure = backwardPressure - forwardPressure
+    const bias =
+      netPressure === 0 ? 'balanced' : netPressure > 0 ? 'backward' : 'forward'
+    const intensity =
+      Math.abs(netPressure) >= 3
+        ? 'heavy'
+        : Math.abs(netPressure) >= 2
+          ? 'strong'
+          : Math.abs(netPressure) === 1
+            ? 'light'
+            : 'idle'
+    const enabledActions = backwardPressure + forwardPressure
+    const stepLane = toLane(canSelectPreviousMarketOverlayMarker, canSelectNextMarketOverlayMarker)
+    const kindLane = toLane(
+      canSelectPreviousSameKindMarketOverlayMarker,
+      canSelectNextSameKindMarketOverlayMarker,
+    )
+    const bucketLane = toLane(
+      canSelectPreviousBucketMarketOverlayMarker,
+      canSelectNextBucketMarketOverlayMarker,
+    )
+    const phase =
+      bias === 'balanced'
+        ? enabledActions === 0
+          ? 'static'
+          : 'balanced-ready'
+        : `${bias}-lean`
+    const stateLabel = (value: boolean) => (value ? 'on' : 'off')
+    const formatSigned = (value: number) => `${value >= 0 ? '+' : ''}${value}`
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label}|slot:${marketOverlayActiveTimelineIndex + 1}/${marketOverlayTimelineCount} · pressure:backward:${backwardPressure}|forward:${forwardPressure}|net:${formatSigned(netPressure)}|bias:${bias}|intensity:${intensity} · lanes:step:${stepLane}|kind:${kindLane}|bucket:${bucketLane} · edges:home:${stateLabel(canSelectOldestMarketOverlayMarker)}|end:${stateLabel(canSelectLatestMarketOverlayMarker)}|coverage:${enabledActions}/10|phase:${phase} · wrap:${marketOverlayMarkerWrap}|order:${marketOverlayTimelineOrder}`
+  }, [
+    canSelectLatestMarketOverlayMarker,
+    canSelectNextBucketMarketOverlayMarker,
+    canSelectNextMarketOverlayMarker,
+    canSelectNextSameKindMarketOverlayMarker,
+    canSelectOldestMarketOverlayMarker,
+    canSelectPreviousBucketMarketOverlayMarker,
+    canSelectPreviousMarketOverlayMarker,
+    canSelectPreviousSameKindMarketOverlayMarker,
+    canSelectSkipBackwardMarketOverlayMarker,
+    canSelectSkipForwardMarketOverlayMarker,
+    isMarketOverlayNavigationLocked,
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayMarkerWrap,
+    marketOverlayTimelineCount,
+    marketOverlayTimelineOrder,
+  ])
+  const marketOverlayMarkerTimelineInteractionReadinessSummary = useMemo(() => {
+    if (isMarketOverlayNavigationLocked) {
+      return 'locked'
+    }
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayTimelineCount === 0
+    ) {
+      return 'none'
+    }
+    const backwardReady =
+      Number(canSelectPreviousMarketOverlayMarker) +
+      Number(canSelectSkipBackwardMarketOverlayMarker) +
+      Number(canSelectPreviousSameKindMarketOverlayMarker) +
+      Number(canSelectPreviousBucketMarketOverlayMarker) +
+      Number(canSelectOldestMarketOverlayMarker)
+    const forwardReady =
+      Number(canSelectNextMarketOverlayMarker) +
+      Number(canSelectSkipForwardMarketOverlayMarker) +
+      Number(canSelectNextSameKindMarketOverlayMarker) +
+      Number(canSelectNextBucketMarketOverlayMarker) +
+      Number(canSelectLatestMarketOverlayMarker)
+    const totalReady = backwardReady + forwardReady
+    const tilt =
+      backwardReady === forwardReady
+        ? 'balanced'
+        : backwardReady > forwardReady
+          ? 'backward'
+          : 'forward'
+    const readiness =
+      totalReady >= 8 ? 'high' : totalReady >= 5 ? 'medium' : totalReady >= 2 ? 'light' : totalReady > 0 ? 'minimal' : 'none'
+    const stateLabel = (value: boolean) => (value ? '1' : '0')
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label}|slot:${marketOverlayActiveTimelineIndex + 1}/${marketOverlayTimelineCount} · matrix:step:${stateLabel(canSelectPreviousMarketOverlayMarker)}/${stateLabel(canSelectNextMarketOverlayMarker)}|skip:${stateLabel(canSelectSkipBackwardMarketOverlayMarker)}/${stateLabel(canSelectSkipForwardMarketOverlayMarker)}|kind:${stateLabel(canSelectPreviousSameKindMarketOverlayMarker)}/${stateLabel(canSelectNextSameKindMarketOverlayMarker)}|bucket:${stateLabel(canSelectPreviousBucketMarketOverlayMarker)}/${stateLabel(canSelectNextBucketMarketOverlayMarker)}|edge:${stateLabel(canSelectOldestMarketOverlayMarker)}/${stateLabel(canSelectLatestMarketOverlayMarker)} · readiness:backward:${backwardReady}|forward:${forwardReady}|total:${totalReady}/10|tilt:${tilt}|band:${readiness} · wrap:${marketOverlayMarkerWrap}|selection:${marketOverlaySelectionMode}|order:${marketOverlayTimelineOrder}`
+  }, [
+    canSelectLatestMarketOverlayMarker,
+    canSelectNextBucketMarketOverlayMarker,
+    canSelectNextMarketOverlayMarker,
+    canSelectNextSameKindMarketOverlayMarker,
+    canSelectOldestMarketOverlayMarker,
+    canSelectPreviousBucketMarketOverlayMarker,
+    canSelectPreviousMarketOverlayMarker,
+    canSelectPreviousSameKindMarketOverlayMarker,
+    canSelectSkipBackwardMarketOverlayMarker,
+    canSelectSkipForwardMarketOverlayMarker,
+    isMarketOverlayNavigationLocked,
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayMarkerWrap,
+    marketOverlaySelectionMode,
+    marketOverlayTimelineCount,
+    marketOverlayTimelineOrder,
+  ])
+  const marketOverlayMarkerTimelineInteractionCoherenceSummary = useMemo(() => {
+    if (isMarketOverlayNavigationLocked) {
+      return 'locked'
+    }
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayTimelineCount === 0
+    ) {
+      return 'none'
+    }
+    const backwardReady =
+      Number(canSelectPreviousMarketOverlayMarker) +
+      Number(canSelectSkipBackwardMarketOverlayMarker) +
+      Number(canSelectPreviousSameKindMarketOverlayMarker) +
+      Number(canSelectPreviousBucketMarketOverlayMarker) +
+      Number(canSelectOldestMarketOverlayMarker)
+    const forwardReady =
+      Number(canSelectNextMarketOverlayMarker) +
+      Number(canSelectSkipForwardMarketOverlayMarker) +
+      Number(canSelectNextSameKindMarketOverlayMarker) +
+      Number(canSelectNextBucketMarketOverlayMarker) +
+      Number(canSelectLatestMarketOverlayMarker)
+    const routeReachable =
+      Number(canSelectPreviousMarketOverlayMarker) +
+      Number(canSelectNextMarketOverlayMarker) +
+      Number(canSelectPreviousSameKindMarketOverlayMarker) +
+      Number(canSelectNextSameKindMarketOverlayMarker) +
+      Number(canSelectPreviousBucketMarketOverlayMarker) +
+      Number(canSelectNextBucketMarketOverlayMarker)
+    const edgeReady = Number(canSelectOldestMarketOverlayMarker) + Number(canSelectLatestMarketOverlayMarker)
+    const net = backwardReady - forwardReady
+    const bias = net === 0 ? 'balanced' : net > 0 ? 'backward' : 'forward'
+    const coherence =
+      routeReachable === 0 && edgeReady === 0
+        ? 'static'
+        : routeReachable === 1 && edgeReady === 1
+          ? 'edge-lean'
+          : routeReachable === 2 && edgeReady === 0
+            ? 'lane-tight'
+            : routeReachable === 2 && edgeReady === 2
+              ? 'paired'
+              : routeReachable > 2
+                ? 'mesh'
+                : 'mixed'
+    const phase =
+      bias === 'balanced'
+        ? routeReachable === 0
+          ? 'idle'
+          : 'balanced-sync'
+        : `${bias}-sync`
+    const formatSigned = (value: number) => `${value >= 0 ? '+' : ''}${value}`
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label}|slot:${marketOverlayActiveTimelineIndex + 1}/${marketOverlayTimelineCount} · readiness:b${backwardReady}/f${forwardReady}|route:${routeReachable}/6|edge:${edgeReady}/2 · net:${formatSigned(net)}|bias:${bias}|coherence:${coherence}|phase:${phase} · wrap:${marketOverlayMarkerWrap}|selection:${marketOverlaySelectionMode}|order:${marketOverlayTimelineOrder}`
+  }, [
+    canSelectLatestMarketOverlayMarker,
+    canSelectNextBucketMarketOverlayMarker,
+    canSelectNextMarketOverlayMarker,
+    canSelectNextSameKindMarketOverlayMarker,
+    canSelectOldestMarketOverlayMarker,
+    canSelectPreviousBucketMarketOverlayMarker,
+    canSelectPreviousMarketOverlayMarker,
+    canSelectPreviousSameKindMarketOverlayMarker,
+    canSelectSkipBackwardMarketOverlayMarker,
+    canSelectSkipForwardMarketOverlayMarker,
+    isMarketOverlayNavigationLocked,
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayMarkerWrap,
+    marketOverlaySelectionMode,
+    marketOverlayTimelineCount,
+    marketOverlayTimelineOrder,
+  ])
+  const marketOverlayMarkerTimelineInteractionVectorSummary = useMemo(() => {
+    if (isMarketOverlayNavigationLocked) {
+      return 'locked'
+    }
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayTimelineCount === 0
+    ) {
+      return 'none'
+    }
+    const backwardVector =
+      Number(canSelectPreviousMarketOverlayMarker) +
+      Number(canSelectSkipBackwardMarketOverlayMarker) +
+      Number(canSelectPreviousSameKindMarketOverlayMarker) +
+      Number(canSelectPreviousBucketMarketOverlayMarker) +
+      Number(canSelectOldestMarketOverlayMarker)
+    const forwardVector =
+      Number(canSelectNextMarketOverlayMarker) +
+      Number(canSelectSkipForwardMarketOverlayMarker) +
+      Number(canSelectNextSameKindMarketOverlayMarker) +
+      Number(canSelectNextBucketMarketOverlayMarker) +
+      Number(canSelectLatestMarketOverlayMarker)
+    const netVector = backwardVector - forwardVector
+    const laneVector = Number(canSelectPreviousMarketOverlayMarker) - Number(canSelectNextMarketOverlayMarker)
+    const edgeVector = Number(canSelectOldestMarketOverlayMarker) - Number(canSelectLatestMarketOverlayMarker)
+    const state = netVector === 0 ? 'balanced' : netVector > 0 ? 'backward' : 'forward'
+    const stability =
+      Math.abs(netVector) >= 3 ? 'strong' : Math.abs(netVector) >= 2 ? 'firm' : Math.abs(netVector) === 1 ? 'light' : 'neutral'
+    const coverage = backwardVector + forwardVector
+    const band = coverage >= 6 ? 'wide' : coverage >= 3 ? 'moderate' : coverage > 0 ? 'narrow' : 'none'
+    const formatSigned = (value: number) => `${value >= 0 ? '+' : ''}${value}`
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label}|slot:${marketOverlayActiveTimelineIndex + 1}/${marketOverlayTimelineCount} · vectors:backward:${backwardVector}|forward:${forwardVector}|net:${formatSigned(netVector)}|lane:${formatSigned(laneVector)}|edge:${formatSigned(edgeVector)} · state:${state}|stability:${stability}|coverage:${coverage}/10|band:${band} · wrap:${marketOverlayMarkerWrap}|selection:${marketOverlaySelectionMode}|order:${marketOverlayTimelineOrder}`
+  }, [
+    canSelectLatestMarketOverlayMarker,
+    canSelectNextBucketMarketOverlayMarker,
+    canSelectNextMarketOverlayMarker,
+    canSelectNextSameKindMarketOverlayMarker,
+    canSelectOldestMarketOverlayMarker,
+    canSelectPreviousBucketMarketOverlayMarker,
+    canSelectPreviousMarketOverlayMarker,
+    canSelectPreviousSameKindMarketOverlayMarker,
+    canSelectSkipBackwardMarketOverlayMarker,
+    canSelectSkipForwardMarketOverlayMarker,
+    isMarketOverlayNavigationLocked,
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayMarkerWrap,
+    marketOverlaySelectionMode,
+    marketOverlayTimelineCount,
+    marketOverlayTimelineOrder,
+  ])
+  const marketOverlayMarkerTimelineInteractionEntropySummary = useMemo(() => {
+    if (isMarketOverlayNavigationLocked) {
+      return 'locked'
+    }
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayTimelineCount === 0
+    ) {
+      return 'none'
+    }
+    const backwardCount =
+      Number(canSelectPreviousMarketOverlayMarker) +
+      Number(canSelectSkipBackwardMarketOverlayMarker) +
+      Number(canSelectPreviousSameKindMarketOverlayMarker) +
+      Number(canSelectPreviousBucketMarketOverlayMarker) +
+      Number(canSelectOldestMarketOverlayMarker)
+    const forwardCount =
+      Number(canSelectNextMarketOverlayMarker) +
+      Number(canSelectSkipForwardMarketOverlayMarker) +
+      Number(canSelectNextSameKindMarketOverlayMarker) +
+      Number(canSelectNextBucketMarketOverlayMarker) +
+      Number(canSelectLatestMarketOverlayMarker)
+    const total = backwardCount + forwardCount
+    const pBackward = total === 0 ? 0 : backwardCount / total
+    const pForward = total === 0 ? 0 : forwardCount / total
+    const entropy = [pBackward, pForward]
+      .filter((value) => value > 0)
+      .reduce((sum, value) => sum - value * Math.log2(value), 0)
+    const normalizedEntropy = entropy / 1
+    const direction =
+      backwardCount === forwardCount
+        ? 'balanced'
+        : backwardCount > forwardCount
+          ? 'backward'
+          : 'forward'
+    const diversity =
+      total === 0
+        ? 'none'
+        : normalizedEntropy < 0.2
+          ? 'concentrated'
+          : normalizedEntropy < 0.8
+            ? 'mixed'
+            : 'even'
+    const edgeCount = Number(canSelectOldestMarketOverlayMarker) + Number(canSelectLatestMarketOverlayMarker)
+    const formatRatio = (value: number) => value.toFixed(2)
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label}|slot:${marketOverlayActiveTimelineIndex + 1}/${marketOverlayTimelineCount} · counts:backward:${backwardCount}|forward:${forwardCount}|total:${total} · probs:b:${formatRatio(pBackward)}|f:${formatRatio(pForward)}|entropy:${formatRatio(entropy)}|norm:${formatRatio(normalizedEntropy)} · direction:${direction}|diversity:${diversity}|edges:${edgeCount}/2 · wrap:${marketOverlayMarkerWrap}|selection:${marketOverlaySelectionMode}|order:${marketOverlayTimelineOrder}`
+  }, [
+    canSelectLatestMarketOverlayMarker,
+    canSelectNextBucketMarketOverlayMarker,
+    canSelectNextMarketOverlayMarker,
+    canSelectNextSameKindMarketOverlayMarker,
+    canSelectOldestMarketOverlayMarker,
+    canSelectPreviousBucketMarketOverlayMarker,
+    canSelectPreviousMarketOverlayMarker,
+    canSelectPreviousSameKindMarketOverlayMarker,
+    canSelectSkipBackwardMarketOverlayMarker,
+    canSelectSkipForwardMarketOverlayMarker,
+    isMarketOverlayNavigationLocked,
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayMarkerWrap,
+    marketOverlaySelectionMode,
+    marketOverlayTimelineCount,
+    marketOverlayTimelineOrder,
+  ])
+  const marketOverlayMarkerTimelineInteractionDriftSummary = useMemo(() => {
+    if (isMarketOverlayNavigationLocked) {
+      return 'locked'
+    }
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayTimelineCount === 0
+    ) {
+      return 'none'
+    }
+    const backwardCount =
+      Number(canSelectPreviousMarketOverlayMarker) +
+      Number(canSelectSkipBackwardMarketOverlayMarker) +
+      Number(canSelectPreviousSameKindMarketOverlayMarker) +
+      Number(canSelectPreviousBucketMarketOverlayMarker) +
+      Number(canSelectOldestMarketOverlayMarker)
+    const forwardCount =
+      Number(canSelectNextMarketOverlayMarker) +
+      Number(canSelectSkipForwardMarketOverlayMarker) +
+      Number(canSelectNextSameKindMarketOverlayMarker) +
+      Number(canSelectNextBucketMarketOverlayMarker) +
+      Number(canSelectLatestMarketOverlayMarker)
+    const readyCount = backwardCount + forwardCount
+    const net = backwardCount - forwardCount
+    const normalized = readyCount === 0 ? 0 : net / readyCount
+    const imbalance = readyCount === 0 ? 0 : Math.abs(net) / readyCount
+    const direction = net === 0 ? 'balanced' : net > 0 ? 'backward' : 'forward'
+    const phase =
+      readyCount === 0
+        ? 'idle'
+        : imbalance >= 0.99
+          ? 'one-sided'
+          : imbalance >= 0.5
+            ? 'tilted'
+            : 'balanced'
+    const cadence = readyCount >= 6 ? 'dense' : readyCount >= 3 ? 'active' : readyCount >= 1 ? 'sparse' : 'idle'
+    const formatSigned = (value: number) => `${value >= 0 ? '+' : ''}${value}`
+    const formatSignedFixed = (value: number) => `${value >= 0 ? '+' : ''}${value.toFixed(2)}`
+    const stateLabel = (value: boolean) => (value ? 'on' : 'off')
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label}|slot:${marketOverlayActiveTimelineIndex + 1}/${marketOverlayTimelineCount} · drift:backward:${backwardCount}|forward:${forwardCount}|net:${formatSigned(net)}|normalized:${formatSignedFixed(normalized)}|direction:${direction} · imbalance:${imbalance.toFixed(2)}|phase:${phase}|cadence:${cadence}|ready:${readyCount}/10 · edges:home:${stateLabel(canSelectOldestMarketOverlayMarker)}|end:${stateLabel(canSelectLatestMarketOverlayMarker)} · wrap:${marketOverlayMarkerWrap}|selection:${marketOverlaySelectionMode}|order:${marketOverlayTimelineOrder}`
+  }, [
+    canSelectLatestMarketOverlayMarker,
+    canSelectNextBucketMarketOverlayMarker,
+    canSelectNextMarketOverlayMarker,
+    canSelectNextSameKindMarketOverlayMarker,
+    canSelectOldestMarketOverlayMarker,
+    canSelectPreviousBucketMarketOverlayMarker,
+    canSelectPreviousMarketOverlayMarker,
+    canSelectPreviousSameKindMarketOverlayMarker,
+    canSelectSkipBackwardMarketOverlayMarker,
+    canSelectSkipForwardMarketOverlayMarker,
+    isMarketOverlayNavigationLocked,
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayMarkerWrap,
+    marketOverlaySelectionMode,
+    marketOverlayTimelineCount,
+    marketOverlayTimelineOrder,
+  ])
+  const marketOverlayMarkerTimelineInteractionParitySummary = useMemo(() => {
+    if (isMarketOverlayNavigationLocked) {
+      return 'locked'
+    }
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayTimelineCount === 0
+    ) {
+      return 'none'
+    }
+    const backwardCount =
+      Number(canSelectPreviousMarketOverlayMarker) +
+      Number(canSelectSkipBackwardMarketOverlayMarker) +
+      Number(canSelectPreviousSameKindMarketOverlayMarker) +
+      Number(canSelectPreviousBucketMarketOverlayMarker) +
+      Number(canSelectOldestMarketOverlayMarker)
+    const forwardCount =
+      Number(canSelectNextMarketOverlayMarker) +
+      Number(canSelectSkipForwardMarketOverlayMarker) +
+      Number(canSelectNextSameKindMarketOverlayMarker) +
+      Number(canSelectNextBucketMarketOverlayMarker) +
+      Number(canSelectLatestMarketOverlayMarker)
+    const minimum = Math.min(backwardCount, forwardCount)
+    const maximum = Math.max(backwardCount, forwardCount)
+    const parityRatio = maximum === 0 ? null : minimum / maximum
+    const state =
+      backwardCount === forwardCount
+        ? 'equal'
+        : backwardCount > forwardCount
+          ? 'backward'
+          : 'forward'
+    const readyCount = backwardCount + forwardCount
+    const coverageClass =
+      readyCount >= 8 ? 'high' : readyCount >= 5 ? 'medium' : readyCount >= 2 ? 'light' : readyCount > 0 ? 'minimal' : 'none'
+    const phase =
+      parityRatio === null ? 'idle' : parityRatio >= 0.9 ? 'balanced' : parityRatio >= 0.5 ? 'tilted' : 'one-sided'
+    const stateLabel = (value: boolean) => (value ? 'on' : 'off')
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label}|slot:${marketOverlayActiveTimelineIndex + 1}/${marketOverlayTimelineCount} · parity:min:${minimum}|max:${maximum}|ratio:${parityRatio === null ? 'n/a' : parityRatio.toFixed(2)}|state:${state}|phase:${phase} · coverage:${readyCount}/10|class:${coverageClass} · edges:home:${stateLabel(canSelectOldestMarketOverlayMarker)}|end:${stateLabel(canSelectLatestMarketOverlayMarker)} · wrap:${marketOverlayMarkerWrap}|selection:${marketOverlaySelectionMode}|order:${marketOverlayTimelineOrder}`
+  }, [
+    canSelectLatestMarketOverlayMarker,
+    canSelectNextBucketMarketOverlayMarker,
+    canSelectNextMarketOverlayMarker,
+    canSelectNextSameKindMarketOverlayMarker,
+    canSelectOldestMarketOverlayMarker,
+    canSelectPreviousBucketMarketOverlayMarker,
+    canSelectPreviousMarketOverlayMarker,
+    canSelectPreviousSameKindMarketOverlayMarker,
+    canSelectSkipBackwardMarketOverlayMarker,
+    canSelectSkipForwardMarketOverlayMarker,
+    isMarketOverlayNavigationLocked,
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayMarkerWrap,
+    marketOverlaySelectionMode,
+    marketOverlayTimelineCount,
+    marketOverlayTimelineOrder,
+  ])
+  const marketOverlayMarkerDrilldown = useMemo(() => {
+    const latest =
+      marketOverlayScopedTimelineAnnotations[marketOverlayScopedTimelineAnnotations.length - 1] ?? null
+    return {
+      focus: marketOverlayMarkerFocus,
+      ageFilter: marketOverlayMarkerAgeFilter,
+      bucketScope: marketOverlayBucketScope,
+      timelineOrder: marketOverlayTimelineOrder,
+      window: marketOverlayMarkerWindow,
+      visibleCount: marketOverlayScopedVisibleAnnotations.length,
+      latestLabel: latest ? `${latest.kind}:${latest.label}` : 'none',
+    }
+  }, [
+    marketOverlayBucketScope,
+    marketOverlayMarkerAgeFilter,
+    marketOverlayMarkerFocus,
+    marketOverlayScopedTimelineAnnotations,
+    marketOverlayTimelineOrder,
+    marketOverlayMarkerWindow,
+    marketOverlayScopedVisibleAnnotations,
+  ])
+  const marketOverlayMarkerScopeSummary = useMemo(() => {
+    const tradeCount = marketOverlayScopedVisibleAnnotations.filter((annotation) => annotation.kind === 'trade').length
+    const riskCount = marketOverlayScopedVisibleAnnotations.filter((annotation) => annotation.kind === 'risk').length
+    const feedCount = marketOverlayScopedVisibleAnnotations.filter((annotation) => annotation.kind === 'feed').length
+    const selectedKind = marketOverlayActiveTimelineAnnotation?.kind ?? 'none'
+    return `visible:t${tradeCount}/r${riskCount}/f${feedCount} · selectedKind:${selectedKind}`
+  }, [marketOverlayActiveTimelineAnnotation, marketOverlayScopedVisibleAnnotations])
+  const marketOverlayMarkerFilterPipelineSummary = useMemo(() => {
+    const rawCount = marketOverlayAnnotations.length
+    const focusCount = marketOverlayFilteredAnnotations.length
+    const ageCount = marketOverlayAgeFilteredAnnotations.length
+    const windowCount = marketOverlayVisibleAnnotations.length
+    const baseCount = marketOverlayTimelineAnnotations.length
+    const bucketCount = marketOverlayBucketScopedTimelineAnnotations.length
+    const agreementCount = marketOverlayAgreementScopedTimelineAnnotations.length
+    const deltaCount = marketOverlayScopedTimelineAnnotations.length
+    const visibleCount = marketOverlayScopedVisibleAnnotations.length
+    return `raw:${rawCount} · focus:${focusCount}/${rawCount} · age:${ageCount}/${focusCount} · window:${windowCount}/${ageCount} · timeline:${baseCount}/${windowCount} · bucket:${bucketCount}/${baseCount} · agreement:${agreementCount}/${bucketCount} · delta:${deltaCount}/${agreementCount} · visible:${visibleCount}/${deltaCount}`
+  }, [
+    marketOverlayAgeFilteredAnnotations.length,
+    marketOverlayAnnotations.length,
+    marketOverlayAgreementScopedTimelineAnnotations.length,
+    marketOverlayBucketScopedTimelineAnnotations.length,
+    marketOverlayFilteredAnnotations.length,
+    marketOverlayScopedTimelineAnnotations.length,
+    marketOverlayScopedVisibleAnnotations.length,
+    marketOverlayTimelineAnnotations.length,
+    marketOverlayVisibleAnnotations.length,
+  ])
+  const marketOverlayMarkerDeltaSummary = useMemo(() => {
+    if (marketOverlayScopedVisibleAnnotations.length === 0 || marketOverlayChartPoints.length === 0) {
+      return 'none'
+    }
+    const timelineById = new Map(
+      marketOverlayScopedTimelineAnnotations.map((annotation) => [annotation.id, annotation] as const),
+    )
+    const chartPointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const chartPointIndexByTime = new Map(
+      marketOverlayChartPoints.map((point, index) => [point.time, index] as const),
+    )
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1]
+    const baseline = marketOverlayAverageClose
+    let deltaLatestSum = 0
+    let deltaLatestCount = 0
+    let deltaAverageSum = 0
+    let deltaAverageCount = 0
+    let deltaPreviousSum = 0
+    let deltaPreviousCount = 0
+    marketOverlayScopedVisibleAnnotations.forEach((annotation) => {
+      const timelineAnnotation = timelineById.get(annotation.id)
+      if (!timelineAnnotation) {
+        return
+      }
+      const point = chartPointByTime.get(timelineAnnotation.time)
+      if (!point) {
+        return
+      }
+      deltaLatestSum += point.value - latestPoint.value
+      deltaLatestCount += 1
+      if (baseline !== null) {
+        deltaAverageSum += point.value - baseline
+        deltaAverageCount += 1
+      }
+      const pointIndex = chartPointIndexByTime.get(point.time) ?? -1
+      if (pointIndex > 0) {
+        const previousPoint = marketOverlayChartPoints[pointIndex - 1]
+        deltaPreviousSum += point.value - previousPoint.value
+        deltaPreviousCount += 1
+      }
+    })
+    const formatAverageDelta = (sum: number, count: number) => {
+      if (count === 0) {
+        return 'n/a'
+      }
+      const mean = sum / count
+      return `${mean >= 0 ? '+' : ''}${mean.toFixed(2)} (n:${count})`
+    }
+    return `Δlatest:${formatAverageDelta(deltaLatestSum, deltaLatestCount)} · Δavg:${formatAverageDelta(deltaAverageSum, deltaAverageCount)} · Δprev:${formatAverageDelta(deltaPreviousSum, deltaPreviousCount)}`
+  }, [
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayScopedTimelineAnnotations,
+    marketOverlayScopedVisibleAnnotations,
+  ])
+  const marketOverlayMarkerDeltaToneSummary = useMemo(() => {
+    if (marketOverlayScopedTimelineAnnotations.length === 0 || marketOverlayChartPoints.length === 0) {
+      return 'none'
+    }
+    const chartPointIndexByTime = new Map(
+      marketOverlayChartPoints.map((point, index) => [point.time, index] as const),
+    )
+    let upCount = 0
+    let downCount = 0
+    let flatCount = 0
+    let unavailableCount = 0
+    marketOverlayScopedTimelineAnnotations.forEach((annotation) => {
+      const pointIndex = chartPointIndexByTime.get(annotation.time) ?? -1
+      if (pointIndex <= 0) {
+        unavailableCount += 1
+        return
+      }
+      const currentPoint = marketOverlayChartPoints[pointIndex]
+      const previousPoint = marketOverlayChartPoints[pointIndex - 1]
+      if (!currentPoint || !previousPoint) {
+        unavailableCount += 1
+        return
+      }
+      const deltaToPrevious = currentPoint.value - previousPoint.value
+      if (deltaToPrevious > 0) {
+        upCount += 1
+        return
+      }
+      if (deltaToPrevious < 0) {
+        downCount += 1
+        return
+      }
+      flatCount += 1
+    })
+    const ranked = [
+      { key: 'up', count: upCount },
+      { key: 'down', count: downCount },
+      { key: 'flat', count: flatCount },
+    ].sort((left, right) => right.count - left.count)
+    const highestCount = ranked[0]?.count ?? 0
+    const dominant =
+      highestCount === 0
+        ? 'none'
+        : ranked.filter((entry) => entry.count === highestCount).length > 1
+          ? 'mixed'
+          : ranked[0]?.key ?? 'none'
+    return `up:${upCount} · down:${downCount} · flat:${flatCount} · n/a:${unavailableCount} · dominant:${dominant}`
+  }, [marketOverlayChartPoints, marketOverlayScopedTimelineAnnotations])
+  const marketOverlayMarkerDeltaAlignmentSummary = useMemo(() => {
+    if (marketOverlayScopedTimelineAnnotations.length === 0 || marketOverlayChartPoints.length === 0) {
+      return 'none'
+    }
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1]
+    const baseline = marketOverlayAverageClose
+    if (!latestPoint || baseline === null) {
+      return `aligned:+0/-0 · mixed:0 · flat:0 · n/a:${marketOverlayScopedTimelineAnnotations.length}`
+    }
+    const chartPointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    let alignedPositiveCount = 0
+    let alignedNegativeCount = 0
+    let mixedCount = 0
+    let flatCount = 0
+    let unavailableCount = 0
+    marketOverlayScopedTimelineAnnotations.forEach((annotation) => {
+      const point = chartPointByTime.get(annotation.time)
+      if (!point) {
+        unavailableCount += 1
+        return
+      }
+      const deltaToLatest = point.value - latestPoint.value
+      const deltaToAverage = point.value - baseline
+      const deltaToLatestSign = Math.sign(deltaToLatest)
+      const deltaToAverageSign = Math.sign(deltaToAverage)
+      if (deltaToLatestSign === 0 || deltaToAverageSign === 0) {
+        flatCount += 1
+        return
+      }
+      if (deltaToLatestSign === deltaToAverageSign) {
+        if (deltaToLatestSign > 0) {
+          alignedPositiveCount += 1
+          return
+        }
+        alignedNegativeCount += 1
+        return
+      }
+      mixedCount += 1
+    })
+    return `aligned:+${alignedPositiveCount}/-${alignedNegativeCount} · mixed:${mixedCount} · flat:${flatCount} · n/a:${unavailableCount}`
+  }, [marketOverlayAverageClose, marketOverlayChartPoints, marketOverlayScopedTimelineAnnotations])
+  const marketOverlayMarkerDeltaByKindSummary = useMemo(() => {
+    if (marketOverlayScopedTimelineAnnotations.length === 0 || marketOverlayChartPoints.length === 0) {
+      return 'none'
+    }
+    type MarkerKindDeltaStats = {
+      visibleCount: number
+      deltaLatestSum: number
+      deltaLatestCount: number
+      deltaAverageSum: number
+      deltaAverageCount: number
+      deltaPreviousSum: number
+      deltaPreviousCount: number
+    }
+    const makeStats = (): MarkerKindDeltaStats => ({
+      visibleCount: 0,
+      deltaLatestSum: 0,
+      deltaLatestCount: 0,
+      deltaAverageSum: 0,
+      deltaAverageCount: 0,
+      deltaPreviousSum: 0,
+      deltaPreviousCount: 0,
+    })
+    const statsByKind: Record<MarketOverlayTimelineAnnotation['kind'], MarkerKindDeltaStats> = {
+      trade: makeStats(),
+      risk: makeStats(),
+      feed: makeStats(),
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const pointIndexByTime = new Map(
+      marketOverlayChartPoints.map((point, index) => [point.time, index] as const),
+    )
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1]
+    const baseline = marketOverlayAverageClose
+    marketOverlayScopedTimelineAnnotations.forEach((annotation) => {
+      const stats = statsByKind[annotation.kind]
+      stats.visibleCount += 1
+      const point = pointByTime.get(annotation.time)
+      if (!point) {
+        return
+      }
+      stats.deltaLatestSum += point.value - latestPoint.value
+      stats.deltaLatestCount += 1
+      if (baseline !== null) {
+        stats.deltaAverageSum += point.value - baseline
+        stats.deltaAverageCount += 1
+      }
+      const pointIndex = pointIndexByTime.get(annotation.time) ?? -1
+      if (pointIndex > 0) {
+        const previousPoint = marketOverlayChartPoints[pointIndex - 1]
+        stats.deltaPreviousSum += point.value - previousPoint.value
+        stats.deltaPreviousCount += 1
+      }
+    })
+    const formatMean = (sum: number, count: number) => {
+      if (count === 0) {
+        return 'n/a'
+      }
+      const mean = sum / count
+      return `${mean >= 0 ? '+' : ''}${mean.toFixed(2)}`
+    }
+    const formatKindSummary = (
+      kind: MarketOverlayTimelineAnnotation['kind'],
+      shortLabel: 't' | 'r' | 'f',
+    ) => {
+      const stats = statsByKind[kind]
+      return `${shortLabel}:n${stats.visibleCount} · Δl:${formatMean(stats.deltaLatestSum, stats.deltaLatestCount)} · Δa:${formatMean(stats.deltaAverageSum, stats.deltaAverageCount)} · Δp:${formatMean(stats.deltaPreviousSum, stats.deltaPreviousCount)}`
+    }
+    return `${formatKindSummary('trade', 't')} · ${formatKindSummary('risk', 'r')} · ${formatKindSummary('feed', 'f')}`
+  }, [marketOverlayAverageClose, marketOverlayChartPoints, marketOverlayScopedTimelineAnnotations])
+  const marketOverlayMarkerDeltaDispersionSummary = useMemo(() => {
+    if (marketOverlayScopedTimelineAnnotations.length === 0 || marketOverlayChartPoints.length === 0) {
+      return 'none'
+    }
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1]
+    const baseline = marketOverlayAverageClose
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const pointIndexByTime = new Map(
+      marketOverlayChartPoints.map((point, index) => [point.time, index] as const),
+    )
+    const deltaLatestValues: number[] = []
+    const deltaAverageValues: number[] = []
+    const deltaPreviousValues: number[] = []
+    marketOverlayScopedTimelineAnnotations.forEach((annotation) => {
+      const point = pointByTime.get(annotation.time)
+      if (!point) {
+        return
+      }
+      deltaLatestValues.push(point.value - latestPoint.value)
+      if (baseline !== null) {
+        deltaAverageValues.push(point.value - baseline)
+      }
+      const pointIndex = pointIndexByTime.get(annotation.time) ?? -1
+      if (pointIndex > 0) {
+        const previousPoint = marketOverlayChartPoints[pointIndex - 1]
+        deltaPreviousValues.push(point.value - previousPoint.value)
+      }
+    })
+    const formatSigned = (value: number) => `${value >= 0 ? '+' : ''}${value.toFixed(2)}`
+    const summarize = (label: 'Δlatest' | 'Δavg' | 'Δprev', values: number[]) => {
+      if (values.length === 0) {
+        return `${label}:n/a`
+      }
+      const minimum = Math.min(...values)
+      const maximum = Math.max(...values)
+      const spread = maximum - minimum
+      return `${label}:min:${formatSigned(minimum)}|max:${formatSigned(maximum)}|spread:${spread.toFixed(2)}|n:${values.length}`
+    }
+    return `${summarize('Δlatest', deltaLatestValues)} · ${summarize('Δavg', deltaAverageValues)} · ${summarize('Δprev', deltaPreviousValues)}`
+  }, [marketOverlayAverageClose, marketOverlayChartPoints, marketOverlayScopedTimelineAnnotations])
+  const marketOverlayMarkerDeltaMomentumSummary = useMemo(() => {
+    if (marketOverlayScopedTimelineAnnotations.length === 0 || marketOverlayChartPoints.length === 0) {
+      return 'none'
+    }
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1]
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const orderedDeltaPoints = marketOverlayScopedTimelineAnnotations
+      .map((annotation) => {
+        const point = pointByTime.get(annotation.time)
+        if (!point) {
+          return null
+        }
+        return { timestamp: annotation.timestamp, deltaToLatest: point.value - latestPoint.value }
+      })
+      .filter((entry): entry is { timestamp: number; deltaToLatest: number } => entry !== null)
+      .sort((left, right) => left.timestamp - right.timestamp)
+    if (orderedDeltaPoints.length < 2) {
+      return `insufficient:n${orderedDeltaPoints.length}`
+    }
+    let improvingCount = 0
+    let softeningCount = 0
+    let flatCount = 0
+    let latestShift = 0
+    for (let index = 1; index < orderedDeltaPoints.length; index += 1) {
+      const shift = orderedDeltaPoints[index].deltaToLatest - orderedDeltaPoints[index - 1].deltaToLatest
+      latestShift = shift
+      if (shift > 0) {
+        improvingCount += 1
+        continue
+      }
+      if (shift < 0) {
+        softeningCount += 1
+        continue
+      }
+      flatCount += 1
+    }
+    const latestShiftLabel = `${latestShift >= 0 ? '+' : ''}${latestShift.toFixed(2)}`
+    return `improving:${improvingCount} · softening:${softeningCount} · flat:${flatCount} · latestShift:${latestShiftLabel}`
+  }, [marketOverlayChartPoints, marketOverlayScopedTimelineAnnotations])
+  const marketOverlayMarkerDeltaPolaritySummary = useMemo(() => {
+    if (marketOverlayScopedTimelineAnnotations.length === 0 || marketOverlayChartPoints.length === 0) {
+      return 'none'
+    }
+    type DeltaPolarityCounts = { positive: number; negative: number; zero: number; unavailable: number }
+    const createCounts = (): DeltaPolarityCounts => ({ positive: 0, negative: 0, zero: 0, unavailable: 0 })
+    const deltaLatestCounts = createCounts()
+    const deltaAverageCounts = createCounts()
+    const deltaPreviousCounts = createCounts()
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1]
+    const baseline = marketOverlayAverageClose
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const pointIndexByTime = new Map(
+      marketOverlayChartPoints.map((point, index) => [point.time, index] as const),
+    )
+    const recordPolarity = (counts: DeltaPolarityCounts, value: number | null) => {
+      if (value === null || Number.isNaN(value)) {
+        counts.unavailable += 1
+        return
+      }
+      if (value > 0) {
+        counts.positive += 1
+        return
+      }
+      if (value < 0) {
+        counts.negative += 1
+        return
+      }
+      counts.zero += 1
+    }
+    marketOverlayScopedTimelineAnnotations.forEach((annotation) => {
+      const point = pointByTime.get(annotation.time)
+      if (!point) {
+        recordPolarity(deltaLatestCounts, null)
+        recordPolarity(deltaAverageCounts, null)
+        recordPolarity(deltaPreviousCounts, null)
+        return
+      }
+      recordPolarity(deltaLatestCounts, point.value - latestPoint.value)
+      recordPolarity(deltaAverageCounts, baseline === null ? null : point.value - baseline)
+      const pointIndex = pointIndexByTime.get(annotation.time) ?? -1
+      const previousPoint = pointIndex > 0 ? marketOverlayChartPoints[pointIndex - 1] : null
+      recordPolarity(deltaPreviousCounts, previousPoint ? point.value - previousPoint.value : null)
+    })
+    const formatCounts = (label: 'Δl' | 'Δa' | 'Δp', counts: DeltaPolarityCounts) =>
+      `${label}:p${counts.positive}/n${counts.negative}/z${counts.zero}/u${counts.unavailable}`
+    return `${formatCounts('Δl', deltaLatestCounts)} · ${formatCounts('Δa', deltaAverageCounts)} · ${formatCounts('Δp', deltaPreviousCounts)}`
+  }, [marketOverlayAverageClose, marketOverlayChartPoints, marketOverlayScopedTimelineAnnotations])
+  const marketOverlayMarkerDeltaCoverageSummary = useMemo(() => {
+    if (marketOverlayScopedTimelineAnnotations.length === 0 || marketOverlayChartPoints.length === 0) {
+      return 'none'
+    }
+    const baseline = marketOverlayAverageClose
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const pointIndexByTime = new Map(
+      marketOverlayChartPoints.map((point, index) => [point.time, index] as const),
+    )
+    const totalCount = marketOverlayScopedTimelineAnnotations.length
+    let fullCoverageCount = 0
+    let partialCoverageCount = 0
+    let missingCoverageCount = 0
+    let latestReadyCount = 0
+    let averageReadyCount = 0
+    let previousReadyCount = 0
+    marketOverlayScopedTimelineAnnotations.forEach((annotation) => {
+      const point = pointByTime.get(annotation.time)
+      if (!point) {
+        missingCoverageCount += 1
+        return
+      }
+      const hasLatest = true
+      const hasAverage = baseline !== null
+      const pointIndex = pointIndexByTime.get(annotation.time) ?? -1
+      const hasPrevious = pointIndex > 0
+      if (hasLatest) {
+        latestReadyCount += 1
+      }
+      if (hasAverage) {
+        averageReadyCount += 1
+      }
+      if (hasPrevious) {
+        previousReadyCount += 1
+      }
+      if (hasLatest && hasAverage && hasPrevious) {
+        fullCoverageCount += 1
+        return
+      }
+      partialCoverageCount += 1
+    })
+    return `full:${fullCoverageCount}/${totalCount} · partial:${partialCoverageCount} · missing:${missingCoverageCount} · ready:l${latestReadyCount}/a${averageReadyCount}/p${previousReadyCount}`
+  }, [marketOverlayAverageClose, marketOverlayChartPoints, marketOverlayScopedTimelineAnnotations])
+  const marketOverlayMarkerDeltaConfidenceSummary = useMemo(() => {
+    if (marketOverlayScopedTimelineAnnotations.length === 0 || marketOverlayChartPoints.length === 0) {
+      return 'none'
+    }
+    const baseline = marketOverlayAverageClose
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1]
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    let agreementCount = 0
+    let conflictCount = 0
+    let neutralCount = 0
+    let unavailableCount = 0
+    let fullComparativeCount = 0
+    const totalCount = marketOverlayScopedTimelineAnnotations.length
+    marketOverlayScopedTimelineAnnotations.forEach((annotation) => {
+      const point = pointByTime.get(annotation.time)
+      if (!point || baseline === null) {
+        unavailableCount += 1
+        return
+      }
+      const deltaToLatest = point.value - latestPoint.value
+      const deltaToAverage = point.value - baseline
+      fullComparativeCount += 1
+      const latestSign = Math.sign(deltaToLatest)
+      const averageSign = Math.sign(deltaToAverage)
+      if (latestSign === 0 || averageSign === 0) {
+        neutralCount += 1
+        return
+      }
+      if (latestSign === averageSign) {
+        agreementCount += 1
+        return
+      }
+      conflictCount += 1
+    })
+    return `agree:${agreementCount} · conflict:${conflictCount} · neutral:${neutralCount} · n/a:${unavailableCount} · fullComparative:${fullComparativeCount}/${totalCount}`
+  }, [marketOverlayAverageClose, marketOverlayChartPoints, marketOverlayScopedTimelineAnnotations])
+  const marketOverlayMarkerDeltaExtremes = useMemo(() => {
+    if (marketOverlayScopedTimelineAnnotations.length === 0 || marketOverlayChartPoints.length === 0) {
+      return 'none'
+    }
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1]
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const formatDelta = (delta: number) => `${delta >= 0 ? '+' : ''}${delta.toFixed(2)}`
+    const candidates = marketOverlayScopedTimelineAnnotations
+      .map((annotation) => {
+        const point = pointByTime.get(annotation.time)
+        if (!point) {
+          return null
+        }
+        const delta = point.value - latestPoint.value
+        const deltaPct = latestPoint.value === 0 ? null : (delta / latestPoint.value) * 100
+        return { annotation, delta, deltaPct }
+      })
+      .filter(
+        (
+          candidate,
+        ): candidate is {
+          annotation: MarketOverlayTimelineAnnotation
+          delta: number
+          deltaPct: number | null
+        } => candidate !== null,
+      )
+    if (candidates.length === 0) {
+      return 'none'
+    }
+    const rise = candidates.reduce((best, candidate) => {
+      if (
+        candidate.delta > best.delta ||
+        (candidate.delta === best.delta && candidate.annotation.timestamp > best.annotation.timestamp)
+      ) {
+        return candidate
+      }
+      return best
+    }, candidates[0])
+    const drop = candidates.reduce((best, candidate) => {
+      if (
+        candidate.delta < best.delta ||
+        (candidate.delta === best.delta && candidate.annotation.timestamp > best.annotation.timestamp)
+      ) {
+        return candidate
+      }
+      return best
+    }, candidates[0])
+    const formatExtreme = (value: {
+      annotation: MarketOverlayTimelineAnnotation
+      delta: number
+      deltaPct: number | null
+    }) =>
+      `${value.annotation.kind}:${value.annotation.label}:${formatDelta(value.delta)} (${value.deltaPct === null ? 'n/a' : `${formatDelta(value.deltaPct)}%`})`
+    const spread = rise.delta - drop.delta
+    return `rise:${formatExtreme(rise)} · drop:${formatExtreme(drop)} · spread:${spread.toFixed(2)}`
+  }, [marketOverlayChartPoints, marketOverlayScopedTimelineAnnotations])
+  const marketOverlayCorrelationHint = useMemo(() => {
+    if (!marketOverlayActiveTimelineAnnotation || marketOverlayChartPoints.length === 0) {
+      return 'none'
+    }
+    const point =
+      marketOverlayChartPoints.find((candidate) => candidate.time === marketOverlayActiveTimelineAnnotation.time) ??
+      marketOverlayChartPoints[marketOverlayChartPoints.length - 1]
+    return `${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label}@${point.value.toFixed(2)}(t${point.time})`
+  }, [marketOverlayActiveTimelineAnnotation, marketOverlayChartPoints])
+  const marketOverlayMarkerDrilldownDetail = useMemo(() => {
+    if (!marketOverlayActiveTimelineAnnotation || marketOverlayChartPoints.length === 0) {
+      return 'none'
+    }
+    const point =
+      marketOverlayChartPoints.find((candidate) => candidate.time === marketOverlayActiveTimelineAnnotation.time) ??
+      marketOverlayChartPoints[marketOverlayChartPoints.length - 1]
+    const baseline = marketOverlayAverageClose ?? point.value
+    const deltaFromAverage = point.value - baseline
+    const deltaFromAveragePct = baseline === 0 ? 0 : (deltaFromAverage / baseline) * 100
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1]
+    const deltaToLatest = point.value - latestPoint.value
+    const deltaToLatestPct = latestPoint.value === 0 ? 0 : (deltaToLatest / latestPoint.value) * 100
+    const pointIndex = marketOverlayChartPoints.findIndex((candidate) => candidate.time === point.time)
+    const previousPoint = pointIndex > 0 ? marketOverlayChartPoints[pointIndex - 1] : null
+    const deltaToPrevious = previousPoint ? point.value - previousPoint.value : null
+    const deltaToPreviousPct =
+      deltaToPrevious !== null && previousPoint && previousPoint.value !== 0
+        ? (deltaToPrevious / previousPoint.value) * 100
+        : null
+    const ageLabel = formatElapsedMs(Date.now() - marketOverlayActiveTimelineAnnotation.timestamp)
+    return `${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · t${point.time} · close:${point.value.toFixed(2)} · Δavg:${deltaFromAverage >= 0 ? '+' : ''}${deltaFromAverage.toFixed(2)} (${deltaFromAveragePct >= 0 ? '+' : ''}${deltaFromAveragePct.toFixed(2)}%) · Δlatest:${deltaToLatest >= 0 ? '+' : ''}${deltaToLatest.toFixed(2)} (${deltaToLatestPct >= 0 ? '+' : ''}${deltaToLatestPct.toFixed(2)}%) · Δprev:${deltaToPrevious === null ? 'n/a' : `${deltaToPrevious >= 0 ? '+' : ''}${deltaToPrevious.toFixed(2)} (${deltaToPreviousPct !== null ? `${deltaToPreviousPct >= 0 ? '+' : ''}${deltaToPreviousPct.toFixed(2)}%` : 'n/a'})`} · age:${ageLabel} · tone:${marketOverlayActiveTimelineAnnotation.tone}`
+  }, [marketOverlayActiveTimelineAnnotation, marketOverlayAverageClose, marketOverlayChartPoints])
+  const marketOverlayActiveMarkerBasisAgreementDetail = useMemo(() => {
+    if (!marketOverlayActiveTimelineAnnotation || marketOverlayChartPoints.length === 0) {
+      return 'none'
+    }
+    const point =
+      marketOverlayChartPoints.find((candidate) => candidate.time === marketOverlayActiveTimelineAnnotation.time) ??
+      marketOverlayChartPoints[marketOverlayChartPoints.length - 1]
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const deltaLatest = latestPoint ? point.value - latestPoint.value : null
+    const deltaAverage = baseline !== null ? point.value - baseline : null
+    const latestTone = resolveMarketOverlayDeltaTone(deltaLatest)
+    const averageTone = resolveMarketOverlayDeltaTone(deltaAverage)
+    const relation = latestTone === averageTone ? 'agree' : 'diverge'
+    const formatDelta = (value: number | null) =>
+      value === null ? 'n/a' : `${value >= 0 ? '+' : ''}${value.toFixed(2)}`
+    return `${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · latest:${latestTone}(${formatDelta(deltaLatest)}) · average:${averageTone}(${formatDelta(deltaAverage)}) · relation:${relation}`
+  }, [marketOverlayActiveTimelineAnnotation, marketOverlayAverageClose, marketOverlayChartPoints])
+  const marketOverlayActiveMarkerDeltaRank = useMemo(() => {
+    if (!marketOverlayActiveTimelineAnnotation || marketOverlayChartPoints.length === 0) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const resolveDelta = (
+      annotation: MarketOverlayTimelineAnnotation,
+      basis: MarketOverlayMarkerDeltaBasis,
+    ): number | null => {
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point) {
+        return null
+      }
+      if (basis === 'latest') {
+        return latestPoint ? point.value - latestPoint.value : null
+      }
+      return baseline !== null ? point.value - baseline : null
+    }
+    const rankForBasis = (basis: MarketOverlayMarkerDeltaBasis) => {
+      const target = resolveDelta(marketOverlayActiveTimelineAnnotation, basis)
+      if (target === null) {
+        return 'n/a'
+      }
+      const values = marketOverlayAgreementScopedTimelineAnnotations
+        .map((annotation) => resolveDelta(annotation, basis))
+        .filter((value): value is number => value !== null)
+      if (values.length === 0) {
+        return 'n/a'
+      }
+      const sortedDescending = values.slice().sort((a, b) => b - a)
+      const rankIndex = sortedDescending.findIndex((value) => Math.abs(value - target) < 1e-9)
+      if (rankIndex < 0) {
+        return 'n/a'
+      }
+      return `${rankIndex + 1}/${sortedDescending.length}`
+    }
+    return `latest:${rankForBasis('latest')} · average:${rankForBasis('average')} · scope:${marketOverlayMarkerBasisAgreement} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayAgreementScopedTimelineAnnotations,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerBasisAgreement,
+    marketOverlayMarkerDeltaFilter,
+  ])
+  const marketOverlayActiveMarkerDeltaPositionSummary = useMemo(() => {
+    if (!marketOverlayActiveTimelineAnnotation || marketOverlayChartPoints.length === 0) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const resolveDelta = (
+      annotation: MarketOverlayTimelineAnnotation,
+      basis: MarketOverlayMarkerDeltaBasis,
+    ): number | null => {
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point) {
+        return null
+      }
+      if (basis === 'latest') {
+        return latestPoint ? point.value - latestPoint.value : null
+      }
+      return baseline !== null ? point.value - baseline : null
+    }
+    const formatDelta = (value: number | null) =>
+      value === null ? 'n/a' : `${value >= 0 ? '+' : ''}${value.toFixed(2)}`
+    const medianValue = (values: number[]) => {
+      if (values.length === 0) {
+        return null
+      }
+      const sortedAscending = values.slice().sort((a, b) => a - b)
+      const middle = Math.floor(sortedAscending.length / 2)
+      if (sortedAscending.length % 2 === 1) {
+        return sortedAscending[middle] ?? null
+      }
+      const lower = sortedAscending[middle - 1]
+      const upper = sortedAscending[middle]
+      if (lower === undefined || upper === undefined) {
+        return null
+      }
+      return (lower + upper) / 2
+    }
+    const describeBasisPosition = (basis: MarketOverlayMarkerDeltaBasis) => {
+      const target = resolveDelta(marketOverlayActiveTimelineAnnotation, basis)
+      if (target === null) {
+        return `${basis}:n/a`
+      }
+      const values = marketOverlayAgreementScopedTimelineAnnotations
+        .map((annotation) => resolveDelta(annotation, basis))
+        .filter((value): value is number => value !== null)
+      if (values.length === 0) {
+        return `${basis}:n/a`
+      }
+      const sortedDescending = values.slice().sort((a, b) => b - a)
+      const rankIndex = sortedDescending.findIndex((value) => Math.abs(value - target) < 1e-9)
+      const leader = sortedDescending[0] ?? null
+      const median = medianValue(values)
+      const slot = rankIndex < 0 ? 'n/a' : `${rankIndex + 1}/${sortedDescending.length}`
+      const deltaToLeader = leader === null ? null : target - leader
+      const deltaToMedian = median === null ? null : target - median
+      return `${basis}:slot:${slot}|Δleader:${formatDelta(deltaToLeader)}|Δmedian:${formatDelta(deltaToMedian)}`
+    }
+    return `${describeBasisPosition('latest')} · ${describeBasisPosition('average')} · scope:${marketOverlayMarkerBasisAgreement} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayAgreementScopedTimelineAnnotations,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerBasisAgreement,
+    marketOverlayMarkerDeltaFilter,
+  ])
+  const marketOverlayActiveMarkerDeltaRangeContextSummary = useMemo(() => {
+    if (!marketOverlayActiveTimelineAnnotation || marketOverlayChartPoints.length === 0) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const resolveDelta = (
+      annotation: MarketOverlayTimelineAnnotation,
+      basis: MarketOverlayMarkerDeltaBasis,
+    ): number | null => {
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point) {
+        return null
+      }
+      if (basis === 'latest') {
+        return latestPoint ? point.value - latestPoint.value : null
+      }
+      return baseline !== null ? point.value - baseline : null
+    }
+    const formatDelta = (value: number | null) =>
+      value === null ? 'n/a' : `${value >= 0 ? '+' : ''}${value.toFixed(2)}`
+    const describeBasisRangeContext = (basis: MarketOverlayMarkerDeltaBasis) => {
+      const target = resolveDelta(marketOverlayActiveTimelineAnnotation, basis)
+      if (target === null) {
+        return `${basis}:n/a`
+      }
+      const values = marketOverlayAgreementScopedTimelineAnnotations
+        .map((annotation) => resolveDelta(annotation, basis))
+        .filter((value): value is number => value !== null)
+      if (values.length === 0) {
+        return `${basis}:n/a`
+      }
+      const min = Math.min(...values)
+      const max = Math.max(...values)
+      const range = max - min
+      const percentile = range === 0 ? null : ((target - min) / range) * 100
+      const formattedPercentile = percentile === null ? 'n/a' : `${percentile.toFixed(2)}%`
+      return `${basis}:active:${formatDelta(target)}|min:${formatDelta(min)}|max:${formatDelta(max)}|pct:${formattedPercentile}`
+    }
+    return `${describeBasisRangeContext('latest')} · ${describeBasisRangeContext('average')} · scope:${marketOverlayMarkerBasisAgreement} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayAgreementScopedTimelineAnnotations,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerBasisAgreement,
+    marketOverlayMarkerDeltaFilter,
+  ])
+  const marketOverlayActiveMarkerNeighborPercentileSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const resolveDelta = (
+      annotation: MarketOverlayTimelineAnnotation | null,
+      basis: MarketOverlayMarkerDeltaBasis,
+    ): number | null => {
+      if (!annotation) {
+        return null
+      }
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point) {
+        return null
+      }
+      if (basis === 'latest') {
+        return latestPoint ? point.value - latestPoint.value : null
+      }
+      return baseline !== null ? point.value - baseline : null
+    }
+    const toPercentile = (value: number | null, values: number[]) => {
+      if (value === null || values.length === 0) {
+        return null
+      }
+      const min = Math.min(...values)
+      const max = Math.max(...values)
+      const range = max - min
+      if (range === 0) {
+        return null
+      }
+      return ((value - min) / range) * 100
+    }
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    const formatPercentile = (value: number | null) => (value === null ? 'n/a' : `${value.toFixed(2)}%`)
+    const describeBasis = (basis: MarketOverlayMarkerDeltaBasis) => {
+      const values = marketOverlayAgreementScopedTimelineAnnotations
+        .map((annotation) => resolveDelta(annotation, basis))
+        .filter((value): value is number => value !== null)
+      const previousDelta = resolveDelta(previousAnnotation, basis)
+      const activeDelta = resolveDelta(marketOverlayActiveTimelineAnnotation, basis)
+      const nextDelta = resolveDelta(nextAnnotation, basis)
+      return `${basis}:prev:${formatPercentile(toPercentile(previousDelta, values))}|active:${formatPercentile(toPercentile(activeDelta, values))}|next:${formatPercentile(toPercentile(nextDelta, values))}`
+    }
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · ${describeBasis('latest')} · ${describeBasis('average')} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAgreementScopedTimelineAnnotations,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayActiveMarkerNeighborBasisRelationSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const describeRelation = (annotation: MarketOverlayTimelineAnnotation | null) => {
+      if (!annotation) {
+        return 'n/a'
+      }
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point) {
+        return 'n/a'
+      }
+      const latestDelta = latestPoint ? point.value - latestPoint.value : null
+      const averageDelta = baseline !== null ? point.value - baseline : null
+      const latestTone = resolveMarketOverlayDeltaTone(latestDelta)
+      const averageTone = resolveMarketOverlayDeltaTone(averageDelta)
+      const relation = latestTone === averageTone ? 'agree' : 'diverge'
+      return `${relation}(${latestTone}/${averageTone})`
+    }
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    return `active:${describeRelation(marketOverlayActiveTimelineAnnotation)} · prev:${describeRelation(previousAnnotation)} · next:${describeRelation(nextAnnotation)} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayActiveMarkerNeighborSpreadChangeSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const resolveSpread = (annotation: MarketOverlayTimelineAnnotation | null): number | null => {
+      if (!annotation) {
+        return null
+      }
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point || !latestPoint || baseline === null) {
+        return null
+      }
+      const latestDelta = point.value - latestPoint.value
+      const averageDelta = point.value - baseline
+      return latestDelta - averageDelta
+    }
+    const formatValue = (value: number | null) =>
+      value === null ? 'n/a' : `${value >= 0 ? '+' : ''}${value.toFixed(2)}`
+    const describeChange = (from: number | null, to: number | null) => {
+      if (from === null || to === null) {
+        return 'n/a'
+      }
+      const change = to - from
+      return `${change >= 0 ? '+' : ''}${change.toFixed(2)}`
+    }
+    const describeSlope = (from: number | null, to: number | null) => {
+      if (from === null || to === null) {
+        return 'n/a'
+      }
+      const change = to - from
+      if (change > 0) {
+        return 'rising'
+      }
+      if (change < 0) {
+        return 'falling'
+      }
+      return 'flat'
+    }
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    const previousSpread = resolveSpread(previousAnnotation)
+    const activeSpread = resolveSpread(marketOverlayActiveTimelineAnnotation)
+    const nextSpread = resolveSpread(nextAnnotation)
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label}:${formatValue(activeSpread)} · latest:prev->active:${describeChange(previousSpread, activeSpread)}|active->next:${describeChange(activeSpread, nextSpread)} · slope:prev->active:${describeSlope(previousSpread, activeSpread)}|active->next:${describeSlope(activeSpread, nextSpread)} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayActiveMarkerNeighborBasisTransitionSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const resolveRelation = (annotation: MarketOverlayTimelineAnnotation | null): 'agree' | 'diverge' | null => {
+      if (!annotation) {
+        return null
+      }
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point) {
+        return null
+      }
+      const latestDelta = latestPoint ? point.value - latestPoint.value : null
+      const averageDelta = baseline !== null ? point.value - baseline : null
+      const latestTone = resolveMarketOverlayDeltaTone(latestDelta)
+      const averageTone = resolveMarketOverlayDeltaTone(averageDelta)
+      return latestTone === averageTone ? 'agree' : 'diverge'
+    }
+    const describeTransition = (from: 'agree' | 'diverge' | null, to: 'agree' | 'diverge' | null) => {
+      if (from === null || to === null) {
+        return 'n/a'
+      }
+      if (from === to) {
+        return `hold-${to}`
+      }
+      return `enter-${to}`
+    }
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    const previousRelation = resolveRelation(previousAnnotation)
+    const activeRelation = resolveRelation(marketOverlayActiveTimelineAnnotation)
+    const nextRelation = resolveRelation(nextAnnotation)
+    return `active:${activeRelation ?? 'n/a'} · prev:${previousRelation ?? 'n/a'} · next:${nextRelation ?? 'n/a'} · transition:prev->active:${describeTransition(previousRelation, activeRelation)}|active->next:${describeTransition(activeRelation, nextRelation)} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayActiveMarkerNeighborDeltaTrendSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const resolveDelta = (
+      annotation: MarketOverlayTimelineAnnotation | null,
+      basis: MarketOverlayMarkerDeltaBasis,
+    ): number | null => {
+      if (!annotation) {
+        return null
+      }
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point) {
+        return null
+      }
+      if (basis === 'latest') {
+        return latestPoint ? point.value - latestPoint.value : null
+      }
+      return baseline !== null ? point.value - baseline : null
+    }
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    const describeTrend = (from: number | null, to: number | null) => {
+      if (from === null || to === null) {
+        return 'n/a'
+      }
+      const change = to - from
+      const direction = change > 0 ? 'improving' : change < 0 ? 'softening' : 'flat'
+      return `${direction}(${change >= 0 ? '+' : ''}${change.toFixed(2)})`
+    }
+    const previousLatest = resolveDelta(previousAnnotation, 'latest')
+    const activeLatest = resolveDelta(marketOverlayActiveTimelineAnnotation, 'latest')
+    const nextLatest = resolveDelta(nextAnnotation, 'latest')
+    const previousAverage = resolveDelta(previousAnnotation, 'average')
+    const activeAverage = resolveDelta(marketOverlayActiveTimelineAnnotation, 'average')
+    const nextAverage = resolveDelta(nextAnnotation, 'average')
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · latest:prev->active:${describeTrend(previousLatest, activeLatest)}|active->next:${describeTrend(activeLatest, nextLatest)} · average:prev->active:${describeTrend(previousAverage, activeAverage)}|active->next:${describeTrend(activeAverage, nextAverage)} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayActiveMarkerNeighborDeltaAccelerationSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const resolveDelta = (
+      annotation: MarketOverlayTimelineAnnotation | null,
+      basis: MarketOverlayMarkerDeltaBasis,
+    ): number | null => {
+      if (!annotation) {
+        return null
+      }
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point) {
+        return null
+      }
+      if (basis === 'latest') {
+        return latestPoint ? point.value - latestPoint.value : null
+      }
+      return baseline !== null ? point.value - baseline : null
+    }
+    const describeStep = (from: number | null, to: number | null) => {
+      if (from === null || to === null) {
+        return null
+      }
+      return to - from
+    }
+    const formatStep = (value: number | null) =>
+      value === null ? 'n/a' : `${value >= 0 ? '+' : ''}${value.toFixed(2)}`
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    const previousLatest = resolveDelta(previousAnnotation, 'latest')
+    const activeLatest = resolveDelta(marketOverlayActiveTimelineAnnotation, 'latest')
+    const nextLatest = resolveDelta(nextAnnotation, 'latest')
+    const previousAverage = resolveDelta(previousAnnotation, 'average')
+    const activeAverage = resolveDelta(marketOverlayActiveTimelineAnnotation, 'average')
+    const nextAverage = resolveDelta(nextAnnotation, 'average')
+    const latestPrevToActive = describeStep(previousLatest, activeLatest)
+    const averagePrevToActive = describeStep(previousAverage, activeAverage)
+    const latestActiveToNext = describeStep(activeLatest, nextLatest)
+    const averageActiveToNext = describeStep(activeAverage, nextAverage)
+    const accelerationPrevToActive =
+      latestPrevToActive === null || averagePrevToActive === null
+        ? null
+        : latestPrevToActive - averagePrevToActive
+    const accelerationActiveToNext =
+      latestActiveToNext === null || averageActiveToNext === null
+        ? null
+        : latestActiveToNext - averageActiveToNext
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · prev->active:latest:${formatStep(latestPrevToActive)}|average:${formatStep(averagePrevToActive)}|accel:${formatStep(accelerationPrevToActive)} · active->next:latest:${formatStep(latestActiveToNext)}|average:${formatStep(averageActiveToNext)}|accel:${formatStep(accelerationActiveToNext)} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayActiveMarkerNeighborToneTransitionSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const resolveTone = (
+      annotation: MarketOverlayTimelineAnnotation | null,
+      basis: MarketOverlayMarkerDeltaBasis,
+    ): 'up' | 'down' | 'flat' | 'unavailable' => {
+      if (!annotation) {
+        return 'unavailable'
+      }
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point) {
+        return 'unavailable'
+      }
+      const delta =
+        basis === 'latest'
+          ? latestPoint
+            ? point.value - latestPoint.value
+            : null
+          : baseline !== null
+            ? point.value - baseline
+            : null
+      return resolveMarketOverlayDeltaTone(delta)
+    }
+    const describeTransition = (
+      from: 'up' | 'down' | 'flat' | 'unavailable',
+      to: 'up' | 'down' | 'flat' | 'unavailable',
+    ) => {
+      if (from === 'unavailable' || to === 'unavailable') {
+        return 'n/a'
+      }
+      if (from === to) {
+        return `hold:${to}`
+      }
+      return `${from}->${to}`
+    }
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    const previousLatestTone = resolveTone(previousAnnotation, 'latest')
+    const activeLatestTone = resolveTone(marketOverlayActiveTimelineAnnotation, 'latest')
+    const nextLatestTone = resolveTone(nextAnnotation, 'latest')
+    const previousAverageTone = resolveTone(previousAnnotation, 'average')
+    const activeAverageTone = resolveTone(marketOverlayActiveTimelineAnnotation, 'average')
+    const nextAverageTone = resolveTone(nextAnnotation, 'average')
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · latest:prev->active:${describeTransition(previousLatestTone, activeLatestTone)}|active->next:${describeTransition(activeLatestTone, nextLatestTone)} · average:prev->active:${describeTransition(previousAverageTone, activeAverageTone)}|active->next:${describeTransition(activeAverageTone, nextAverageTone)} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayActiveMarkerNeighborConsensusSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const resolveRelation = (annotation: MarketOverlayTimelineAnnotation | null): 'agree' | 'diverge' | null => {
+      if (!annotation) {
+        return null
+      }
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point) {
+        return null
+      }
+      const latestDelta = latestPoint ? point.value - latestPoint.value : null
+      const averageDelta = baseline !== null ? point.value - baseline : null
+      const latestTone = resolveMarketOverlayDeltaTone(latestDelta)
+      const averageTone = resolveMarketOverlayDeltaTone(averageDelta)
+      if (latestTone === 'unavailable' || averageTone === 'unavailable') {
+        return null
+      }
+      return latestTone === averageTone ? 'agree' : 'diverge'
+    }
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    const previousRelation = resolveRelation(previousAnnotation)
+    const activeRelation = resolveRelation(marketOverlayActiveTimelineAnnotation)
+    const nextRelation = resolveRelation(nextAnnotation)
+    const relations = [previousRelation, activeRelation, nextRelation].filter(
+      (relation): relation is 'agree' | 'diverge' => relation !== null,
+    )
+    const agreeCount = relations.filter((relation) => relation === 'agree').length
+    const divergeCount = relations.filter((relation) => relation === 'diverge').length
+    const majority =
+      relations.length === 0 ? 'none' : agreeCount === divergeCount ? 'tie' : agreeCount > divergeCount ? 'agree' : 'diverge'
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · prev:${previousRelation ?? 'n/a'} · active:${activeRelation ?? 'n/a'} · next:${nextRelation ?? 'n/a'} · counts:agree:${agreeCount}|diverge:${divergeCount} · majority:${majority} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayActiveMarkerNeighborConsensusBalanceSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const resolveRelation = (annotation: MarketOverlayTimelineAnnotation | null): 'agree' | 'diverge' | null => {
+      if (!annotation) {
+        return null
+      }
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point) {
+        return null
+      }
+      const latestDelta = latestPoint ? point.value - latestPoint.value : null
+      const averageDelta = baseline !== null ? point.value - baseline : null
+      const latestTone = resolveMarketOverlayDeltaTone(latestDelta)
+      const averageTone = resolveMarketOverlayDeltaTone(averageDelta)
+      if (latestTone === 'unavailable' || averageTone === 'unavailable') {
+        return null
+      }
+      return latestTone === averageTone ? 'agree' : 'diverge'
+    }
+    const toScore = (relation: 'agree' | 'diverge' | null) =>
+      relation === 'agree' ? 1 : relation === 'diverge' ? -1 : 0
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    const previousRelation = resolveRelation(previousAnnotation)
+    const activeRelation = resolveRelation(marketOverlayActiveTimelineAnnotation)
+    const nextRelation = resolveRelation(nextAnnotation)
+    const previousScore = toScore(previousRelation)
+    const activeScore = toScore(activeRelation)
+    const nextScore = toScore(nextRelation)
+    const totalScore = previousScore + activeScore + nextScore
+    const sentiment = totalScore > 0 ? 'agree-leaning' : totalScore < 0 ? 'diverge-leaning' : 'balanced'
+    const formatScore = (value: number) => `${value >= 0 ? '+' : ''}${value}`
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · prev:${previousRelation ?? 'n/a'}(${formatScore(previousScore)}) · active:${activeRelation ?? 'n/a'}(${formatScore(activeScore)}) · next:${nextRelation ?? 'n/a'}(${formatScore(nextScore)}) · total:${formatScore(totalScore)} · sentiment:${sentiment} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayActiveMarkerNeighborConsensusTransitionSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const resolveRelation = (annotation: MarketOverlayTimelineAnnotation | null): 'agree' | 'diverge' | null => {
+      if (!annotation) {
+        return null
+      }
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point) {
+        return null
+      }
+      const latestDelta = latestPoint ? point.value - latestPoint.value : null
+      const averageDelta = baseline !== null ? point.value - baseline : null
+      const latestTone = resolveMarketOverlayDeltaTone(latestDelta)
+      const averageTone = resolveMarketOverlayDeltaTone(averageDelta)
+      if (latestTone === 'unavailable' || averageTone === 'unavailable') {
+        return null
+      }
+      return latestTone === averageTone ? 'agree' : 'diverge'
+    }
+    const toScore = (relation: 'agree' | 'diverge' | null) =>
+      relation === 'agree' ? 1 : relation === 'diverge' ? -1 : 0
+    const describeTransition = (from: number, to: number) => {
+      const change = to - from
+      const direction = change > 0 ? 'toward-agree' : change < 0 ? 'toward-diverge' : 'flat'
+      return `${direction}(${change >= 0 ? '+' : ''}${change})`
+    }
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    const previousScore = toScore(resolveRelation(previousAnnotation))
+    const activeScore = toScore(resolveRelation(marketOverlayActiveTimelineAnnotation))
+    const nextScore = toScore(resolveRelation(nextAnnotation))
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · prev->active:${describeTransition(previousScore, activeScore)} · active->next:${describeTransition(activeScore, nextScore)} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayActiveMarkerNeighborConsensusVolatilitySummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const resolveRelation = (annotation: MarketOverlayTimelineAnnotation | null): 'agree' | 'diverge' | null => {
+      if (!annotation) {
+        return null
+      }
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point) {
+        return null
+      }
+      const latestDelta = latestPoint ? point.value - latestPoint.value : null
+      const averageDelta = baseline !== null ? point.value - baseline : null
+      const latestTone = resolveMarketOverlayDeltaTone(latestDelta)
+      const averageTone = resolveMarketOverlayDeltaTone(averageDelta)
+      if (latestTone === 'unavailable' || averageTone === 'unavailable') {
+        return null
+      }
+      return latestTone === averageTone ? 'agree' : 'diverge'
+    }
+    const toScore = (relation: 'agree' | 'diverge' | null) =>
+      relation === 'agree' ? 1 : relation === 'diverge' ? -1 : 0
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    const previousScore = toScore(resolveRelation(previousAnnotation))
+    const activeScore = toScore(resolveRelation(marketOverlayActiveTimelineAnnotation))
+    const nextScore = toScore(resolveRelation(nextAnnotation))
+    const prevToActiveChange = activeScore - previousScore
+    const activeToNextChange = nextScore - activeScore
+    const volatility = Math.abs(prevToActiveChange) + Math.abs(activeToNextChange)
+    const classify = (value: number) => (value === 0 ? 'steady' : value > 0 ? 'toward-agree' : 'toward-diverge')
+    const formatChange = (value: number) => `${value >= 0 ? '+' : ''}${value}`
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · transitions:prev->active:${classify(prevToActiveChange)}(${formatChange(prevToActiveChange)})|active->next:${classify(activeToNextChange)}(${formatChange(activeToNextChange)}) · swing:${volatility} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayActiveMarkerNeighborDeltaRelationSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const resolveDelta = (
+      annotation: MarketOverlayTimelineAnnotation | null,
+      basis: MarketOverlayMarkerDeltaBasis,
+    ): number | null => {
+      if (!annotation) {
+        return null
+      }
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point) {
+        return null
+      }
+      if (basis === 'latest') {
+        return latestPoint ? point.value - latestPoint.value : null
+      }
+      return baseline !== null ? point.value - baseline : null
+    }
+    const compareNeighbor = (neighbor: number | null, active: number | null) => {
+      if (neighbor === null || active === null) {
+        return 'n/a'
+      }
+      if (Math.abs(neighbor - active) < 1e-9) {
+        return 'match'
+      }
+      return neighbor > active ? 'lead' : 'lag'
+    }
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    const activeLatest = resolveDelta(marketOverlayActiveTimelineAnnotation, 'latest')
+    const activeAverage = resolveDelta(marketOverlayActiveTimelineAnnotation, 'average')
+    const previousLatest = resolveDelta(previousAnnotation, 'latest')
+    const previousAverage = resolveDelta(previousAnnotation, 'average')
+    const nextLatest = resolveDelta(nextAnnotation, 'latest')
+    const nextAverage = resolveDelta(nextAnnotation, 'average')
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · prev:latest:${compareNeighbor(previousLatest, activeLatest)}|average:${compareNeighbor(previousAverage, activeAverage)} · next:latest:${compareNeighbor(nextLatest, activeLatest)}|average:${compareNeighbor(nextAverage, activeAverage)} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayActiveMarkerNeighborPolarityRelationSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const resolveDelta = (
+      annotation: MarketOverlayTimelineAnnotation | null,
+      basis: MarketOverlayMarkerDeltaBasis,
+    ): number | null => {
+      if (!annotation) {
+        return null
+      }
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point) {
+        return null
+      }
+      if (basis === 'latest') {
+        return latestPoint ? point.value - latestPoint.value : null
+      }
+      return baseline !== null ? point.value - baseline : null
+    }
+    const toSign = (value: number | null): 'pos' | 'neg' | 'zero' | 'n/a' => {
+      if (value === null) {
+        return 'n/a'
+      }
+      if (Math.abs(value) < 1e-9) {
+        return 'zero'
+      }
+      return value > 0 ? 'pos' : 'neg'
+    }
+    const compareSign = (
+      neighbor: 'pos' | 'neg' | 'zero' | 'n/a',
+      active: 'pos' | 'neg' | 'zero' | 'n/a',
+    ) => {
+      if (neighbor === 'n/a' || active === 'n/a') {
+        return 'n/a'
+      }
+      if (neighbor === active) {
+        return 'match'
+      }
+      if (neighbor === 'zero' || active === 'zero') {
+        return 'neutralized'
+      }
+      return 'opposite'
+    }
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    const activeLatestSign = toSign(resolveDelta(marketOverlayActiveTimelineAnnotation, 'latest'))
+    const activeAverageSign = toSign(resolveDelta(marketOverlayActiveTimelineAnnotation, 'average'))
+    const previousLatestSign = toSign(resolveDelta(previousAnnotation, 'latest'))
+    const previousAverageSign = toSign(resolveDelta(previousAnnotation, 'average'))
+    const nextLatestSign = toSign(resolveDelta(nextAnnotation, 'latest'))
+    const nextAverageSign = toSign(resolveDelta(nextAnnotation, 'average'))
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · prev:latest:${compareSign(previousLatestSign, activeLatestSign)}(${previousLatestSign}/${activeLatestSign})|average:${compareSign(previousAverageSign, activeAverageSign)}(${previousAverageSign}/${activeAverageSign}) · next:latest:${compareSign(nextLatestSign, activeLatestSign)}(${nextLatestSign}/${activeLatestSign})|average:${compareSign(nextAverageSign, activeAverageSign)}(${nextAverageSign}/${activeAverageSign}) · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayActiveMarkerNeighborPolarityTransitionSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const resolveDelta = (
+      annotation: MarketOverlayTimelineAnnotation | null,
+      basis: MarketOverlayMarkerDeltaBasis,
+    ): number | null => {
+      if (!annotation) {
+        return null
+      }
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point) {
+        return null
+      }
+      if (basis === 'latest') {
+        return latestPoint ? point.value - latestPoint.value : null
+      }
+      return baseline !== null ? point.value - baseline : null
+    }
+    const toSign = (value: number | null): 'pos' | 'neg' | 'zero' | 'n/a' => {
+      if (value === null) {
+        return 'n/a'
+      }
+      if (Math.abs(value) < 1e-9) {
+        return 'zero'
+      }
+      return value > 0 ? 'pos' : 'neg'
+    }
+    const describeTransition = (
+      from: 'pos' | 'neg' | 'zero' | 'n/a',
+      to: 'pos' | 'neg' | 'zero' | 'n/a',
+    ) => {
+      if (from === 'n/a' || to === 'n/a') {
+        return 'n/a'
+      }
+      if (from === to) {
+        return `hold:${to}`
+      }
+      return `${from}->${to}`
+    }
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    const previousLatestSign = toSign(resolveDelta(previousAnnotation, 'latest'))
+    const activeLatestSign = toSign(resolveDelta(marketOverlayActiveTimelineAnnotation, 'latest'))
+    const nextLatestSign = toSign(resolveDelta(nextAnnotation, 'latest'))
+    const previousAverageSign = toSign(resolveDelta(previousAnnotation, 'average'))
+    const activeAverageSign = toSign(resolveDelta(marketOverlayActiveTimelineAnnotation, 'average'))
+    const nextAverageSign = toSign(resolveDelta(nextAnnotation, 'average'))
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · latest:prev->active:${describeTransition(previousLatestSign, activeLatestSign)}|active->next:${describeTransition(activeLatestSign, nextLatestSign)} · average:prev->active:${describeTransition(previousAverageSign, activeAverageSign)}|active->next:${describeTransition(activeAverageSign, nextAverageSign)} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayActiveMarkerNeighborPolarityShiftSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const resolveDelta = (
+      annotation: MarketOverlayTimelineAnnotation | null,
+      basis: MarketOverlayMarkerDeltaBasis,
+    ): number | null => {
+      if (!annotation) {
+        return null
+      }
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point) {
+        return null
+      }
+      if (basis === 'latest') {
+        return latestPoint ? point.value - latestPoint.value : null
+      }
+      return baseline !== null ? point.value - baseline : null
+    }
+    const toSignScore = (value: number | null): number | null => {
+      if (value === null) {
+        return null
+      }
+      if (Math.abs(value) < 1e-9) {
+        return 0
+      }
+      return value > 0 ? 1 : -1
+    }
+    const describeShift = (from: number | null, to: number | null) => {
+      if (from === null || to === null) {
+        return 'n/a'
+      }
+      const shift = to - from
+      return `${shift >= 0 ? '+' : ''}${shift.toFixed(0)}`
+    }
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    const previousLatestSign = toSignScore(resolveDelta(previousAnnotation, 'latest'))
+    const activeLatestSign = toSignScore(resolveDelta(marketOverlayActiveTimelineAnnotation, 'latest'))
+    const nextLatestSign = toSignScore(resolveDelta(nextAnnotation, 'latest'))
+    const previousAverageSign = toSignScore(resolveDelta(previousAnnotation, 'average'))
+    const activeAverageSign = toSignScore(resolveDelta(marketOverlayActiveTimelineAnnotation, 'average'))
+    const nextAverageSign = toSignScore(resolveDelta(nextAnnotation, 'average'))
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · latest:prev->active:${describeShift(previousLatestSign, activeLatestSign)}|active->next:${describeShift(activeLatestSign, nextLatestSign)} · average:prev->active:${describeShift(previousAverageSign, activeAverageSign)}|active->next:${describeShift(activeAverageSign, nextAverageSign)} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayActiveMarkerNeighborMagnitudeRatioSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const resolveDelta = (
+      annotation: MarketOverlayTimelineAnnotation | null,
+      basis: MarketOverlayMarkerDeltaBasis,
+    ): number | null => {
+      if (!annotation) {
+        return null
+      }
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point) {
+        return null
+      }
+      if (basis === 'latest') {
+        return latestPoint ? point.value - latestPoint.value : null
+      }
+      return baseline !== null ? point.value - baseline : null
+    }
+    const computeRatio = (neighbor: number | null, active: number | null) => {
+      if (neighbor === null || active === null || Math.abs(active) < 1e-9) {
+        return null
+      }
+      return Math.abs(neighbor) / Math.abs(active)
+    }
+    const formatRatio = (value: number | null) => (value === null ? 'n/a' : value.toFixed(2))
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    const activeLatest = resolveDelta(marketOverlayActiveTimelineAnnotation, 'latest')
+    const activeAverage = resolveDelta(marketOverlayActiveTimelineAnnotation, 'average')
+    const previousLatest = resolveDelta(previousAnnotation, 'latest')
+    const previousAverage = resolveDelta(previousAnnotation, 'average')
+    const nextLatest = resolveDelta(nextAnnotation, 'latest')
+    const nextAverage = resolveDelta(nextAnnotation, 'average')
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · prev:latest:${formatRatio(computeRatio(previousLatest, activeLatest))}|average:${formatRatio(computeRatio(previousAverage, activeAverage))} · next:latest:${formatRatio(computeRatio(nextLatest, activeLatest))}|average:${formatRatio(computeRatio(nextAverage, activeAverage))} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayActiveMarkerNeighborMagnitudeRatioGapSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const resolveDelta = (
+      annotation: MarketOverlayTimelineAnnotation | null,
+      basis: MarketOverlayMarkerDeltaBasis,
+    ): number | null => {
+      if (!annotation) {
+        return null
+      }
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point) {
+        return null
+      }
+      if (basis === 'latest') {
+        return latestPoint ? point.value - latestPoint.value : null
+      }
+      return baseline !== null ? point.value - baseline : null
+    }
+    const computeRatio = (neighbor: number | null, active: number | null) => {
+      if (neighbor === null || active === null || Math.abs(active) < 1e-9) {
+        return null
+      }
+      return Math.abs(neighbor) / Math.abs(active)
+    }
+    const formatValue = (value: number | null) => (value === null ? 'n/a' : value.toFixed(2))
+    const describeNeighbor = (
+      annotation: MarketOverlayTimelineAnnotation | null,
+      activeLatest: number | null,
+      activeAverage: number | null,
+    ) => {
+      const neighborLatest = resolveDelta(annotation, 'latest')
+      const neighborAverage = resolveDelta(annotation, 'average')
+      const latestRatio = computeRatio(neighborLatest, activeLatest)
+      const averageRatio = computeRatio(neighborAverage, activeAverage)
+      const ratioGap = latestRatio === null || averageRatio === null ? null : latestRatio - averageRatio
+      return `latest:${formatValue(latestRatio)}|average:${formatValue(averageRatio)}|Δratio:${formatValue(ratioGap)}`
+    }
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    const activeLatest = resolveDelta(marketOverlayActiveTimelineAnnotation, 'latest')
+    const activeAverage = resolveDelta(marketOverlayActiveTimelineAnnotation, 'average')
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · prev:${describeNeighbor(previousAnnotation, activeLatest, activeAverage)} · next:${describeNeighbor(nextAnnotation, activeLatest, activeAverage)} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayActiveMarkerNeighborMagnitudeRatioSideSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const resolveDelta = (
+      annotation: MarketOverlayTimelineAnnotation | null,
+      basis: MarketOverlayMarkerDeltaBasis,
+    ): number | null => {
+      if (!annotation) {
+        return null
+      }
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point) {
+        return null
+      }
+      if (basis === 'latest') {
+        return latestPoint ? point.value - latestPoint.value : null
+      }
+      return baseline !== null ? point.value - baseline : null
+    }
+    const computeRatio = (neighbor: number | null, active: number | null) => {
+      if (neighbor === null || active === null || Math.abs(active) < 1e-9) {
+        return null
+      }
+      return Math.abs(neighbor) / Math.abs(active)
+    }
+    const formatRatio = (value: number | null) => (value === null ? 'n/a' : value.toFixed(2))
+    const describeBasis = (
+      basis: MarketOverlayMarkerDeltaBasis,
+      previousAnnotation: MarketOverlayTimelineAnnotation | null,
+      nextAnnotation: MarketOverlayTimelineAnnotation | null,
+    ) => {
+      const active = resolveDelta(marketOverlayActiveTimelineAnnotation, basis)
+      const previous = resolveDelta(previousAnnotation, basis)
+      const next = resolveDelta(nextAnnotation, basis)
+      const previousRatio = computeRatio(previous, active)
+      const nextRatio = computeRatio(next, active)
+      const availableCount = Number(previousRatio !== null) + Number(nextRatio !== null)
+      let side: 'none' | 'prev' | 'next' | 'balanced' = 'none'
+      if (previousRatio !== null && nextRatio === null) {
+        side = 'prev'
+      } else if (previousRatio === null && nextRatio !== null) {
+        side = 'next'
+      } else if (previousRatio !== null && nextRatio !== null) {
+        side = Math.abs(previousRatio - nextRatio) < 1e-9 ? 'balanced' : previousRatio > nextRatio ? 'prev' : 'next'
+      }
+      return `${basis}:prev:${formatRatio(previousRatio)}|next:${formatRatio(nextRatio)}|side:${side}|available:${availableCount}/2`
+    }
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · ${describeBasis('latest', previousAnnotation, nextAnnotation)} · ${describeBasis('average', previousAnnotation, nextAnnotation)} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayActiveMarkerNeighborMagnitudeSideVoteSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const resolveDelta = (
+      annotation: MarketOverlayTimelineAnnotation | null,
+      basis: MarketOverlayMarkerDeltaBasis,
+    ): number | null => {
+      if (!annotation) {
+        return null
+      }
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point) {
+        return null
+      }
+      if (basis === 'latest') {
+        return latestPoint ? point.value - latestPoint.value : null
+      }
+      return baseline !== null ? point.value - baseline : null
+    }
+    const computeRatio = (neighbor: number | null, active: number | null) => {
+      if (neighbor === null || active === null || Math.abs(active) < 1e-9) {
+        return null
+      }
+      return Math.abs(neighbor) / Math.abs(active)
+    }
+    const describeBasis = (basis: MarketOverlayMarkerDeltaBasis) => {
+      const previousAnnotation =
+        marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+      const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+      const active = resolveDelta(marketOverlayActiveTimelineAnnotation, basis)
+      const previous = resolveDelta(previousAnnotation, basis)
+      const next = resolveDelta(nextAnnotation, basis)
+      const previousRatio = computeRatio(previous, active)
+      const nextRatio = computeRatio(next, active)
+      const availableCount = Number(previousRatio !== null) + Number(nextRatio !== null)
+      let side: 'none' | 'prev' | 'next' | 'balanced' = 'none'
+      if (previousRatio !== null && nextRatio === null) {
+        side = 'prev'
+      } else if (previousRatio === null && nextRatio !== null) {
+        side = 'next'
+      } else if (previousRatio !== null && nextRatio !== null) {
+        side = Math.abs(previousRatio - nextRatio) < 1e-9 ? 'balanced' : previousRatio > nextRatio ? 'prev' : 'next'
+      }
+      return { side, availableCount }
+    }
+    const latestSummary = describeBasis('latest')
+    const averageSummary = describeBasis('average')
+    const toVote = (side: 'none' | 'prev' | 'next' | 'balanced', availableCount: number) => {
+      if (availableCount === 0 || side === 'none' || side === 'balanced') {
+        return 0
+      }
+      return side === 'prev' ? availableCount : -availableCount
+    }
+    const combinedVote =
+      toVote(latestSummary.side, latestSummary.availableCount) +
+      toVote(averageSummary.side, averageSummary.availableCount)
+    const combinedSide =
+      combinedVote === 0 ? 'balanced' : combinedVote > 0 ? 'prev' : 'next'
+    const formatVote = (value: number) => `${value >= 0 ? '+' : ''}${value}`
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · latest:side:${latestSummary.side}|available:${latestSummary.availableCount}/2 · average:side:${averageSummary.side}|available:${averageSummary.availableCount}/2 · combined:${combinedSide}|vote:${formatVote(combinedVote)} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayActiveMarkerNeighborMagnitudeSideTransitionSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const resolveDelta = (
+      annotation: MarketOverlayTimelineAnnotation | null,
+      basis: MarketOverlayMarkerDeltaBasis,
+    ): number | null => {
+      if (!annotation) {
+        return null
+      }
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point) {
+        return null
+      }
+      if (basis === 'latest') {
+        return latestPoint ? point.value - latestPoint.value : null
+      }
+      return baseline !== null ? point.value - baseline : null
+    }
+    const computeRatio = (neighbor: number | null, active: number | null) => {
+      if (neighbor === null || active === null || Math.abs(active) < 1e-9) {
+        return null
+      }
+      return Math.abs(neighbor) / Math.abs(active)
+    }
+    const describeBasis = (basis: MarketOverlayMarkerDeltaBasis) => {
+      const previousAnnotation =
+        marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+      const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+      const active = resolveDelta(marketOverlayActiveTimelineAnnotation, basis)
+      const previous = resolveDelta(previousAnnotation, basis)
+      const next = resolveDelta(nextAnnotation, basis)
+      const previousRatio = computeRatio(previous, active)
+      const nextRatio = computeRatio(next, active)
+      const availableCount = Number(previousRatio !== null) + Number(nextRatio !== null)
+      let side: 'none' | 'prev' | 'next' | 'balanced' = 'none'
+      if (previousRatio !== null && nextRatio === null) {
+        side = 'prev'
+      } else if (previousRatio === null && nextRatio !== null) {
+        side = 'next'
+      } else if (previousRatio !== null && nextRatio !== null) {
+        side = Math.abs(previousRatio - nextRatio) < 1e-9 ? 'balanced' : previousRatio > nextRatio ? 'prev' : 'next'
+      }
+      return { side, availableCount }
+    }
+    const sideScore = (side: 'none' | 'prev' | 'next' | 'balanced') => {
+      if (side === 'prev') {
+        return 1
+      }
+      if (side === 'next') {
+        return -1
+      }
+      return 0
+    }
+    const latestSummary = describeBasis('latest')
+    const averageSummary = describeBasis('average')
+    const latestWeightedScore = sideScore(latestSummary.side) * latestSummary.availableCount
+    const averageWeightedScore = sideScore(averageSummary.side) * averageSummary.availableCount
+    const combinedVote = latestWeightedScore + averageWeightedScore
+    const maximumVote = latestSummary.availableCount + averageSummary.availableCount
+    const combinedSide = combinedVote === 0 ? 'balanced' : combinedVote > 0 ? 'prev' : 'next'
+    const swingScore = sideScore(averageSummary.side) - sideScore(latestSummary.side)
+    const swing =
+      swingScore === 0 ? 'flat' : swingScore > 0 ? `toward-prev(+${swingScore})` : `toward-next(${swingScore})`
+    let crossBasis: 'agree' | 'partial' | 'diverge' = 'diverge'
+    if (latestSummary.side === averageSummary.side) {
+      crossBasis = 'agree'
+    } else if (
+      latestSummary.side === 'none' ||
+      averageSummary.side === 'none' ||
+      latestSummary.side === 'balanced' ||
+      averageSummary.side === 'balanced'
+    ) {
+      crossBasis = 'partial'
+    }
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · latest:${latestSummary.side}(${latestSummary.availableCount}/2) · average:${averageSummary.side}(${averageSummary.availableCount}/2) · transition:${latestSummary.side}->${averageSummary.side}|${swing} · cross-basis:${crossBasis} · net:${combinedSide}|strength:${Math.abs(combinedVote)}/${maximumVote} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayActiveMarkerNeighborMagnitudeSideDriftSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const resolveDelta = (
+      annotation: MarketOverlayTimelineAnnotation | null,
+      basis: MarketOverlayMarkerDeltaBasis,
+    ): number | null => {
+      if (!annotation) {
+        return null
+      }
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point) {
+        return null
+      }
+      if (basis === 'latest') {
+        return latestPoint ? point.value - latestPoint.value : null
+      }
+      return baseline !== null ? point.value - baseline : null
+    }
+    const computeRatio = (neighbor: number | null, active: number | null) => {
+      if (neighbor === null || active === null || Math.abs(active) < 1e-9) {
+        return null
+      }
+      return Math.abs(neighbor) / Math.abs(active)
+    }
+    const describeBasis = (basis: MarketOverlayMarkerDeltaBasis) => {
+      const previousAnnotation =
+        marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+      const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+      const active = resolveDelta(marketOverlayActiveTimelineAnnotation, basis)
+      const previous = resolveDelta(previousAnnotation, basis)
+      const next = resolveDelta(nextAnnotation, basis)
+      const previousRatio = computeRatio(previous, active)
+      const nextRatio = computeRatio(next, active)
+      const availableCount = Number(previousRatio !== null) + Number(nextRatio !== null)
+      let side: 'none' | 'prev' | 'next' | 'balanced' = 'none'
+      if (previousRatio !== null && nextRatio === null) {
+        side = 'prev'
+      } else if (previousRatio === null && nextRatio !== null) {
+        side = 'next'
+      } else if (previousRatio !== null && nextRatio !== null) {
+        side = Math.abs(previousRatio - nextRatio) < 1e-9 ? 'balanced' : previousRatio > nextRatio ? 'prev' : 'next'
+      }
+      return { side, availableCount }
+    }
+    const sideScore = (side: 'none' | 'prev' | 'next' | 'balanced') => {
+      if (side === 'prev') {
+        return 1
+      }
+      if (side === 'next') {
+        return -1
+      }
+      return 0
+    }
+    const toWeightedVote = (
+      side: 'none' | 'prev' | 'next' | 'balanced',
+      availableCount: number,
+    ): number => sideScore(side) * availableCount
+    const formatVote = (vote: number) => `${vote >= 0 ? '+' : ''}${vote}`
+    const latestSummary = describeBasis('latest')
+    const averageSummary = describeBasis('average')
+    const latestVote = toWeightedVote(latestSummary.side, latestSummary.availableCount)
+    const averageVote = toWeightedVote(averageSummary.side, averageSummary.availableCount)
+    const driftVote = averageVote - latestVote
+    const driftDirection = driftVote === 0 ? 'stable' : driftVote > 0 ? 'toward-prev' : 'toward-next'
+    const dominance =
+      Math.abs(latestVote) === Math.abs(averageVote)
+        ? 'balanced'
+        : Math.abs(latestVote) > Math.abs(averageVote)
+          ? 'latest'
+          : 'average'
+    const sign = (value: number) => (value === 0 ? 0 : value > 0 ? 1 : -1)
+    const latestSign = sign(latestVote)
+    const averageSign = sign(averageVote)
+    const alignment =
+      latestSign === 0 && averageSign === 0
+        ? 'neutral'
+        : latestSign === averageSign
+          ? 'aligned'
+          : latestSign === 0 || averageSign === 0
+            ? 'partial'
+            : 'opposed'
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · latest:vote:${formatVote(latestVote)}|side:${latestSummary.side}|available:${latestSummary.availableCount}/2 · average:vote:${formatVote(averageVote)}|side:${averageSummary.side}|available:${averageSummary.availableCount}/2 · drift:${formatVote(driftVote)}|${driftDirection} · dominance:${dominance} · alignment:${alignment} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayActiveMarkerNeighborMagnitudeSideRegimeSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const resolveDelta = (
+      annotation: MarketOverlayTimelineAnnotation | null,
+      basis: MarketOverlayMarkerDeltaBasis,
+    ): number | null => {
+      if (!annotation) {
+        return null
+      }
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point) {
+        return null
+      }
+      if (basis === 'latest') {
+        return latestPoint ? point.value - latestPoint.value : null
+      }
+      return baseline !== null ? point.value - baseline : null
+    }
+    const computeRatio = (neighbor: number | null, active: number | null) => {
+      if (neighbor === null || active === null || Math.abs(active) < 1e-9) {
+        return null
+      }
+      return Math.abs(neighbor) / Math.abs(active)
+    }
+    const describeBasis = (basis: MarketOverlayMarkerDeltaBasis) => {
+      const previousAnnotation =
+        marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+      const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+      const active = resolveDelta(marketOverlayActiveTimelineAnnotation, basis)
+      const previous = resolveDelta(previousAnnotation, basis)
+      const next = resolveDelta(nextAnnotation, basis)
+      const previousRatio = computeRatio(previous, active)
+      const nextRatio = computeRatio(next, active)
+      const availableCount = Number(previousRatio !== null) + Number(nextRatio !== null)
+      let side: 'none' | 'prev' | 'next' | 'balanced' = 'none'
+      if (previousRatio !== null && nextRatio === null) {
+        side = 'prev'
+      } else if (previousRatio === null && nextRatio !== null) {
+        side = 'next'
+      } else if (previousRatio !== null && nextRatio !== null) {
+        side = Math.abs(previousRatio - nextRatio) < 1e-9 ? 'balanced' : previousRatio > nextRatio ? 'prev' : 'next'
+      }
+      return { side, availableCount, confidence: availableCount / 2 }
+    }
+    const latestSummary = describeBasis('latest')
+    const averageSummary = describeBasis('average')
+    const agreement = latestSummary.side === averageSummary.side ? 'same' : 'split'
+    const dominantBasis =
+      latestSummary.availableCount === averageSummary.availableCount
+        ? 'balanced'
+        : latestSummary.availableCount > averageSummary.availableCount
+          ? 'latest'
+          : 'average'
+    const confidenceGap = latestSummary.confidence - averageSummary.confidence
+    const formatConfidence = (value: number) => value.toFixed(2)
+    const formatDelta = (value: number) => `${value >= 0 ? '+' : ''}${value.toFixed(2)}`
+    const coverage = (latestSummary.availableCount + averageSummary.availableCount) / 4
+    let regime: 'idle' | 'neutral' | 'emerging' | 'locked' | 'contested' = 'contested'
+    const latestDirectional = latestSummary.side === 'prev' || latestSummary.side === 'next'
+    const averageDirectional = averageSummary.side === 'prev' || averageSummary.side === 'next'
+    if (latestSummary.availableCount === 0 && averageSummary.availableCount === 0) {
+      regime = 'idle'
+    } else if (latestSummary.side === averageSummary.side && latestDirectional && averageDirectional) {
+      regime = 'locked'
+    } else if (
+      latestSummary.side === averageSummary.side &&
+      (latestSummary.side === 'none' || latestSummary.side === 'balanced')
+    ) {
+      regime = 'neutral'
+    } else if (!latestDirectional || !averageDirectional) {
+      regime = 'emerging'
+    } else {
+      regime = 'contested'
+    }
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · latest:side:${latestSummary.side}|available:${latestSummary.availableCount}/2|confidence:${formatConfidence(latestSummary.confidence)} · average:side:${averageSummary.side}|available:${averageSummary.availableCount}/2|confidence:${formatConfidence(averageSummary.confidence)} · regime:${regime}|agreement:${agreement}|dominant:${dominantBasis} · confidenceGap:${formatDelta(confidenceGap)}|coverage:${formatConfidence(coverage)} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayActiveMarkerNeighborMagnitudeSidePressureSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const resolveDelta = (
+      annotation: MarketOverlayTimelineAnnotation | null,
+      basis: MarketOverlayMarkerDeltaBasis,
+    ): number | null => {
+      if (!annotation) {
+        return null
+      }
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point) {
+        return null
+      }
+      if (basis === 'latest') {
+        return latestPoint ? point.value - latestPoint.value : null
+      }
+      return baseline !== null ? point.value - baseline : null
+    }
+    const computeRatio = (neighbor: number | null, active: number | null) => {
+      if (neighbor === null || active === null || Math.abs(active) < 1e-9) {
+        return null
+      }
+      return Math.abs(neighbor) / Math.abs(active)
+    }
+    const describeBasis = (basis: MarketOverlayMarkerDeltaBasis) => {
+      const previousAnnotation =
+        marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+      const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+      const active = resolveDelta(marketOverlayActiveTimelineAnnotation, basis)
+      const previous = resolveDelta(previousAnnotation, basis)
+      const next = resolveDelta(nextAnnotation, basis)
+      const previousRatio = computeRatio(previous, active)
+      const nextRatio = computeRatio(next, active)
+      const availableCount = Number(previousRatio !== null) + Number(nextRatio !== null)
+      let side: 'none' | 'prev' | 'next' | 'balanced' = 'none'
+      if (previousRatio !== null && nextRatio === null) {
+        side = 'prev'
+      } else if (previousRatio === null && nextRatio !== null) {
+        side = 'next'
+      } else if (previousRatio !== null && nextRatio !== null) {
+        side = Math.abs(previousRatio - nextRatio) < 1e-9 ? 'balanced' : previousRatio > nextRatio ? 'prev' : 'next'
+      }
+      return { side, confidence: availableCount / 2 }
+    }
+    const sideScore = (side: 'none' | 'prev' | 'next' | 'balanced') => {
+      if (side === 'prev') {
+        return 1
+      }
+      if (side === 'next') {
+        return -1
+      }
+      return 0
+    }
+    const formatSigned = (value: number) => `${value >= 0 ? '+' : ''}${value.toFixed(2)}`
+    const pressureSign = (value: number) => (Math.abs(value) < 1e-9 ? 0 : value > 0 ? 1 : -1)
+    const latestSummary = describeBasis('latest')
+    const averageSummary = describeBasis('average')
+    const latestPressure = sideScore(latestSummary.side) * latestSummary.confidence
+    const averagePressure = sideScore(averageSummary.side) * averageSummary.confidence
+    const netPressure = latestPressure + averagePressure
+    const driftPressure = averagePressure - latestPressure
+    const netBias = netPressure === 0 ? 'balanced' : netPressure > 0 ? 'prev' : 'next'
+    const conviction =
+      Math.abs(netPressure) < 1e-9
+        ? 'idle'
+        : Math.abs(netPressure) < 0.5
+          ? 'light'
+          : Math.abs(netPressure) < 1
+            ? 'moderate'
+            : 'strong'
+    const latestSign = pressureSign(latestPressure)
+    const averageSign = pressureSign(averagePressure)
+    const coherence =
+      latestSign === 0 && averageSign === 0
+        ? 'neutral'
+        : latestSign === averageSign
+          ? 'synchronized'
+          : latestSign === 0 || averageSign === 0
+            ? 'ramping'
+            : 'opposing'
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · latest:pressure:${formatSigned(latestPressure)}|side:${latestSummary.side}|confidence:${latestSummary.confidence.toFixed(2)} · average:pressure:${formatSigned(averagePressure)}|side:${averageSummary.side}|confidence:${averageSummary.confidence.toFixed(2)} · net:${formatSigned(netPressure)}|bias:${netBias}|conviction:${conviction} · drift:${formatSigned(driftPressure)}|coherence:${coherence} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayActiveMarkerNeighborMagnitudeSideCertaintySummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const resolveDelta = (
+      annotation: MarketOverlayTimelineAnnotation | null,
+      basis: MarketOverlayMarkerDeltaBasis,
+    ): number | null => {
+      if (!annotation) {
+        return null
+      }
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point) {
+        return null
+      }
+      if (basis === 'latest') {
+        return latestPoint ? point.value - latestPoint.value : null
+      }
+      return baseline !== null ? point.value - baseline : null
+    }
+    const computeRatio = (neighbor: number | null, active: number | null) => {
+      if (neighbor === null || active === null || Math.abs(active) < 1e-9) {
+        return null
+      }
+      return Math.abs(neighbor) / Math.abs(active)
+    }
+    const describeBasis = (basis: MarketOverlayMarkerDeltaBasis) => {
+      const previousAnnotation =
+        marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+      const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+      const active = resolveDelta(marketOverlayActiveTimelineAnnotation, basis)
+      const previous = resolveDelta(previousAnnotation, basis)
+      const next = resolveDelta(nextAnnotation, basis)
+      const previousRatio = computeRatio(previous, active)
+      const nextRatio = computeRatio(next, active)
+      const availableCount = Number(previousRatio !== null) + Number(nextRatio !== null)
+      let side: 'none' | 'prev' | 'next' | 'balanced' = 'none'
+      if (previousRatio !== null && nextRatio === null) {
+        side = 'prev'
+      } else if (previousRatio === null && nextRatio !== null) {
+        side = 'next'
+      } else if (previousRatio !== null && nextRatio !== null) {
+        side = Math.abs(previousRatio - nextRatio) < 1e-9 ? 'balanced' : previousRatio > nextRatio ? 'prev' : 'next'
+      }
+      const availabilityScore = availableCount / 2
+      const directionScore = side === 'balanced' ? 0.5 : side === 'none' ? 0 : 1
+      const certainty = availabilityScore * directionScore
+      const uncertainty = 1 - certainty
+      return { side, certainty, uncertainty }
+    }
+    const latestSummary = describeBasis('latest')
+    const averageSummary = describeBasis('average')
+    const combinedCertainty = (latestSummary.certainty + averageSummary.certainty) / 2
+    const combinedUncertainty = 1 - combinedCertainty
+    const confidenceClass =
+      combinedCertainty < 0.25
+        ? 'sparse'
+        : combinedCertainty < 0.5
+          ? 'uncertain'
+          : combinedCertainty < 0.75
+            ? 'developing'
+            : 'confident'
+    const consensus = latestSummary.side === averageSummary.side ? 'same' : 'split'
+    const uncertaintyDrift = averageSummary.uncertainty - latestSummary.uncertainty
+    const driftDirection =
+      Math.abs(uncertaintyDrift) < 1e-9 ? 'flat' : uncertaintyDrift > 0 ? 'loosening' : 'tightening'
+    const format = (value: number) => value.toFixed(2)
+    const formatSigned = (value: number) => `${value >= 0 ? '+' : ''}${value.toFixed(2)}`
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · latest:certainty:${format(latestSummary.certainty)}|uncertainty:${format(latestSummary.uncertainty)}|state:${latestSummary.side} · average:certainty:${format(averageSummary.certainty)}|uncertainty:${format(averageSummary.uncertainty)}|state:${averageSummary.side} · combined:certainty:${format(combinedCertainty)}|uncertainty:${format(combinedUncertainty)}|class:${confidenceClass}|consensus:${consensus} · drift:${formatSigned(uncertaintyDrift)}|${driftDirection} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayActiveMarkerNeighborMagnitudeSideCoherenceSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const resolveDelta = (
+      annotation: MarketOverlayTimelineAnnotation | null,
+      basis: MarketOverlayMarkerDeltaBasis,
+    ): number | null => {
+      if (!annotation) {
+        return null
+      }
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point) {
+        return null
+      }
+      if (basis === 'latest') {
+        return latestPoint ? point.value - latestPoint.value : null
+      }
+      return baseline !== null ? point.value - baseline : null
+    }
+    const computeRatio = (neighbor: number | null, active: number | null) => {
+      if (neighbor === null || active === null || Math.abs(active) < 1e-9) {
+        return null
+      }
+      return Math.abs(neighbor) / Math.abs(active)
+    }
+    const describeBasis = (basis: MarketOverlayMarkerDeltaBasis) => {
+      const previousAnnotation =
+        marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+      const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+      const active = resolveDelta(marketOverlayActiveTimelineAnnotation, basis)
+      const previous = resolveDelta(previousAnnotation, basis)
+      const next = resolveDelta(nextAnnotation, basis)
+      const previousRatio = computeRatio(previous, active)
+      const nextRatio = computeRatio(next, active)
+      const availableCount = Number(previousRatio !== null) + Number(nextRatio !== null)
+      let side: 'none' | 'prev' | 'next' | 'balanced' = 'none'
+      if (previousRatio !== null && nextRatio === null) {
+        side = 'prev'
+      } else if (previousRatio === null && nextRatio !== null) {
+        side = 'next'
+      } else if (previousRatio !== null && nextRatio !== null) {
+        side = Math.abs(previousRatio - nextRatio) < 1e-9 ? 'balanced' : previousRatio > nextRatio ? 'prev' : 'next'
+      }
+      return { side, availableCount }
+    }
+    const sideScore = (side: 'none' | 'prev' | 'next' | 'balanced') => {
+      if (side === 'prev') {
+        return 1
+      }
+      if (side === 'next') {
+        return -1
+      }
+      return 0
+    }
+    const toWeightedScore = (side: 'none' | 'prev' | 'next' | 'balanced', availableCount: number) =>
+      sideScore(side) * availableCount
+    const latestSummary = describeBasis('latest')
+    const averageSummary = describeBasis('average')
+    const latestWeighted = toWeightedScore(latestSummary.side, latestSummary.availableCount)
+    const averageWeighted = toWeightedScore(averageSummary.side, averageSummary.availableCount)
+    const totalAvailable = latestSummary.availableCount + averageSummary.availableCount
+    const coherence = totalAvailable === 0 ? 0 : (latestWeighted + averageWeighted) / totalAvailable
+    const coherenceLabel =
+      coherence === 0
+        ? 'neutral'
+        : coherence >= 0.5
+          ? 'prev-lean'
+          : coherence > 0
+            ? 'prev-tilt'
+            : coherence <= -0.5
+              ? 'next-lean'
+              : 'next-tilt'
+    const dispersion = Math.abs(latestWeighted - averageWeighted)
+    const sign = (value: number) => (value === 0 ? 0 : value > 0 ? 1 : -1)
+    const latestSign = sign(latestWeighted)
+    const averageSign = sign(averageWeighted)
+    const coupling =
+      latestSign === 0 && averageSign === 0
+        ? 'quiescent'
+        : latestSign === averageSign
+          ? 'coupled'
+          : latestSign === 0 || averageSign === 0
+            ? 'assistive'
+            : 'opposed'
+    const formatWeighted = (value: number) => `${value >= 0 ? '+' : ''}${value}`
+    const formatCoherence = (value: number) => `${value >= 0 ? '+' : ''}${value.toFixed(2)}`
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · latest:weighted:${formatWeighted(latestWeighted)}|side:${latestSummary.side}|available:${latestSummary.availableCount}/2 · average:weighted:${formatWeighted(averageWeighted)}|side:${averageSummary.side}|available:${averageSummary.availableCount}/2 · coherence:${formatCoherence(coherence)}|label:${coherenceLabel} · dispersion:${dispersion}|coupling:${coupling} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayActiveMarkerNeighborMagnitudeSideVectorSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const resolveDelta = (
+      annotation: MarketOverlayTimelineAnnotation | null,
+      basis: MarketOverlayMarkerDeltaBasis,
+    ): number | null => {
+      if (!annotation) {
+        return null
+      }
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point) {
+        return null
+      }
+      if (basis === 'latest') {
+        return latestPoint ? point.value - latestPoint.value : null
+      }
+      return baseline !== null ? point.value - baseline : null
+    }
+    const computeRatio = (neighbor: number | null, active: number | null) => {
+      if (neighbor === null || active === null || Math.abs(active) < 1e-9) {
+        return null
+      }
+      return Math.abs(neighbor) / Math.abs(active)
+    }
+    const describeBasis = (basis: MarketOverlayMarkerDeltaBasis) => {
+      const previousAnnotation =
+        marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+      const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+      const active = resolveDelta(marketOverlayActiveTimelineAnnotation, basis)
+      const previous = resolveDelta(previousAnnotation, basis)
+      const next = resolveDelta(nextAnnotation, basis)
+      const previousRatio = computeRatio(previous, active)
+      const nextRatio = computeRatio(next, active)
+      let side: 'none' | 'prev' | 'next' | 'balanced' = 'none'
+      if (previousRatio !== null && nextRatio === null) {
+        side = 'prev'
+      } else if (previousRatio === null && nextRatio !== null) {
+        side = 'next'
+      } else if (previousRatio !== null && nextRatio !== null) {
+        side = Math.abs(previousRatio - nextRatio) < 1e-9 ? 'balanced' : previousRatio > nextRatio ? 'prev' : 'next'
+      }
+      return { side }
+    }
+    const sideScore = (side: 'none' | 'prev' | 'next' | 'balanced') => {
+      if (side === 'prev') {
+        return 1
+      }
+      if (side === 'next') {
+        return -1
+      }
+      return 0
+    }
+    const latestSummary = describeBasis('latest')
+    const averageSummary = describeBasis('average')
+    const latestVector = sideScore(latestSummary.side)
+    const averageVector = sideScore(averageSummary.side)
+    const netVector = latestVector + averageVector
+    const normalizedVector = netVector / 2
+    const resolvedCount = Number(Math.abs(latestVector) === 1) + Number(Math.abs(averageVector) === 1)
+    const bias = netVector === 0 ? 'balanced' : netVector > 0 ? 'prev' : 'next'
+    let stability: 'idle' | 'flat' | 'forming' | 'locked' | 'contested' = 'contested'
+    if (resolvedCount === 0) {
+      stability = 'idle'
+    } else if (latestVector === averageVector && Math.abs(latestVector) === 1) {
+      stability = 'locked'
+    } else if (latestVector === averageVector) {
+      stability = 'flat'
+    } else if (latestVector === -averageVector && Math.abs(latestVector) === 1) {
+      stability = 'contested'
+    } else {
+      stability = 'forming'
+    }
+    const formatVector = (value: number) => `${value >= 0 ? '+' : ''}${value}`
+    const formatNormalized = (value: number) => `${value >= 0 ? '+' : ''}${value.toFixed(2)}`
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · latest:${latestSummary.side}|vector:${formatVector(latestVector)} · average:${averageSummary.side}|vector:${formatVector(averageVector)} · vector:${formatVector(netVector)}|normalized:${formatNormalized(normalizedVector)}|bias:${bias} · resolved:${resolvedCount}/2|stability:${stability} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayActiveMarkerNeighborMagnitudeSideEntropySummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const resolveDelta = (
+      annotation: MarketOverlayTimelineAnnotation | null,
+      basis: MarketOverlayMarkerDeltaBasis,
+    ): number | null => {
+      if (!annotation) {
+        return null
+      }
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point) {
+        return null
+      }
+      if (basis === 'latest') {
+        return latestPoint ? point.value - latestPoint.value : null
+      }
+      return baseline !== null ? point.value - baseline : null
+    }
+    const computeRatio = (neighbor: number | null, active: number | null) => {
+      if (neighbor === null || active === null || Math.abs(active) < 1e-9) {
+        return null
+      }
+      return Math.abs(neighbor) / Math.abs(active)
+    }
+    const resolveSide = (basis: MarketOverlayMarkerDeltaBasis): 'none' | 'prev' | 'next' | 'balanced' => {
+      const previousAnnotation =
+        marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+      const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+      const active = resolveDelta(marketOverlayActiveTimelineAnnotation, basis)
+      const previous = resolveDelta(previousAnnotation, basis)
+      const next = resolveDelta(nextAnnotation, basis)
+      const previousRatio = computeRatio(previous, active)
+      const nextRatio = computeRatio(next, active)
+      if (previousRatio !== null && nextRatio === null) {
+        return 'prev'
+      }
+      if (previousRatio === null && nextRatio !== null) {
+        return 'next'
+      }
+      if (previousRatio !== null && nextRatio !== null) {
+        return Math.abs(previousRatio - nextRatio) < 1e-9 ? 'balanced' : previousRatio > nextRatio ? 'prev' : 'next'
+      }
+      return 'none'
+    }
+    const sideByBasis = {
+      latest: resolveSide('latest'),
+      average: resolveSide('average'),
+    } as const
+    const counts = {
+      prev: Number(sideByBasis.latest === 'prev') + Number(sideByBasis.average === 'prev'),
+      next: Number(sideByBasis.latest === 'next') + Number(sideByBasis.average === 'next'),
+      neutral:
+        Number(sideByBasis.latest === 'none' || sideByBasis.latest === 'balanced') +
+        Number(sideByBasis.average === 'none' || sideByBasis.average === 'balanced'),
+    }
+    const total = 2
+    const probabilities = [counts.prev, counts.next, counts.neutral]
+      .map((count) => count / total)
+      .filter((value) => value > 0)
+    const entropy = probabilities.reduce((sum, probability) => sum - probability * Math.log2(probability), 0)
+    const maxEntropy = Math.log2(3)
+    const normalizedEntropy = maxEntropy > 0 ? entropy / maxEntropy : 0
+    const diversity =
+      normalizedEntropy < 0.2 ? 'concentrated' : normalizedEntropy < 0.6 ? 'leaning' : 'mixed'
+    const dominantEntries = Object.entries(counts).sort((a, b) => b[1] - a[1])
+    const highestCount = dominantEntries[0]?.[1] ?? 0
+    const highestTied = dominantEntries.filter((entry) => entry[1] === highestCount)
+    const dominant =
+      highestCount === 0 ? 'none' : highestTied.length > 1 ? 'tie' : (highestTied[0]?.[0] ?? 'none')
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · counts:prev:${counts.prev}|next:${counts.next}|neutral:${counts.neutral} · entropy:${entropy.toFixed(2)}|norm:${normalizedEntropy.toFixed(2)}|diversity:${diversity} · dominant:${dominant}(${highestCount}/2) · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayActiveMarkerNeighborMagnitudeSideSymmetrySummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const resolveDelta = (
+      annotation: MarketOverlayTimelineAnnotation | null,
+      basis: MarketOverlayMarkerDeltaBasis,
+    ): number | null => {
+      if (!annotation) {
+        return null
+      }
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point) {
+        return null
+      }
+      if (basis === 'latest') {
+        return latestPoint ? point.value - latestPoint.value : null
+      }
+      return baseline !== null ? point.value - baseline : null
+    }
+    const computeRatio = (neighbor: number | null, active: number | null) => {
+      if (neighbor === null || active === null || Math.abs(active) < 1e-9) {
+        return null
+      }
+      return Math.abs(neighbor) / Math.abs(active)
+    }
+    const resolveSide = (basis: MarketOverlayMarkerDeltaBasis): 'none' | 'prev' | 'next' | 'balanced' => {
+      const previousAnnotation =
+        marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+      const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+      const active = resolveDelta(marketOverlayActiveTimelineAnnotation, basis)
+      const previous = resolveDelta(previousAnnotation, basis)
+      const next = resolveDelta(nextAnnotation, basis)
+      const previousRatio = computeRatio(previous, active)
+      const nextRatio = computeRatio(next, active)
+      if (previousRatio !== null && nextRatio === null) {
+        return 'prev'
+      }
+      if (previousRatio === null && nextRatio !== null) {
+        return 'next'
+      }
+      if (previousRatio !== null && nextRatio !== null) {
+        return Math.abs(previousRatio - nextRatio) < 1e-9 ? 'balanced' : previousRatio > nextRatio ? 'prev' : 'next'
+      }
+      return 'none'
+    }
+    const sideScore = (side: 'none' | 'prev' | 'next' | 'balanced') => {
+      if (side === 'prev') {
+        return 1
+      }
+      if (side === 'next') {
+        return -1
+      }
+      return 0
+    }
+    const latestSide = resolveSide('latest')
+    const averageSide = resolveSide('average')
+    const latestScore = sideScore(latestSide)
+    const averageScore = sideScore(averageSide)
+    const combinedScore = latestScore + averageScore
+    const dominant = combinedScore === 0 ? 'balanced' : combinedScore > 0 ? 'prev' : 'next'
+    const asymmetry = Math.abs(latestScore - averageScore)
+    const directionalCount = Number(Math.abs(latestScore) === 1) + Number(Math.abs(averageScore) === 1)
+    const polarity =
+      latestScore === averageScore
+        ? 'aligned'
+        : latestScore === 0 || averageScore === 0
+          ? 'staged'
+          : 'split'
+    let stage: string = 'contested'
+    if (directionalCount === 0) {
+      stage = 'idle'
+    } else if (latestScore === averageScore && latestScore !== 0) {
+      stage = `locked-${dominant}`
+    } else if (latestScore === averageScore) {
+      stage = 'neutral'
+    } else if (latestScore === 0 || averageScore === 0) {
+      stage = `emerging-${dominant === 'balanced' ? 'mixed' : dominant}`
+    }
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · latest:${latestSide}|score:${latestScore >= 0 ? '+' : ''}${latestScore} · average:${averageSide}|score:${averageScore >= 0 ? '+' : ''}${averageScore} · asymmetry:${asymmetry}|polarity:${polarity}|dominant:${dominant} · directional:${directionalCount}/2|stage:${stage} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayActiveMarkerNeighborMagnitudeSideConsensusIndexSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const resolveDelta = (
+      annotation: MarketOverlayTimelineAnnotation | null,
+      basis: MarketOverlayMarkerDeltaBasis,
+    ): number | null => {
+      if (!annotation) {
+        return null
+      }
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point) {
+        return null
+      }
+      if (basis === 'latest') {
+        return latestPoint ? point.value - latestPoint.value : null
+      }
+      return baseline !== null ? point.value - baseline : null
+    }
+    const computeRatio = (neighbor: number | null, active: number | null) => {
+      if (neighbor === null || active === null || Math.abs(active) < 1e-9) {
+        return null
+      }
+      return Math.abs(neighbor) / Math.abs(active)
+    }
+    const resolveSide = (basis: MarketOverlayMarkerDeltaBasis): 'none' | 'prev' | 'next' | 'balanced' => {
+      const previousAnnotation =
+        marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+      const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+      const active = resolveDelta(marketOverlayActiveTimelineAnnotation, basis)
+      const previous = resolveDelta(previousAnnotation, basis)
+      const next = resolveDelta(nextAnnotation, basis)
+      const previousRatio = computeRatio(previous, active)
+      const nextRatio = computeRatio(next, active)
+      if (previousRatio !== null && nextRatio === null) {
+        return 'prev'
+      }
+      if (previousRatio === null && nextRatio !== null) {
+        return 'next'
+      }
+      if (previousRatio !== null && nextRatio !== null) {
+        return Math.abs(previousRatio - nextRatio) < 1e-9 ? 'balanced' : previousRatio > nextRatio ? 'prev' : 'next'
+      }
+      return 'none'
+    }
+    const sideScore = (side: 'none' | 'prev' | 'next' | 'balanced') => {
+      if (side === 'prev') {
+        return 1
+      }
+      if (side === 'next') {
+        return -1
+      }
+      return 0
+    }
+    const latestSide = resolveSide('latest')
+    const averageSide = resolveSide('average')
+    const latestScore = sideScore(latestSide)
+    const averageScore = sideScore(averageSide)
+    const directionalCoverage = Number(Math.abs(latestScore) === 1) + Number(Math.abs(averageScore) === 1)
+    let agreementPoints = 0
+    if (latestScore === averageScore && Math.abs(latestScore) === 1) {
+      agreementPoints = 1
+    } else if (latestScore === averageScore) {
+      agreementPoints = 0.5
+    } else if (latestScore === -averageScore && Math.abs(latestScore) === 1) {
+      agreementPoints = -1
+    }
+    const coverageRatio = directionalCoverage / 2
+    const consensusIndex = agreementPoints * coverageRatio
+    let consensusClass = 'mixed'
+    if (directionalCoverage === 0) {
+      consensusClass = 'inactive'
+    } else if (consensusIndex >= 0.75) {
+      consensusClass = 'strong-consensus'
+    } else if (consensusIndex >= 0.25) {
+      consensusClass = 'soft-consensus'
+    } else if (consensusIndex <= -0.75) {
+      consensusClass = 'hard-conflict'
+    } else if (consensusIndex <= -0.25) {
+      consensusClass = 'soft-conflict'
+    }
+    const formatScore = (value: number) => `${value >= 0 ? '+' : ''}${value}`
+    const formatSigned = (value: number) => `${value >= 0 ? '+' : ''}${value.toFixed(2)}`
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · latest:${latestSide}|score:${formatScore(latestScore)} · average:${averageSide}|score:${formatScore(averageScore)} · coverage:${directionalCoverage}/2|agreement:${formatSigned(agreementPoints)} · index:${formatSigned(consensusIndex)}|class:${consensusClass} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayActiveMarkerNeighborMagnitudeSideConflictScoreSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const resolveDelta = (
+      annotation: MarketOverlayTimelineAnnotation | null,
+      basis: MarketOverlayMarkerDeltaBasis,
+    ): number | null => {
+      if (!annotation) {
+        return null
+      }
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point) {
+        return null
+      }
+      if (basis === 'latest') {
+        return latestPoint ? point.value - latestPoint.value : null
+      }
+      return baseline !== null ? point.value - baseline : null
+    }
+    const computeRatio = (neighbor: number | null, active: number | null) => {
+      if (neighbor === null || active === null || Math.abs(active) < 1e-9) {
+        return null
+      }
+      return Math.abs(neighbor) / Math.abs(active)
+    }
+    const resolveSide = (basis: MarketOverlayMarkerDeltaBasis): 'none' | 'prev' | 'next' | 'balanced' => {
+      const previousAnnotation =
+        marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+      const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+      const active = resolveDelta(marketOverlayActiveTimelineAnnotation, basis)
+      const previous = resolveDelta(previousAnnotation, basis)
+      const next = resolveDelta(nextAnnotation, basis)
+      const previousRatio = computeRatio(previous, active)
+      const nextRatio = computeRatio(next, active)
+      if (previousRatio !== null && nextRatio === null) {
+        return 'prev'
+      }
+      if (previousRatio === null && nextRatio !== null) {
+        return 'next'
+      }
+      if (previousRatio !== null && nextRatio !== null) {
+        return Math.abs(previousRatio - nextRatio) < 1e-9 ? 'balanced' : previousRatio > nextRatio ? 'prev' : 'next'
+      }
+      return 'none'
+    }
+    const sideScore = (side: 'none' | 'prev' | 'next' | 'balanced') => {
+      if (side === 'prev') {
+        return 1
+      }
+      if (side === 'next') {
+        return -1
+      }
+      return 0
+    }
+    const latestSide = resolveSide('latest')
+    const averageSide = resolveSide('average')
+    const latestScore = sideScore(latestSide)
+    const averageScore = sideScore(averageSide)
+    const gap = Math.abs(latestScore - averageScore)
+    const directionalCoverage = Number(Math.abs(latestScore) === 1) + Number(Math.abs(averageScore) === 1)
+    const denominator = directionalCoverage === 0 ? 1 : directionalCoverage * 2
+    const conflictScore = gap / denominator
+    const conflictBand =
+      directionalCoverage === 0
+        ? 'inactive'
+        : conflictScore === 0
+          ? 'aligned'
+          : conflictScore <= 0.25
+            ? 'mild'
+            : conflictScore <= 0.5
+              ? 'moderate'
+              : 'high'
+    const resolution =
+      latestScore === averageScore
+        ? 'same-direction'
+        : latestScore === 0 || averageScore === 0
+          ? 'one-sided'
+          : 'opposed'
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · latest:${latestSide}|score:${latestScore >= 0 ? '+' : ''}${latestScore} · average:${averageSide}|score:${averageScore >= 0 ? '+' : ''}${averageScore} · conflict:${conflictScore.toFixed(2)}|band:${conflictBand}|resolution:${resolution} · coverage:${directionalCoverage}/2 · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayActiveMarkerNeighborMagnitudeSidePulseSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const resolveDelta = (
+      annotation: MarketOverlayTimelineAnnotation | null,
+      basis: MarketOverlayMarkerDeltaBasis,
+    ): number | null => {
+      if (!annotation) {
+        return null
+      }
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point) {
+        return null
+      }
+      if (basis === 'latest') {
+        return latestPoint ? point.value - latestPoint.value : null
+      }
+      return baseline !== null ? point.value - baseline : null
+    }
+    const computeRatio = (neighbor: number | null, active: number | null) => {
+      if (neighbor === null || active === null || Math.abs(active) < 1e-9) {
+        return null
+      }
+      return Math.abs(neighbor) / Math.abs(active)
+    }
+    const resolveSide = (basis: MarketOverlayMarkerDeltaBasis): 'none' | 'prev' | 'next' | 'balanced' => {
+      const previousAnnotation =
+        marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+      const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+      const active = resolveDelta(marketOverlayActiveTimelineAnnotation, basis)
+      const previous = resolveDelta(previousAnnotation, basis)
+      const next = resolveDelta(nextAnnotation, basis)
+      const previousRatio = computeRatio(previous, active)
+      const nextRatio = computeRatio(next, active)
+      if (previousRatio !== null && nextRatio === null) {
+        return 'prev'
+      }
+      if (previousRatio === null && nextRatio !== null) {
+        return 'next'
+      }
+      if (previousRatio !== null && nextRatio !== null) {
+        return Math.abs(previousRatio - nextRatio) < 1e-9 ? 'balanced' : previousRatio > nextRatio ? 'prev' : 'next'
+      }
+      return 'none'
+    }
+    const sideScore = (side: 'none' | 'prev' | 'next' | 'balanced') => {
+      if (side === 'prev') {
+        return 1
+      }
+      if (side === 'next') {
+        return -1
+      }
+      return 0
+    }
+    const latestSide = resolveSide('latest')
+    const averageSide = resolveSide('average')
+    const latestScore = sideScore(latestSide)
+    const averageScore = sideScore(averageSide)
+    const pulse = latestScore + averageScore
+    const variance = Math.abs(latestScore - averageScore)
+    const directionalCoverage = Number(Math.abs(latestScore) === 1) + Number(Math.abs(averageScore) === 1)
+    const bias = pulse === 0 ? 'balanced' : pulse > 0 ? 'prev' : 'next'
+    const phase =
+      directionalCoverage === 0
+        ? 'dormant'
+        : variance === 0 && Math.abs(pulse) === 2
+          ? 'locked'
+          : variance === 0 && Math.abs(pulse) === 0
+            ? 'neutral'
+            : variance === 1
+              ? 'building'
+              : 'whipsaw'
+    const intensity = directionalCoverage === 0 ? 'quiet' : Math.abs(pulse) === 2 ? 'high' : 'medium'
+    const formatScore = (value: number) => `${value >= 0 ? '+' : ''}${value}`
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · latest:${latestSide}|score:${formatScore(latestScore)} · average:${averageSide}|score:${formatScore(averageScore)} · pulse:${formatScore(pulse)}|variance:${variance}|coverage:${directionalCoverage}/2 · phase:${phase}|bias:${bias}|intensity:${intensity} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayActiveMarkerNeighborMagnitudeSidePulseTransitionSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const resolveDelta = (
+      annotation: MarketOverlayTimelineAnnotation | null,
+      basis: MarketOverlayMarkerDeltaBasis,
+    ): number | null => {
+      if (!annotation) {
+        return null
+      }
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point) {
+        return null
+      }
+      if (basis === 'latest') {
+        return latestPoint ? point.value - latestPoint.value : null
+      }
+      return baseline !== null ? point.value - baseline : null
+    }
+    const computeRatio = (neighbor: number | null, active: number | null) => {
+      if (neighbor === null || active === null || Math.abs(active) < 1e-9) {
+        return null
+      }
+      return Math.abs(neighbor) / Math.abs(active)
+    }
+    const resolveSide = (basis: MarketOverlayMarkerDeltaBasis): 'none' | 'prev' | 'next' | 'balanced' => {
+      const previousAnnotation =
+        marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+      const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+      const active = resolveDelta(marketOverlayActiveTimelineAnnotation, basis)
+      const previous = resolveDelta(previousAnnotation, basis)
+      const next = resolveDelta(nextAnnotation, basis)
+      const previousRatio = computeRatio(previous, active)
+      const nextRatio = computeRatio(next, active)
+      if (previousRatio !== null && nextRatio === null) {
+        return 'prev'
+      }
+      if (previousRatio === null && nextRatio !== null) {
+        return 'next'
+      }
+      if (previousRatio !== null && nextRatio !== null) {
+        return Math.abs(previousRatio - nextRatio) < 1e-9 ? 'balanced' : previousRatio > nextRatio ? 'prev' : 'next'
+      }
+      return 'none'
+    }
+    const sideScore = (side: 'none' | 'prev' | 'next' | 'balanced') => {
+      if (side === 'prev') {
+        return 1
+      }
+      if (side === 'next') {
+        return -1
+      }
+      return 0
+    }
+    const latestSide = resolveSide('latest')
+    const averageSide = resolveSide('average')
+    const latestScore = sideScore(latestSide)
+    const averageScore = sideScore(averageSide)
+    const step = averageScore - latestScore
+    const pulse = latestScore + averageScore
+    const slope = step === 0 ? 'flat' : step > 0 ? 'toward-prev' : 'toward-next'
+    const phaseShift =
+      latestSide === averageSide ? `hold:${latestSide}` : `${latestSide}->${averageSide}`
+    const formatScore = (value: number) => `${value >= 0 ? '+' : ''}${value}`
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · latest:${latestSide}|score:${formatScore(latestScore)} · average:${averageSide}|score:${formatScore(averageScore)} · transition:${phaseShift}|step:${formatScore(step)} · pulse:${formatScore(pulse)}|slope:${slope} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayActiveMarkerNeighborMagnitudeSidePulseAlignmentSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const resolveDelta = (
+      annotation: MarketOverlayTimelineAnnotation | null,
+      basis: MarketOverlayMarkerDeltaBasis,
+    ): number | null => {
+      if (!annotation) {
+        return null
+      }
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point) {
+        return null
+      }
+      if (basis === 'latest') {
+        return latestPoint ? point.value - latestPoint.value : null
+      }
+      return baseline !== null ? point.value - baseline : null
+    }
+    const computeRatio = (neighbor: number | null, active: number | null) => {
+      if (neighbor === null || active === null || Math.abs(active) < 1e-9) {
+        return null
+      }
+      return Math.abs(neighbor) / Math.abs(active)
+    }
+    const resolveSide = (basis: MarketOverlayMarkerDeltaBasis): 'none' | 'prev' | 'next' | 'balanced' => {
+      const previousAnnotation =
+        marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+      const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+      const active = resolveDelta(marketOverlayActiveTimelineAnnotation, basis)
+      const previous = resolveDelta(previousAnnotation, basis)
+      const next = resolveDelta(nextAnnotation, basis)
+      const previousRatio = computeRatio(previous, active)
+      const nextRatio = computeRatio(next, active)
+      if (previousRatio !== null && nextRatio === null) {
+        return 'prev'
+      }
+      if (previousRatio === null && nextRatio !== null) {
+        return 'next'
+      }
+      if (previousRatio !== null && nextRatio !== null) {
+        return Math.abs(previousRatio - nextRatio) < 1e-9 ? 'balanced' : previousRatio > nextRatio ? 'prev' : 'next'
+      }
+      return 'none'
+    }
+    const sideScore = (side: 'none' | 'prev' | 'next' | 'balanced') => {
+      if (side === 'prev') {
+        return 1
+      }
+      if (side === 'next') {
+        return -1
+      }
+      return 0
+    }
+    const latestSide = resolveSide('latest')
+    const averageSide = resolveSide('average')
+    const latestScore = sideScore(latestSide)
+    const averageScore = sideScore(averageSide)
+    const pulse = latestScore + averageScore
+    const energy = Math.abs(latestScore) + Math.abs(averageScore)
+    const normalizedPulse = energy === 0 ? 0 : pulse / energy
+    const alignment = 1 - Math.abs(latestScore - averageScore) / 2
+    const cooperation = latestScore * averageScore
+    const state =
+      cooperation > 0 && alignment >= 0.99
+        ? 'aligned'
+        : cooperation < 0
+          ? 'opposed'
+          : cooperation === 0 && alignment < 1
+            ? 'partial'
+            : 'neutral'
+    const formatScore = (value: number) => `${value >= 0 ? '+' : ''}${value}`
+    const formatFixed = (value: number) => `${value >= 0 ? '+' : ''}${value.toFixed(2)}`
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · latest:${latestSide}|score:${formatScore(latestScore)} · average:${averageSide}|score:${formatScore(averageScore)} · pulse:${formatScore(pulse)}|energy:${energy}|normalized:${formatFixed(normalizedPulse)} · alignment:${alignment.toFixed(2)}|cooperation:${formatFixed(cooperation)}|state:${state} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayActiveMarkerNeighborMagnitudeSidePulseMomentumSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const resolveDelta = (
+      annotation: MarketOverlayTimelineAnnotation | null,
+      basis: MarketOverlayMarkerDeltaBasis,
+    ): number | null => {
+      if (!annotation) {
+        return null
+      }
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point) {
+        return null
+      }
+      if (basis === 'latest') {
+        return latestPoint ? point.value - latestPoint.value : null
+      }
+      return baseline !== null ? point.value - baseline : null
+    }
+    const computeRatio = (neighbor: number | null, active: number | null) => {
+      if (neighbor === null || active === null || Math.abs(active) < 1e-9) {
+        return null
+      }
+      return Math.abs(neighbor) / Math.abs(active)
+    }
+    const resolveSide = (basis: MarketOverlayMarkerDeltaBasis): 'none' | 'prev' | 'next' | 'balanced' => {
+      const previousAnnotation =
+        marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+      const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+      const active = resolveDelta(marketOverlayActiveTimelineAnnotation, basis)
+      const previous = resolveDelta(previousAnnotation, basis)
+      const next = resolveDelta(nextAnnotation, basis)
+      const previousRatio = computeRatio(previous, active)
+      const nextRatio = computeRatio(next, active)
+      if (previousRatio !== null && nextRatio === null) {
+        return 'prev'
+      }
+      if (previousRatio === null && nextRatio !== null) {
+        return 'next'
+      }
+      if (previousRatio !== null && nextRatio !== null) {
+        return Math.abs(previousRatio - nextRatio) < 1e-9 ? 'balanced' : previousRatio > nextRatio ? 'prev' : 'next'
+      }
+      return 'none'
+    }
+    const sideScore = (side: 'none' | 'prev' | 'next' | 'balanced') => {
+      if (side === 'prev') {
+        return 1
+      }
+      if (side === 'next') {
+        return -1
+      }
+      return 0
+    }
+    const latestSide = resolveSide('latest')
+    const averageSide = resolveSide('average')
+    const latestScore = sideScore(latestSide)
+    const averageScore = sideScore(averageSide)
+    const pulse = latestScore + averageScore
+    const momentum = averageScore - latestScore
+    const drift =
+      momentum === 0 ? 'steady' : momentum > 0 ? `accelerating-prev(+${momentum})` : `accelerating-next(${momentum})`
+    const pulseBand =
+      Math.abs(pulse) === 2 ? 'strong' : Math.abs(pulse) === 1 ? 'moderate' : 'neutral'
+    const direction = pulse === 0 ? 'balanced' : pulse > 0 ? 'prev' : 'next'
+    const score = Math.abs(pulse) + Math.abs(momentum)
+    const cadence = score >= 3 ? 'impulsive' : score >= 2 ? 'active' : score >= 1 ? 'warming' : 'idle'
+    const formatScore = (value: number) => `${value >= 0 ? '+' : ''}${value}`
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · latest:${latestSide}|score:${formatScore(latestScore)} · average:${averageSide}|score:${formatScore(averageScore)} · pulse:${formatScore(pulse)}|band:${pulseBand}|direction:${direction} · momentum:${formatScore(momentum)}|drift:${drift}|cadence:${cadence} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayActiveMarkerNeighborDeltaSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const resolveDelta = (
+      annotation: MarketOverlayTimelineAnnotation,
+      basis: MarketOverlayMarkerDeltaBasis,
+    ): number | null => {
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point) {
+        return null
+      }
+      if (basis === 'latest') {
+        return latestPoint ? point.value - latestPoint.value : null
+      }
+      return baseline !== null ? point.value - baseline : null
+    }
+    const formatDelta = (value: number | null) =>
+      value === null ? 'n/a' : `${value >= 0 ? '+' : ''}${value.toFixed(2)}`
+    const describeAnnotation = (annotation: MarketOverlayTimelineAnnotation | null) => {
+      if (!annotation) {
+        return 'none'
+      }
+      const latestDelta = resolveDelta(annotation, 'latest')
+      const averageDelta = resolveDelta(annotation, 'average')
+      return `${annotation.kind}:${annotation.label}(Δl:${formatDelta(latestDelta)}|Δa:${formatDelta(averageDelta)})`
+    }
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · prev:${describeAnnotation(previousAnnotation)} · next:${describeAnnotation(nextAnnotation)} · scope:${marketOverlayMarkerBasisAgreement}/${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerBasisAgreement,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayActiveMarkerNeighborGapSummary = useMemo(() => {
+    if (!marketOverlayActiveTimelineAnnotation || marketOverlayActiveTimelineIndex < 0) {
+      return 'none'
+    }
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    const previousGap = previousAnnotation
+      ? Math.abs(marketOverlayActiveTimelineAnnotation.time - previousAnnotation.time)
+      : null
+    const nextGap = nextAnnotation
+      ? Math.abs(nextAnnotation.time - marketOverlayActiveTimelineAnnotation.time)
+      : null
+    const describeAnnotation = (annotation: MarketOverlayTimelineAnnotation | null) =>
+      annotation ? `${annotation.kind}:${annotation.label}` : 'none'
+    return `slot:${marketOverlayActiveTimelineIndex + 1}/${marketOverlayScopedTimelineAnnotations.length} · prev:${describeAnnotation(previousAnnotation)}|Δt:${previousGap ?? 'n/a'} · next:${describeAnnotation(nextAnnotation)}|Δt:${nextGap ?? 'n/a'} · order:${marketOverlayTimelineOrder}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayScopedTimelineAnnotations,
+    marketOverlayTimelineOrder,
+  ])
+  const marketOverlayActiveMarkerBasisSpreadSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const resolveSpread = (annotation: MarketOverlayTimelineAnnotation | null): number | null => {
+      if (!annotation) {
+        return null
+      }
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point || !latestPoint || baseline === null) {
+        return null
+      }
+      const latestDelta = point.value - latestPoint.value
+      const averageDelta = point.value - baseline
+      return latestDelta - averageDelta
+    }
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    const formatSpread = (value: number | null) =>
+      value === null ? 'n/a' : `${value >= 0 ? '+' : ''}${value.toFixed(2)}`
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label}:${formatSpread(resolveSpread(marketOverlayActiveTimelineAnnotation))} · prev:${formatSpread(resolveSpread(previousAnnotation))} · next:${formatSpread(resolveSpread(nextAnnotation))} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayActiveMarkerNeighborDeltaChangeSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const resolveDelta = (
+      annotation: MarketOverlayTimelineAnnotation | null,
+      basis: MarketOverlayMarkerDeltaBasis,
+    ): number | null => {
+      if (!annotation) {
+        return null
+      }
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point) {
+        return null
+      }
+      if (basis === 'latest') {
+        return latestPoint ? point.value - latestPoint.value : null
+      }
+      return baseline !== null ? point.value - baseline : null
+    }
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    const activeLatest = resolveDelta(marketOverlayActiveTimelineAnnotation, 'latest')
+    const previousLatest = resolveDelta(previousAnnotation, 'latest')
+    const nextLatest = resolveDelta(nextAnnotation, 'latest')
+    const activeAverage = resolveDelta(marketOverlayActiveTimelineAnnotation, 'average')
+    const previousAverage = resolveDelta(previousAnnotation, 'average')
+    const nextAverage = resolveDelta(nextAnnotation, 'average')
+    const describeChange = (from: number | null, to: number | null) => {
+      if (from === null || to === null) {
+        return 'n/a'
+      }
+      const value = to - from
+      return `${value >= 0 ? '+' : ''}${value.toFixed(2)}`
+    }
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · latest:prev->active:${describeChange(previousLatest, activeLatest)}|active->next:${describeChange(activeLatest, nextLatest)} · average:prev->active:${describeChange(previousAverage, activeAverage)}|active->next:${describeChange(activeAverage, nextAverage)} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayActiveMarkerNeighborToneSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const resolveTone = (annotation: MarketOverlayTimelineAnnotation | null): 'up' | 'down' | 'flat' | 'unavailable' => {
+      if (!annotation) {
+        return 'unavailable'
+      }
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point) {
+        return 'unavailable'
+      }
+      const delta =
+        marketOverlayMarkerDeltaBasis === 'latest'
+          ? latestPoint
+            ? point.value - latestPoint.value
+            : null
+          : baseline !== null
+            ? point.value - baseline
+            : null
+      return resolveMarketOverlayDeltaTone(delta)
+    }
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    const activeTone = resolveTone(marketOverlayActiveTimelineAnnotation)
+    const previousTone = resolveTone(previousAnnotation)
+    const nextTone = resolveTone(nextAnnotation)
+    const describeNeighbor = (
+      annotation: MarketOverlayTimelineAnnotation | null,
+      tone: 'up' | 'down' | 'flat' | 'unavailable',
+    ) => {
+      if (!annotation || tone === 'unavailable') {
+        return 'n/a'
+      }
+      const relation = tone === activeTone ? 'agree' : 'diverge'
+      return `${tone}(${relation})`
+    }
+    return `active:${activeTone} · prev:${describeNeighbor(previousAnnotation, previousTone)} · next:${describeNeighbor(nextAnnotation, nextTone)} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayMarkerEventCandleComparativeSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const pointIndexByTime = new Map(
+      marketOverlayChartPoints.map((point, index) => [point.time, index] as const),
+    )
+    const activePoint = pointByTime.get(marketOverlayActiveTimelineAnnotation.time) ?? null
+    if (!activePoint) {
+      return 'none'
+    }
+    const activePointIndex = pointIndexByTime.get(activePoint.time) ?? -1
+    if (activePointIndex < 0) {
+      return 'none'
+    }
+    const previousPoint = activePointIndex > 0 ? marketOverlayChartPoints[activePointIndex - 1] : null
+    const nextPoint =
+      activePointIndex < marketOverlayChartPoints.length - 1
+        ? marketOverlayChartPoints[activePointIndex + 1]
+        : null
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const latestDelta = latestPoint ? activePoint.value - latestPoint.value : null
+    const averageDelta = baseline !== null ? activePoint.value - baseline : null
+    const previousDelta = previousPoint ? activePoint.value - previousPoint.value : null
+    const previousDeltaPct =
+      previousDelta !== null && previousPoint && previousPoint.value !== 0
+        ? (previousDelta / previousPoint.value) * 100
+        : null
+    const nextDelta = nextPoint ? nextPoint.value - activePoint.value : null
+    const nextDeltaPct =
+      nextDelta !== null && activePoint.value !== 0 ? (nextDelta / activePoint.value) * 100 : null
+    const corridorDelta =
+      previousPoint && nextPoint ? nextPoint.value - previousPoint.value : null
+    const corridorDeltaPct =
+      corridorDelta !== null && previousPoint && previousPoint.value !== 0
+        ? (corridorDelta / previousPoint.value) * 100
+        : null
+    const previousGap = previousPoint ? Math.abs(activePoint.time - previousPoint.time) : null
+    const nextGap = nextPoint ? Math.abs(nextPoint.time - activePoint.time) : null
+    const cadence =
+      previousGap !== null && nextGap !== null
+        ? previousGap === nextGap
+          ? 'balanced'
+          : previousGap > nextGap
+            ? 'front-loaded'
+            : 'back-loaded'
+        : previousGap !== null || nextGap !== null
+          ? 'edge'
+          : 'isolated'
+    const resolvePhase = () => {
+      if (corridorDelta !== null) {
+        if (Math.abs(corridorDelta) < 1e-9) {
+          return 'balanced'
+        }
+        return corridorDelta > 0 ? 'warming' : 'cooling'
+      }
+      const edgeDelta = previousDelta ?? nextDelta
+      if (edgeDelta === null) {
+        return 'isolated'
+      }
+      if (Math.abs(edgeDelta) < 1e-9) {
+        return 'edge-flat'
+      }
+      return edgeDelta > 0 ? 'edge-rise' : 'edge-fade'
+    }
+    const phase = resolvePhase()
+    const formatSigned = (value: number | null) =>
+      value === null ? 'n/a' : `${value >= 0 ? '+' : ''}${value.toFixed(2)}`
+    const formatPercent = (value: number | null) =>
+      value === null ? 'n/a' : `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`
+    const formatStep = (value: number | null) => (value === null ? 'n/a' : String(value))
+    const describePrevious = previousPoint
+      ? `t${previousPoint.time}|Δ:${formatSigned(previousDelta)} (${formatPercent(previousDeltaPct)})|Δstep:${formatStep(previousGap)}`
+      : 'n/a'
+    const describeNext = nextPoint
+      ? `t${nextPoint.time}|Δ:${formatSigned(nextDelta)} (${formatPercent(nextDeltaPct)})|Δstep:${formatStep(nextGap)}`
+      : 'n/a'
+    const stateLabel = (value: boolean) => (value ? 'on' : 'off')
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · candle:t${activePoint.time}|close:${activePoint.value.toFixed(2)}|slot:${activePointIndex + 1}/${marketOverlayChartPoints.length} · prev:${describePrevious} · next:${describeNext} · corridor:${formatSigned(corridorDelta)} (${formatPercent(corridorDeltaPct)})|phase:${phase}|cadence:${cadence} · latestΔ:${formatSigned(latestDelta)}|avgΔ:${formatSigned(averageDelta)} · nav:prev:${stateLabel(canSelectPreviousMarketOverlayMarker)}|next:${stateLabel(canSelectNextMarketOverlayMarker)}|home:${stateLabel(canSelectOldestMarketOverlayMarker)}|end:${stateLabel(canSelectLatestMarketOverlayMarker)} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    canSelectLatestMarketOverlayMarker,
+    canSelectNextMarketOverlayMarker,
+    canSelectOldestMarketOverlayMarker,
+    canSelectPreviousMarketOverlayMarker,
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+  ])
+  const marketOverlayMarkerEventCandleTransitSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const pointIndexByTime = new Map(
+      marketOverlayChartPoints.map((point, index) => [point.time, index] as const),
+    )
+    const activePoint = pointByTime.get(marketOverlayActiveTimelineAnnotation.time) ?? null
+    if (!activePoint) {
+      return 'none'
+    }
+    const activePointIndex = pointIndexByTime.get(activePoint.time) ?? -1
+    if (activePointIndex < 0) {
+      return 'none'
+    }
+    const previousPoint = activePointIndex > 0 ? marketOverlayChartPoints[activePointIndex - 1] : null
+    const nextPoint =
+      activePointIndex < marketOverlayChartPoints.length - 1
+        ? marketOverlayChartPoints[activePointIndex + 1]
+        : null
+    const previousSlope = previousPoint ? activePoint.value - previousPoint.value : null
+    const nextSlope = nextPoint ? nextPoint.value - activePoint.value : null
+    const bridgeSlope =
+      previousPoint && nextPoint ? nextPoint.value - previousPoint.value : null
+    const previousGap = previousPoint ? Math.abs(activePoint.time - previousPoint.time) : null
+    const nextGap = nextPoint ? Math.abs(nextPoint.time - activePoint.time) : null
+    const cadence =
+      previousGap !== null && nextGap !== null
+        ? previousGap === nextGap
+          ? 'balanced'
+          : previousGap > nextGap
+            ? 'front-loaded'
+            : 'back-loaded'
+        : previousGap !== null || nextGap !== null
+          ? 'edge'
+          : 'isolated'
+    const phase = (() => {
+      if (previousSlope !== null && nextSlope !== null) {
+        if (Math.abs(previousSlope) < 1e-9 && Math.abs(nextSlope) < 1e-9) {
+          return 'through-flat'
+        }
+        if (previousSlope > 0 && nextSlope > 0) {
+          return 'through-rise'
+        }
+        if (previousSlope < 0 && nextSlope < 0) {
+          return 'through-fade'
+        }
+        return 'pivot'
+      }
+      if (previousSlope !== null) {
+        if (Math.abs(previousSlope) < 1e-9) {
+          return 'tail-flat'
+        }
+        return previousSlope > 0 ? 'tail-rise' : 'tail-fade'
+      }
+      if (nextSlope !== null) {
+        if (Math.abs(nextSlope) < 1e-9) {
+          return 'head-flat'
+        }
+        return nextSlope > 0 ? 'head-rise' : 'head-fade'
+      }
+      return 'isolated'
+    })()
+    const stepBalance = (nextGap ?? 0) - (previousGap ?? 0)
+    const intent =
+      canSelectPreviousMarketOverlayMarker && canSelectNextMarketOverlayMarker
+        ? 'cruise'
+        : canSelectPreviousMarketOverlayMarker
+          ? 'backtrack'
+          : canSelectNextMarketOverlayMarker
+            ? 'advance'
+            : 'hold'
+    const keys =
+      intent === 'backtrack'
+        ? 'ArrowLeft/Home'
+        : intent === 'advance'
+          ? 'ArrowRight/End'
+          : intent === 'cruise'
+            ? 'ArrowLeft/ArrowRight'
+            : 'idle'
+    const formatSigned = (value: number | null) =>
+      value === null ? 'n/a' : `${value >= 0 ? '+' : ''}${value.toFixed(2)}`
+    const formatStep = (value: number | null) => (value === null ? 'n/a' : String(value))
+    const formatBalance = (value: number) => `${value >= 0 ? '+' : ''}${value}`
+    const stateLabel = (value: boolean) => (value ? 'on' : 'off')
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · candle:t${activePoint.time}|close:${activePoint.value.toFixed(2)}|slot:${activePointIndex + 1}/${marketOverlayChartPoints.length} · slopes:prev:${formatSigned(previousSlope)}|next:${formatSigned(nextSlope)}|bridge:${formatSigned(bridgeSlope)} · steps:prev:${formatStep(previousGap)}|next:${formatStep(nextGap)}|balance:${formatBalance(stepBalance)}|cadence:${cadence}|phase:${phase} · intent:${intent}|keys:${keys}|home:${stateLabel(canSelectOldestMarketOverlayMarker)}|end:${stateLabel(canSelectLatestMarketOverlayMarker)} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    canSelectLatestMarketOverlayMarker,
+    canSelectNextMarketOverlayMarker,
+    canSelectOldestMarketOverlayMarker,
+    canSelectPreviousMarketOverlayMarker,
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+  ])
+  const marketOverlayMarkerEventCandleComparativeDriftSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const pointIndexByTime = new Map(
+      marketOverlayChartPoints.map((point, index) => [point.time, index] as const),
+    )
+    const activePoint = pointByTime.get(marketOverlayActiveTimelineAnnotation.time) ?? null
+    if (!activePoint) {
+      return 'none'
+    }
+    const activePointIndex = pointIndexByTime.get(activePoint.time) ?? -1
+    if (activePointIndex < 0) {
+      return 'none'
+    }
+    const previousPoint = activePointIndex > 0 ? marketOverlayChartPoints[activePointIndex - 1] : null
+    const nextPoint =
+      activePointIndex < marketOverlayChartPoints.length - 1
+        ? marketOverlayChartPoints[activePointIndex + 1]
+        : null
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const latestDelta = latestPoint ? activePoint.value - latestPoint.value : null
+    const averageDelta = baseline !== null ? activePoint.value - baseline : null
+    const basisDelta = marketOverlayMarkerDeltaBasis === 'latest' ? latestDelta : averageDelta
+    const alternateDelta = marketOverlayMarkerDeltaBasis === 'latest' ? averageDelta : latestDelta
+    const deltaDrift =
+      basisDelta !== null && alternateDelta !== null ? basisDelta - alternateDelta : null
+    const basisTone = resolveMarketOverlayDeltaTone(basisDelta)
+    const alternateTone = resolveMarketOverlayDeltaTone(alternateDelta)
+    const basisAgreement =
+      basisTone === 'unavailable' || alternateTone === 'unavailable'
+        ? 'n/a'
+        : basisTone === alternateTone
+          ? 'agree'
+          : 'diverge'
+    const previousSlope = previousPoint ? activePoint.value - previousPoint.value : null
+    const nextSlope = nextPoint ? nextPoint.value - activePoint.value : null
+    const neighborVector = (previousSlope ?? 0) + (nextSlope ?? 0)
+    const neighborCoverage = Number(previousSlope !== null) + Number(nextSlope !== null)
+    const neighborDirection =
+      neighborCoverage === 0
+        ? 'isolated'
+        : Math.abs(neighborVector) < 1e-9
+          ? 'balanced'
+          : neighborVector > 0
+            ? 'warming'
+            : 'cooling'
+    const navBias =
+      canSelectPreviousMarketOverlayMarker && canSelectNextMarketOverlayMarker
+        ? 'bidirectional'
+        : canSelectPreviousMarketOverlayMarker
+          ? 'backward'
+          : canSelectNextMarketOverlayMarker
+            ? 'forward'
+            : 'stalled'
+    const formatSigned = (value: number | null) =>
+      value === null ? 'n/a' : `${value >= 0 ? '+' : ''}${value.toFixed(2)}`
+    const stateLabel = (enabled: boolean) => (enabled ? 'on' : 'off')
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · basis:${marketOverlayMarkerDeltaBasis}:${formatSigned(basisDelta)}|alt:${formatSigned(alternateDelta)}|drift:${formatSigned(deltaDrift)}|agreement:${basisAgreement} · neighbors:prevSlope:${formatSigned(previousSlope)}|nextSlope:${formatSigned(nextSlope)}|vector:${formatSigned(neighborVector)}|direction:${neighborDirection}|coverage:${neighborCoverage}/2 · navBias:${navBias}|home:${stateLabel(canSelectOldestMarketOverlayMarker)}|end:${stateLabel(canSelectLatestMarketOverlayMarker)} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    canSelectLatestMarketOverlayMarker,
+    canSelectNextMarketOverlayMarker,
+    canSelectOldestMarketOverlayMarker,
+    canSelectPreviousMarketOverlayMarker,
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+  ])
+  const marketOverlayMarkerEventTimelineCadenceSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const pointIndexByTime = new Map(
+      marketOverlayChartPoints.map((point, index) => [point.time, index] as const),
+    )
+    const activePoint = pointByTime.get(marketOverlayActiveTimelineAnnotation.time) ?? null
+    if (!activePoint) {
+      return 'none'
+    }
+    const activePointIndex = pointIndexByTime.get(activePoint.time) ?? -1
+    if (activePointIndex < 0) {
+      return 'none'
+    }
+    const previousPoint = activePointIndex > 0 ? marketOverlayChartPoints[activePointIndex - 1] : null
+    const nextPoint =
+      activePointIndex < marketOverlayChartPoints.length - 1
+        ? marketOverlayChartPoints[activePointIndex + 1]
+        : null
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    const previousPointGap = previousPoint ? Math.abs(activePoint.time - previousPoint.time) : null
+    const nextPointGap = nextPoint ? Math.abs(nextPoint.time - activePoint.time) : null
+    const previousMarkerGap = previousAnnotation
+      ? Math.abs(marketOverlayActiveTimelineAnnotation.time - previousAnnotation.time)
+      : null
+    const nextMarkerGap = nextAnnotation
+      ? Math.abs(nextAnnotation.time - marketOverlayActiveTimelineAnnotation.time)
+      : null
+    const toWeight = (markerGap: number | null, pointGap: number | null) => {
+      if (markerGap === null || pointGap === null || pointGap === 0) {
+        return null
+      }
+      return markerGap / pointGap
+    }
+    const previousWeight = toWeight(previousMarkerGap, previousPointGap)
+    const nextWeight = toWeight(nextMarkerGap, nextPointGap)
+    const coverage = Number(previousWeight !== null) + Number(nextWeight !== null)
+    const balance =
+      previousWeight !== null && nextWeight !== null ? nextWeight - previousWeight : null
+    const cadence =
+      coverage === 2
+        ? Math.abs(balance ?? 0) < 1e-9
+          ? 'symmetric'
+          : (balance ?? 0) > 0
+            ? 'forward-skew'
+            : 'backward-skew'
+        : coverage === 1
+          ? 'one-sided'
+          : 'isolated'
+    const vector = (nextWeight ?? 0) - (previousWeight ?? 0)
+    const direction =
+      coverage === 0 ? 'none' : Math.abs(vector) < 1e-9 ? 'balanced' : vector > 0 ? 'forward' : 'backward'
+    const phase =
+      direction === 'none'
+        ? 'isolated'
+        : direction === 'balanced'
+          ? 'centered'
+          : direction === 'forward'
+            ? 'forward-sync'
+            : 'backward-sync'
+    const formatStep = (value: number | null) => (value === null ? 'n/a' : String(value))
+    const formatWeight = (value: number | null) => (value === null ? 'n/a' : value.toFixed(2))
+    const formatSigned = (value: number | null) =>
+      value === null ? 'n/a' : `${value >= 0 ? '+' : ''}${value.toFixed(2)}`
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label}|slot:${marketOverlayActiveTimelineIndex + 1}/${marketOverlayScopedTimelineAnnotations.length} · prev:step:${formatStep(previousPointGap)}|marker:${formatStep(previousMarkerGap)}|weight:${formatWeight(previousWeight)} · next:step:${formatStep(nextPointGap)}|marker:${formatStep(nextMarkerGap)}|weight:${formatWeight(nextWeight)} · cadence:${cadence}|balance:${formatSigned(balance)}|direction:${direction}|phase:${phase}|coverage:${coverage}/2 · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayMarkerEventTimelineCouplingSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const pointIndexByTime = new Map(
+      marketOverlayChartPoints.map((point, index) => [point.time, index] as const),
+    )
+    const activePoint = pointByTime.get(marketOverlayActiveTimelineAnnotation.time) ?? null
+    if (!activePoint) {
+      return 'none'
+    }
+    const activePointIndex = pointIndexByTime.get(activePoint.time) ?? -1
+    if (activePointIndex < 0) {
+      return 'none'
+    }
+    const previousPoint = activePointIndex > 0 ? marketOverlayChartPoints[activePointIndex - 1] : null
+    const nextPoint =
+      activePointIndex < marketOverlayChartPoints.length - 1
+        ? marketOverlayChartPoints[activePointIndex + 1]
+        : null
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    const previousPointGap = previousPoint ? Math.abs(activePoint.time - previousPoint.time) : null
+    const nextPointGap = nextPoint ? Math.abs(nextPoint.time - activePoint.time) : null
+    const previousMarkerGap = previousAnnotation
+      ? Math.abs(marketOverlayActiveTimelineAnnotation.time - previousAnnotation.time)
+      : null
+    const nextMarkerGap = nextAnnotation
+      ? Math.abs(nextAnnotation.time - marketOverlayActiveTimelineAnnotation.time)
+      : null
+    const toCoupling = (markerGap: number | null, pointGap: number | null) => {
+      if (markerGap === null || pointGap === null) {
+        return null
+      }
+      return markerGap - pointGap
+    }
+    const previousCoupling = toCoupling(previousMarkerGap, previousPointGap)
+    const nextCoupling = toCoupling(nextMarkerGap, nextPointGap)
+    const coverage = Number(previousCoupling !== null) + Number(nextCoupling !== null)
+    const netCoupling = (previousCoupling ?? 0) + (nextCoupling ?? 0)
+    const direction =
+      coverage === 0
+        ? 'isolated'
+        : Math.abs(netCoupling) < 1e-9
+          ? 'balanced'
+          : netCoupling > 0
+            ? 'stretched'
+            : 'compressed'
+    const phase = coverage === 2 ? 'paired' : coverage === 1 ? 'edge' : 'none'
+    const navBias =
+      canSelectPreviousMarketOverlayMarker && canSelectNextMarketOverlayMarker
+        ? 'bidirectional'
+        : canSelectPreviousMarketOverlayMarker
+          ? 'backward'
+          : canSelectNextMarketOverlayMarker
+            ? 'forward'
+            : 'stalled'
+    const formatStep = (value: number | null) => (value === null ? 'n/a' : String(value))
+    const formatSigned = (value: number | null) =>
+      value === null ? 'n/a' : `${value >= 0 ? '+' : ''}${value.toFixed(2)}`
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label}|slot:${marketOverlayActiveTimelineIndex + 1}/${marketOverlayScopedTimelineAnnotations.length} · prev:step:${formatStep(previousPointGap)}|marker:${formatStep(previousMarkerGap)}|coupling:${formatSigned(previousCoupling)} · next:step:${formatStep(nextPointGap)}|marker:${formatStep(nextMarkerGap)}|coupling:${formatSigned(nextCoupling)} · net:${formatSigned(netCoupling)}|direction:${direction}|phase:${phase}|coverage:${coverage}/2|navBias:${navBias} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    canSelectNextMarketOverlayMarker,
+    canSelectPreviousMarketOverlayMarker,
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayMarkerEventTimelineTensionSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const pointIndexByTime = new Map(
+      marketOverlayChartPoints.map((point, index) => [point.time, index] as const),
+    )
+    const activePoint = pointByTime.get(marketOverlayActiveTimelineAnnotation.time) ?? null
+    if (!activePoint) {
+      return 'none'
+    }
+    const activePointIndex = pointIndexByTime.get(activePoint.time) ?? -1
+    if (activePointIndex < 0) {
+      return 'none'
+    }
+    const previousPoint = activePointIndex > 0 ? marketOverlayChartPoints[activePointIndex - 1] : null
+    const nextPoint =
+      activePointIndex < marketOverlayChartPoints.length - 1
+        ? marketOverlayChartPoints[activePointIndex + 1]
+        : null
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    const previousPointGap = previousPoint ? Math.abs(activePoint.time - previousPoint.time) : null
+    const nextPointGap = nextPoint ? Math.abs(nextPoint.time - activePoint.time) : null
+    const previousMarkerGap = previousAnnotation
+      ? Math.abs(marketOverlayActiveTimelineAnnotation.time - previousAnnotation.time)
+      : null
+    const nextMarkerGap = nextAnnotation
+      ? Math.abs(nextAnnotation.time - marketOverlayActiveTimelineAnnotation.time)
+      : null
+    const toStretch = (markerGap: number | null, pointGap: number | null) => {
+      if (markerGap === null || pointGap === null) {
+        return null
+      }
+      return markerGap - pointGap
+    }
+    const previousStretch = toStretch(previousMarkerGap, previousPointGap)
+    const nextStretch = toStretch(nextMarkerGap, nextPointGap)
+    const coverage = Number(previousStretch !== null) + Number(nextStretch !== null)
+    const netStretch = (nextStretch ?? 0) - (previousStretch ?? 0)
+    const totalTension = Math.abs(previousStretch ?? 0) + Math.abs(nextStretch ?? 0)
+    const bias =
+      coverage === 0
+        ? 'none'
+        : Math.abs(netStretch) < 1e-9
+          ? 'balanced'
+          : netStretch > 0
+            ? 'forward'
+            : 'backward'
+    const symmetry =
+      previousStretch !== null && nextStretch !== null
+        ? Math.abs(previousStretch - nextStretch) < 1e-9
+          ? 'aligned'
+          : 'skewed'
+        : coverage === 1
+          ? 'one-sided'
+          : 'none'
+    const intensity =
+      totalTension === 0 ? 'idle' : totalTension < 1 ? 'light' : totalTension < 2 ? 'moderate' : 'strong'
+    const navBias =
+      canSelectPreviousMarketOverlayMarker && canSelectNextMarketOverlayMarker
+        ? 'bidirectional'
+        : canSelectPreviousMarketOverlayMarker
+          ? 'backward'
+          : canSelectNextMarketOverlayMarker
+            ? 'forward'
+            : 'stalled'
+    const formatStep = (value: number | null) => (value === null ? 'n/a' : String(value))
+    const formatSigned = (value: number | null) =>
+      value === null ? 'n/a' : `${value >= 0 ? '+' : ''}${value.toFixed(2)}`
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label}|slot:${marketOverlayActiveTimelineIndex + 1}/${marketOverlayScopedTimelineAnnotations.length} · prev:step:${formatStep(previousPointGap)}|marker:${formatStep(previousMarkerGap)}|stretch:${formatSigned(previousStretch)} · next:step:${formatStep(nextPointGap)}|marker:${formatStep(nextMarkerGap)}|stretch:${formatSigned(nextStretch)} · tension:${formatSigned(netStretch)}|total:${totalTension.toFixed(2)}|bias:${bias}|symmetry:${symmetry}|intensity:${intensity}|coverage:${coverage}/2|nav:${navBias} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    canSelectNextMarketOverlayMarker,
+    canSelectPreviousMarketOverlayMarker,
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayMarkerTimelineRows = useMemo(() => {
+    if (marketOverlayScopedVisibleAnnotations.length === 0) {
+      return [] as Array<{ id: string; text: string; isSelected: boolean }>
+    }
+    const timelineById = new Map(
+      marketOverlayScopedTimelineAnnotations.map((annotation) => [annotation.id, annotation] as const),
+    )
+    const chartPointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const chartPointIndexByTime = new Map(
+      marketOverlayChartPoints.map((point, index) => [point.time, index] as const),
+    )
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const bucketSizeMs =
+      marketOverlayMarkerBucket === 'none'
+        ? null
+        : marketOverlayMarkerBucket === '30s'
+          ? 30_000
+          : 60_000
+    return marketOverlayScopedVisibleAnnotations.map((annotation) => {
+      const timelineAnnotation = timelineById.get(annotation.id)
+      const point = timelineAnnotation ? (chartPointByTime.get(timelineAnnotation.time) ?? null) : null
+      const deltaFromAverage = point && baseline !== null ? point.value - baseline : null
+      const deltaFromAveragePct =
+        deltaFromAverage !== null && baseline !== null && baseline !== 0
+          ? (deltaFromAverage / baseline) * 100
+          : null
+      const deltaToLatest = point && latestPoint ? point.value - latestPoint.value : null
+      const deltaToLatestPct =
+        deltaToLatest !== null && latestPoint && latestPoint.value !== 0
+          ? (deltaToLatest / latestPoint.value) * 100
+          : null
+      const pointIndex = point ? (chartPointIndexByTime.get(point.time) ?? -1) : -1
+      const previousPoint = pointIndex > 0 ? marketOverlayChartPoints[pointIndex - 1] : null
+      const deltaToPrevious = point && previousPoint ? point.value - previousPoint.value : null
+      const deltaToPreviousPct =
+        deltaToPrevious !== null && previousPoint && previousPoint.value !== 0
+          ? (deltaToPrevious / previousPoint.value) * 100
+          : null
+      const ageLabel = formatElapsedMs(Date.now() - annotation.timestamp)
+      const bucketLabel =
+        bucketSizeMs === null
+          ? 'none'
+          : new Date(Math.floor(annotation.timestamp / bucketSizeMs) * bucketSizeMs).toISOString()
+      return {
+        id: annotation.id,
+        text: `${annotation.kind}:${annotation.label} · t${timelineAnnotation?.time ?? 'n/a'} · close:${point ? point.value.toFixed(2) : 'n/a'} · Δlatest:${deltaToLatest === null ? 'n/a' : `${deltaToLatest >= 0 ? '+' : ''}${deltaToLatest.toFixed(2)} (${deltaToLatestPct !== null ? `${deltaToLatestPct >= 0 ? '+' : ''}${deltaToLatestPct.toFixed(2)}%` : 'n/a'})`} · Δavg:${deltaFromAverage === null ? 'n/a' : `${deltaFromAverage >= 0 ? '+' : ''}${deltaFromAverage.toFixed(2)} (${deltaFromAveragePct !== null ? `${deltaFromAveragePct >= 0 ? '+' : ''}${deltaFromAveragePct.toFixed(2)}%` : 'n/a'})`} · Δprev:${deltaToPrevious === null ? 'n/a' : `${deltaToPrevious >= 0 ? '+' : ''}${deltaToPrevious.toFixed(2)} (${deltaToPreviousPct !== null ? `${deltaToPreviousPct >= 0 ? '+' : ''}${deltaToPreviousPct.toFixed(2)}%` : 'n/a'})`} · bucket:${bucketLabel} · age:${ageLabel}`,
+        isSelected: annotation.id === marketOverlaySelectedMarkerId,
+      }
+    })
+  }, [
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerBucket,
+    marketOverlayScopedTimelineAnnotations,
+    marketOverlayScopedVisibleAnnotations,
+    marketOverlaySelectedMarkerId,
+  ])
+  const marketOverlayMarkerBucketSummary = useMemo(() => {
+    const totalVisible = marketOverlayTimelineAnnotations.length
+    const scopedVisible = marketOverlayScopedTimelineAnnotations.length
+    if (totalVisible === 0) {
+      return `mode:${marketOverlayMarkerBucket} · scope:${marketOverlayBucketScope} · buckets:0 · latest:none · count:0`
+    }
+    if (marketOverlayMarkerBucket === 'none') {
+      const latest = marketOverlayTimelineAnnotations[marketOverlayTimelineAnnotations.length - 1]
+      return `mode:none · scope:${marketOverlayBucketScope} · buckets:${totalVisible} · latest:t${latest.time} · count:${scopedVisible}`
+    }
+    const bucketSizeMs = marketOverlayMarkerBucket === '30s' ? 30_000 : 60_000
+    const grouped = new Map<number, number>()
+    marketOverlayTimelineAnnotations.forEach((annotation) => {
+      const bucketStart = Math.floor(annotation.timestamp / bucketSizeMs) * bucketSizeMs
+      grouped.set(bucketStart, (grouped.get(bucketStart) ?? 0) + 1)
+    })
+    const orderedKeys = [...grouped.keys()].sort((a, b) => b - a)
+    const latestBucket = orderedKeys[0]
+    return `mode:${marketOverlayMarkerBucket} · scope:${marketOverlayBucketScope} · buckets:${orderedKeys.length} · latest:${new Date(latestBucket).toISOString()} · count:${scopedVisible}`
+  }, [
+    marketOverlayBucketScope,
+    marketOverlayMarkerBucket,
+    marketOverlayScopedTimelineAnnotations.length,
+    marketOverlayTimelineAnnotations,
+  ])
+  const marketOverlayMarkerBucketDeltaSummary = useMemo(() => {
+    if (marketOverlayMarkerBucket === 'none') {
+      return 'mode:none · buckets:n/a · latestAvg:n/a · previousAvg:n/a · Δbucket:n/a'
+    }
+    if (marketOverlayScopedTimelineAnnotations.length === 0 || marketOverlayChartPoints.length === 0) {
+      return `mode:${marketOverlayMarkerBucket} · buckets:0 · latestAvg:n/a · previousAvg:n/a · Δbucket:n/a`
+    }
+    const bucketSizeMs = marketOverlayMarkerBucket === '30s' ? 30_000 : 60_000
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const grouped = new Map<number, { sum: number; count: number }>()
+    marketOverlayScopedTimelineAnnotations.forEach((annotation) => {
+      const point = pointByTime.get(annotation.time)
+      if (!point) {
+        return
+      }
+      const bucketStart = Math.floor(annotation.timestamp / bucketSizeMs) * bucketSizeMs
+      const current = grouped.get(bucketStart) ?? { sum: 0, count: 0 }
+      grouped.set(bucketStart, { sum: current.sum + point.value, count: current.count + 1 })
+    })
+    if (grouped.size === 0) {
+      return `mode:${marketOverlayMarkerBucket} · buckets:0 · latestAvg:n/a · previousAvg:n/a · Δbucket:n/a`
+    }
+    const orderedBuckets = [...grouped.entries()].sort((a, b) => b[0] - a[0])
+    const latestAvg = orderedBuckets[0][1].sum / orderedBuckets[0][1].count
+    const previousAvg =
+      orderedBuckets.length > 1 ? orderedBuckets[1][1].sum / orderedBuckets[1][1].count : null
+    const deltaBucket = previousAvg === null ? null : latestAvg - previousAvg
+    const deltaBucketPct =
+      deltaBucket !== null && previousAvg !== null && previousAvg !== 0
+        ? (deltaBucket / previousAvg) * 100
+        : null
+    const deltaBucketLabel =
+      deltaBucket === null
+        ? 'n/a'
+        : `${deltaBucket >= 0 ? '+' : ''}${deltaBucket.toFixed(2)} (${deltaBucketPct === null ? 'n/a' : `${deltaBucketPct >= 0 ? '+' : ''}${deltaBucketPct.toFixed(2)}%`})`
+    return `mode:${marketOverlayMarkerBucket} · buckets:${orderedBuckets.length} · latestAvg:${latestAvg.toFixed(2)} · previousAvg:${previousAvg === null ? 'n/a' : previousAvg.toFixed(2)} · Δbucket:${deltaBucketLabel}`
+  }, [marketOverlayChartPoints, marketOverlayMarkerBucket, marketOverlayScopedTimelineAnnotations])
+  const marketOverlayMarkerChronologySummary = useMemo(() => {
+    if (marketOverlayScopedTimelineAnnotations.length === 0) {
+      return 'none'
+    }
+    const sortedTimestamps = marketOverlayScopedTimelineAnnotations
+      .map((annotation) => annotation.timestamp)
+      .sort((a, b) => a - b)
+    const spanMs = sortedTimestamps[sortedTimestamps.length - 1] - sortedTimestamps[0]
+    if (sortedTimestamps.length === 1) {
+      return `count:1 · span:${formatElapsedMs(spanMs)} · avgGap:n/a · latestGap:n/a`
+    }
+    let totalGapMs = 0
+    for (let index = 1; index < sortedTimestamps.length; index += 1) {
+      totalGapMs += sortedTimestamps[index] - sortedTimestamps[index - 1]
+    }
+    const averageGapMs = totalGapMs / (sortedTimestamps.length - 1)
+    const latestGapMs =
+      sortedTimestamps[sortedTimestamps.length - 1] - sortedTimestamps[sortedTimestamps.length - 2]
+    return `count:${sortedTimestamps.length} · span:${formatElapsedMs(spanMs)} · avgGap:${formatElapsedMs(averageGapMs)} · latestGap:${formatElapsedMs(latestGapMs)}`
+  }, [marketOverlayScopedTimelineAnnotations])
+  const marketOverlayMarkerVisualProfiles = useMemo(() => {
+    const profiles = new Map<string, MarketOverlayMarkerVisualProfile>()
+    if (marketOverlayChartPoints.length === 0 || marketOverlayScopedTimelineAnnotations.length === 0) {
+      return profiles
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const previousAnnotation =
+      marketOverlayActiveTimelineIndex >= 0
+        ? marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+        : null
+    const nextAnnotation =
+      marketOverlayActiveTimelineIndex >= 0
+        ? marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+        : null
+    const resolveDelta = (annotation: MarketOverlayTimelineAnnotation): number | null => {
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point) {
+        return null
+      }
+      if (marketOverlayMarkerDeltaBasis === 'latest') {
+        return latestPoint ? point.value - latestPoint.value : null
+      }
+      return baseline !== null ? point.value - baseline : null
+    }
+    const resolveBaseMarker = (annotation: MarketOverlayTimelineAnnotation): MarketOverlayChartMarker => {
+      if (annotation.kind === 'trade') {
+        return {
+          time: annotation.time,
+          position: 'belowBar',
+          color: annotation.tone === 'positive' ? '#71d48c' : '#e9cf7a',
+          shape: annotation.tone === 'positive' ? 'arrowUp' : 'arrowDown',
+          text: `trade:${annotation.label}`,
+        }
+      }
+      if (annotation.kind === 'risk') {
+        return {
+          time: annotation.time,
+          position: 'aboveBar',
+          color: '#ee8d8d',
+          shape: 'circle',
+          text: `risk:${annotation.label}`,
+        }
+      }
+      return {
+        time: annotation.time,
+        position: 'inBar',
+        color: '#84d3f8',
+        shape: 'square',
+        text: `feed:${annotation.label}`,
+      }
+    }
+    const activePalette: Record<MarketOverlayMarkerVisualProfile['tone'], string> = {
+      up: '#59c98d',
+      down: '#e06f6f',
+      flat: '#e5c453',
+      unavailable: '#84d3f8',
+    }
+    const neighborPalette: Record<MarketOverlayMarkerVisualProfile['tone'], string> = {
+      up: '#8de2ab',
+      down: '#f2a5a5',
+      flat: '#f2dd98',
+      unavailable: '#a7ddf9',
+    }
+    const contextPalette: Record<MarketOverlayMarkerVisualProfile['tone'], string> = {
+      up: '#6bb888',
+      down: '#c98b8b',
+      flat: '#c9b779',
+      unavailable: '#84d3f8',
+    }
+    const resolveToneShape = (
+      tone: MarketOverlayMarkerVisualProfile['tone'],
+    ): MarketOverlayMarkerVisualProfile['shape'] => {
+      if (tone === 'up') {
+        return 'arrowUp'
+      }
+      if (tone === 'down') {
+        return 'arrowDown'
+      }
+      if (tone === 'flat') {
+        return 'circle'
+      }
+      return 'square'
+    }
+    marketOverlayScopedTimelineAnnotations.forEach((annotation) => {
+      const baseMarker = resolveBaseMarker(annotation)
+      const role: MarketOverlayMarkerVisualRole =
+        annotation.id === marketOverlayActiveTimelineAnnotation?.id
+          ? 'active'
+          : annotation.id === previousAnnotation?.id
+            ? 'prev'
+            : annotation.id === nextAnnotation?.id
+              ? 'next'
+              : 'context'
+      const tone = resolveMarketOverlayDeltaTone(resolveDelta(annotation))
+      if (role === 'context') {
+        profiles.set(annotation.id, {
+          ...baseMarker,
+          role,
+          tone,
+          color: contextPalette[tone],
+          text: `${role}:${annotation.kind}:${annotation.label}:${tone}`,
+        })
+        return
+      }
+      const color = role === 'active' ? activePalette[tone] : neighborPalette[tone]
+      const shape = resolveToneShape(tone)
+      profiles.set(annotation.id, {
+        ...baseMarker,
+        role,
+        tone,
+        color,
+        shape,
+        text: `${role}:${annotation.kind}:${annotation.label}:${tone}`,
+      })
+    })
+    return profiles
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayChartMarkers = useMemo(() => {
+    if (marketOverlayScopedTimelineAnnotations.length === 0) {
+      return [] as MarketOverlayChartMarker[]
+    }
+    return marketOverlayScopedTimelineAnnotations.map((annotation): MarketOverlayChartMarker => {
+      const profile = marketOverlayMarkerVisualProfiles.get(annotation.id)
+      if (profile) {
+        return {
+          time: profile.time,
+          position: profile.position,
+          color: profile.color,
+          shape: profile.shape,
+          text: profile.text,
+        }
+      }
+      return {
+        time: annotation.time,
+        position: 'inBar',
+        color: '#84d3f8',
+        shape: 'square',
+        text: `feed:${annotation.label}`,
+      }
+    })
+  }, [marketOverlayMarkerVisualProfiles, marketOverlayScopedTimelineAnnotations])
+  const marketOverlayMarkerVisualFocusSummary = useMemo(() => {
+    if (!marketOverlayActiveTimelineAnnotation || marketOverlayActiveTimelineIndex < 0) {
+      return 'none'
+    }
+    const activeProfile = marketOverlayMarkerVisualProfiles.get(marketOverlayActiveTimelineAnnotation.id)
+    if (!activeProfile) {
+      return 'none'
+    }
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    const previousProfile = previousAnnotation
+      ? marketOverlayMarkerVisualProfiles.get(previousAnnotation.id) ?? null
+      : null
+    const nextProfile = nextAnnotation ? marketOverlayMarkerVisualProfiles.get(nextAnnotation.id) ?? null : null
+    const describe = (
+      scope: 'active' | 'prev' | 'next',
+      annotation: MarketOverlayTimelineAnnotation | null,
+      profile: MarketOverlayMarkerVisualProfile | null,
+    ) => {
+      if (!annotation || !profile) {
+        return `${scope}:none`
+      }
+      return `${scope}:${annotation.kind}:${annotation.label}|role:${profile.role}|tone:${profile.tone}|color:${profile.color}|shape:${profile.shape}`
+    }
+    return `${describe('active', marketOverlayActiveTimelineAnnotation, activeProfile)} · ${describe('prev', previousAnnotation, previousProfile)} · ${describe('next', nextAnnotation, nextProfile)} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayMarkerVisualProfiles,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayMarkerVisualDistributionSummary = useMemo(() => {
+    if (!marketOverlayActiveTimelineAnnotation || marketOverlayActiveTimelineIndex < 0) {
+      return 'none'
+    }
+    const roleCounts: Record<MarketOverlayMarkerVisualRole, number> = {
+      active: 0,
+      prev: 0,
+      next: 0,
+      context: 0,
+    }
+    const toneCounts: Record<MarketOverlayMarkerVisualProfile['tone'], number> = {
+      up: 0,
+      down: 0,
+      flat: 0,
+      unavailable: 0,
+    }
+    const contextToneCounts: Record<MarketOverlayMarkerVisualProfile['tone'], number> = {
+      up: 0,
+      down: 0,
+      flat: 0,
+      unavailable: 0,
+    }
+    marketOverlayScopedTimelineAnnotations.forEach((annotation) => {
+      const profile = marketOverlayMarkerVisualProfiles.get(annotation.id)
+      if (!profile) {
+        return
+      }
+      roleCounts[profile.role] += 1
+      toneCounts[profile.tone] += 1
+      if (profile.role === 'context') {
+        contextToneCounts[profile.tone] += 1
+      }
+    })
+    const rankedContextTones = [...Object.entries(contextToneCounts)].sort((left, right) => right[1] - left[1])
+    const topContextToneCount = rankedContextTones[0]?.[1] ?? 0
+    const contextTone =
+      topContextToneCount === 0
+        ? 'none'
+        : rankedContextTones.filter((entry) => entry[1] === topContextToneCount).length > 1
+          ? `tie(${topContextToneCount})`
+          : `${rankedContextTones[0]?.[0] ?? 'none'}(${topContextToneCount})`
+    return `roles:active:${roleCounts.active}|prev:${roleCounts.prev}|next:${roleCounts.next}|context:${roleCounts.context} · tones:up:${toneCounts.up}|down:${toneCounts.down}|flat:${toneCounts.flat}|unavailable:${toneCounts.unavailable} · contextTone:${contextTone} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayMarkerVisualProfiles,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayMarkerVisualTransitionSummary = useMemo(() => {
+    if (!marketOverlayActiveTimelineAnnotation || marketOverlayActiveTimelineIndex < 0) {
+      return 'none'
+    }
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    const previousProfile = previousAnnotation
+      ? marketOverlayMarkerVisualProfiles.get(previousAnnotation.id) ?? null
+      : null
+    const activeProfile = marketOverlayMarkerVisualProfiles.get(marketOverlayActiveTimelineAnnotation.id) ?? null
+    const nextProfile = nextAnnotation ? marketOverlayMarkerVisualProfiles.get(nextAnnotation.id) ?? null : null
+    if (!activeProfile) {
+      return 'none'
+    }
+    const toneScore = (tone: MarketOverlayMarkerVisualProfile['tone']) => {
+      if (tone === 'up') {
+        return 1
+      }
+      if (tone === 'down') {
+        return -1
+      }
+      return 0
+    }
+    const formatSigned = (value: number) => `${value >= 0 ? '+' : ''}${value}`
+    const describeLeg = (
+      fromLabel: 'prev' | 'active',
+      toLabel: 'active' | 'next',
+      fromProfile: MarketOverlayMarkerVisualProfile | null,
+      toProfile: MarketOverlayMarkerVisualProfile | null,
+    ) => {
+      if (!fromProfile || !toProfile) {
+        return { summary: `${fromLabel}->${toLabel}:n/a`, step: null as number | null }
+      }
+      const step = toneScore(toProfile.tone) - toneScore(fromProfile.tone)
+      const direction = step === 0 ? 'steady' : step > 0 ? 'warming' : 'cooling'
+      return {
+        summary: `${fromLabel}->${toLabel}:${fromProfile.tone}->${toProfile.tone}|Δ:${formatSigned(step)}|${direction}|shape:${fromProfile.shape}->${toProfile.shape}`,
+        step,
+      }
+    }
+    const prevToActive = describeLeg('prev', 'active', previousProfile, activeProfile)
+    const activeToNext = describeLeg('active', 'next', activeProfile, nextProfile)
+    const availableLegs = Number(prevToActive.step !== null) + Number(activeToNext.step !== null)
+    const motion = Math.abs(prevToActive.step ?? 0) + Math.abs(activeToNext.step ?? 0)
+    const phase = motion === 0 ? 'steady' : motion === 1 ? 'shifting' : motion === 2 ? 'swing' : 'volatile'
+    return `${prevToActive.summary} · ${activeToNext.summary} · legs:${availableLegs}/2|motion:${motion}|phase:${phase} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayMarkerVisualProfiles,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayMarkerVisualContextDriftSummary = useMemo(() => {
+    if (!marketOverlayActiveTimelineAnnotation || marketOverlayActiveTimelineIndex < 0) {
+      return 'none'
+    }
+    const activeProfile = marketOverlayMarkerVisualProfiles.get(marketOverlayActiveTimelineAnnotation.id) ?? null
+    if (!activeProfile) {
+      return 'none'
+    }
+    const toneScore = (tone: MarketOverlayMarkerVisualProfile['tone']) => {
+      if (tone === 'up') {
+        return 1
+      }
+      if (tone === 'down') {
+        return -1
+      }
+      return 0
+    }
+    const activeScore = toneScore(activeProfile.tone)
+    let contextCount = 0
+    let agreementCount = 0
+    let oppositionCount = 0
+    let neutralCount = 0
+    let driftTotal = 0
+    marketOverlayScopedTimelineAnnotations.forEach((annotation) => {
+      const profile = marketOverlayMarkerVisualProfiles.get(annotation.id)
+      if (!profile || profile.role !== 'context') {
+        return
+      }
+      contextCount += 1
+      const contextScore = toneScore(profile.tone)
+      driftTotal += contextScore - activeScore
+      if (contextScore === activeScore) {
+        agreementCount += 1
+        return
+      }
+      if (contextScore === 0 || activeScore === 0) {
+        neutralCount += 1
+        return
+      }
+      oppositionCount += 1
+    })
+    const averageDrift = contextCount > 0 ? driftTotal / contextCount : null
+    const pressure =
+      averageDrift === null ? 'none' : averageDrift > 0 ? 'toward-up' : averageDrift < 0 ? 'toward-down' : 'balanced'
+    const phase =
+      contextCount === 0
+        ? 'isolated'
+        : averageDrift === null || Math.abs(averageDrift) < 0.25
+          ? 'anchored'
+          : Math.abs(averageDrift) < 0.75
+            ? 'tilting'
+            : 'dislocated'
+    const formatSigned = (value: number) => `${value >= 0 ? '+' : ''}${value.toFixed(2)}`
+    return `activeTone:${activeProfile.tone}|score:${activeScore >= 0 ? '+' : ''}${activeScore} · context:${contextCount}|agreement:${agreementCount}|opposition:${oppositionCount}|neutral:${neutralCount} · drift:${averageDrift === null ? 'n/a' : formatSigned(averageDrift)}|pressure:${pressure}|phase:${phase} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayMarkerVisualProfiles,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayMarkerVisualRolePulseSummary = useMemo(() => {
+    if (!marketOverlayActiveTimelineAnnotation || marketOverlayActiveTimelineIndex < 0) {
+      return 'none'
+    }
+    const activeProfile = marketOverlayMarkerVisualProfiles.get(marketOverlayActiveTimelineAnnotation.id) ?? null
+    if (!activeProfile) {
+      return 'none'
+    }
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    const previousProfile = previousAnnotation
+      ? marketOverlayMarkerVisualProfiles.get(previousAnnotation.id) ?? null
+      : null
+    const nextProfile = nextAnnotation ? marketOverlayMarkerVisualProfiles.get(nextAnnotation.id) ?? null : null
+    const toneScore = (tone: MarketOverlayMarkerVisualProfile['tone']) => {
+      if (tone === 'up') {
+        return 1
+      }
+      if (tone === 'down') {
+        return -1
+      }
+      return 0
+    }
+    const weights: Record<MarketOverlayMarkerVisualRole, number> = {
+      active: 3,
+      prev: 2,
+      next: 2,
+      context: 1,
+    }
+    const entries = [
+      { label: 'active', profile: activeProfile },
+      { label: 'prev', profile: previousProfile },
+      { label: 'next', profile: nextProfile },
+    ] as const
+    const formatSigned = (value: number) => `${value >= 0 ? '+' : ''}${value}`
+    let weightedPulse = 0
+    let weightedEnergy = 0
+    let resolvedCount = 0
+    let availableCount = 0
+    const components = entries.map((entry) => {
+      if (!entry.profile) {
+        return `${entry.label}:n/a`
+      }
+      availableCount += 1
+      const score = toneScore(entry.profile.tone)
+      const weightedScore = score * weights[entry.profile.role]
+      weightedPulse += weightedScore
+      weightedEnergy += Math.abs(weightedScore)
+      if (score !== 0) {
+        resolvedCount += 1
+      }
+      return `${entry.label}:${entry.profile.tone}|score:${formatSigned(score)}|weighted:${formatSigned(weightedScore)}`
+    })
+    const normalized = weightedEnergy === 0 ? 0 : weightedPulse / weightedEnergy
+    const bias = normalized === 0 ? 'balanced' : normalized > 0 ? 'up' : 'down'
+    const conviction =
+      Math.abs(normalized) < 1e-9
+        ? 'idle'
+        : Math.abs(normalized) < 0.34
+          ? 'light'
+          : Math.abs(normalized) < 0.67
+            ? 'moderate'
+            : 'strong'
+    return `${components.join(' · ')} · pulse:${formatSigned(weightedPulse)}|energy:${weightedEnergy}|normalized:${normalized >= 0 ? '+' : ''}${normalized.toFixed(2)}|bias:${bias}|conviction:${conviction} · resolved:${resolvedCount}/${availableCount} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayMarkerVisualProfiles,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayMarkerVisualRoleBalanceSummary = useMemo(() => {
+    if (!marketOverlayActiveTimelineAnnotation || marketOverlayActiveTimelineIndex < 0) {
+      return 'none'
+    }
+    const activeProfile = marketOverlayMarkerVisualProfiles.get(marketOverlayActiveTimelineAnnotation.id) ?? null
+    if (!activeProfile) {
+      return 'none'
+    }
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    const previousProfile = previousAnnotation
+      ? marketOverlayMarkerVisualProfiles.get(previousAnnotation.id) ?? null
+      : null
+    const nextProfile = nextAnnotation ? marketOverlayMarkerVisualProfiles.get(nextAnnotation.id) ?? null : null
+    const toneScore = (tone: MarketOverlayMarkerVisualProfile['tone']) => {
+      if (tone === 'up') {
+        return 1
+      }
+      if (tone === 'down') {
+        return -1
+      }
+      return 0
+    }
+    const activeScore = toneScore(activeProfile.tone)
+    const formatSigned = (value: number) => `${value >= 0 ? '+' : ''}${value}`
+    const describeNeighbor = (label: 'prev' | 'next', profile: MarketOverlayMarkerVisualProfile | null) => {
+      if (!profile) {
+        return { summary: `${label}:n/a`, diff: null as number | null, aligned: false }
+      }
+      const diff = toneScore(profile.tone) - activeScore
+      const relation = diff === 0 ? 'aligned' : diff > 0 ? 'warmer' : 'cooler'
+      return {
+        summary: `${label}:${profile.tone}|Δ:${formatSigned(diff)}|${relation}`,
+        diff,
+        aligned: diff === 0,
+      }
+    }
+    const previousSummary = describeNeighbor('prev', previousProfile)
+    const nextSummary = describeNeighbor('next', nextProfile)
+    const availableCount = Number(previousSummary.diff !== null) + Number(nextSummary.diff !== null)
+    const agreementCount = Number(previousSummary.aligned) + Number(nextSummary.aligned)
+    const drift = (previousSummary.diff ?? 0) + (nextSummary.diff ?? 0)
+    const bias = drift === 0 ? 'balanced' : drift > 0 ? 'warming' : 'cooling'
+    const phase =
+      availableCount === 0 ? 'isolated' : agreementCount === availableCount ? 'locked' : drift === 0 ? 'contested' : 'tilted'
+    return `active:${activeProfile.tone}|score:${formatSigned(activeScore)} · ${previousSummary.summary} · ${nextSummary.summary} · drift:${formatSigned(drift)}|bias:${bias}|agreement:${agreementCount}/${availableCount}|phase:${phase} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayMarkerVisualProfiles,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayMarkerVisualBasisDriftSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const resolveToneByBasis = (
+      annotation: MarketOverlayTimelineAnnotation | null,
+      basis: MarketOverlayMarkerDeltaBasis,
+    ): ReturnType<typeof resolveMarketOverlayDeltaTone> | null => {
+      if (!annotation) {
+        return null
+      }
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point) {
+        return null
+      }
+      const delta =
+        basis === 'latest'
+          ? latestPoint
+            ? point.value - latestPoint.value
+            : null
+          : baseline !== null
+            ? point.value - baseline
+            : null
+      return resolveMarketOverlayDeltaTone(delta)
+    }
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    const toneScore = (tone: ReturnType<typeof resolveMarketOverlayDeltaTone>) => {
+      if (tone === 'up') {
+        return 1
+      }
+      if (tone === 'down') {
+        return -1
+      }
+      return 0
+    }
+    const formatSigned = (value: number) => `${value >= 0 ? '+' : ''}${value}`
+    const describeRole = (
+      label: 'active' | 'prev' | 'next',
+      annotation: MarketOverlayTimelineAnnotation | null,
+    ) => {
+      const latestTone = resolveToneByBasis(annotation, 'latest')
+      const averageTone = resolveToneByBasis(annotation, 'average')
+      if (!annotation || !latestTone || !averageTone) {
+        return { summary: `${label}:n/a`, latestScore: null as number | null, averageScore: null as number | null }
+      }
+      const latestScore = toneScore(latestTone)
+      const averageScore = toneScore(averageTone)
+      const drift = averageScore - latestScore
+      return {
+        summary: `${label}:latest:${latestTone}|average:${averageTone}|Δ:${formatSigned(drift)}`,
+        latestScore,
+        averageScore,
+      }
+    }
+    const active = describeRole('active', marketOverlayActiveTimelineAnnotation)
+    const prev = describeRole('prev', previousAnnotation)
+    const next = describeRole('next', nextAnnotation)
+    const toScore = (value: number | null) => value ?? 0
+    const latestTotal = toScore(active.latestScore) + toScore(prev.latestScore) + toScore(next.latestScore)
+    const averageTotal = toScore(active.averageScore) + toScore(prev.averageScore) + toScore(next.averageScore)
+    const drift = averageTotal - latestTotal
+    const comparableCount =
+      Number(active.latestScore !== null) +
+      Number(prev.latestScore !== null) +
+      Number(next.latestScore !== null)
+    const alignedCount =
+      Number(active.latestScore !== null && active.latestScore === active.averageScore) +
+      Number(prev.latestScore !== null && prev.latestScore === prev.averageScore) +
+      Number(next.latestScore !== null && next.latestScore === next.averageScore)
+    const coherence =
+      comparableCount === 0
+        ? 'none'
+        : alignedCount === comparableCount
+          ? 'aligned'
+          : alignedCount === 0
+            ? 'diverged'
+            : 'partial'
+    return `${active.summary} · ${prev.summary} · ${next.summary} · totals:latest:${formatSigned(latestTotal)}|average:${formatSigned(averageTotal)}|drift:${formatSigned(drift)}|coherence:${coherence} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayMarkerVisualNeighborPolaritySummary = useMemo(() => {
+    if (!marketOverlayActiveTimelineAnnotation || marketOverlayActiveTimelineIndex < 0) {
+      return 'none'
+    }
+    const activeProfile = marketOverlayMarkerVisualProfiles.get(marketOverlayActiveTimelineAnnotation.id) ?? null
+    if (!activeProfile) {
+      return 'none'
+    }
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    const previousProfile = previousAnnotation
+      ? marketOverlayMarkerVisualProfiles.get(previousAnnotation.id) ?? null
+      : null
+    const nextProfile = nextAnnotation ? marketOverlayMarkerVisualProfiles.get(nextAnnotation.id) ?? null : null
+    const toneScore = (tone: MarketOverlayMarkerVisualProfile['tone']) => {
+      if (tone === 'up') {
+        return 1
+      }
+      if (tone === 'down') {
+        return -1
+      }
+      return 0
+    }
+    const formatSigned = (value: number) => `${value >= 0 ? '+' : ''}${value}`
+    const describe = (label: 'active' | 'prev' | 'next', profile: MarketOverlayMarkerVisualProfile | null) => {
+      if (!profile) {
+        return { summary: `${label}:n/a`, score: null as number | null }
+      }
+      const score = toneScore(profile.tone)
+      return { summary: `${label}:${profile.tone}|score:${formatSigned(score)}`, score }
+    }
+    const active = describe('active', activeProfile)
+    const prev = describe('prev', previousProfile)
+    const next = describe('next', nextProfile)
+    const neighborScore = (prev.score ?? 0) + (next.score ?? 0)
+    const neighborCoverage = Number(prev.score !== null) + Number(next.score !== null)
+    const polarity = neighborScore === 0 ? 'neutral' : neighborScore > 0 ? 'up-lean' : 'down-lean'
+    const spread = prev.score === null || next.score === null ? 'n/a' : formatSigned(prev.score - next.score)
+    const activeScore = active.score ?? 0
+    const couplingScore = neighborScore - activeScore
+    const couplingState =
+      couplingScore === 0
+        ? 'aligned'
+        : activeScore === 0
+          ? 'priming'
+          : Math.sign(couplingScore) === Math.sign(activeScore)
+            ? 'supportive'
+            : 'offset'
+    return `${active.summary} · ${prev.summary} · ${next.summary} · neighbors:${formatSigned(neighborScore)}|polarity:${polarity}|coverage:${neighborCoverage}/2|spread:${spread} · coupling:${formatSigned(couplingScore)}|state:${couplingState} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayMarkerVisualProfiles,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayMarkerVisualNeighborPhaseSummary = useMemo(() => {
+    if (!marketOverlayActiveTimelineAnnotation || marketOverlayActiveTimelineIndex < 0) {
+      return 'none'
+    }
+    const activeProfile = marketOverlayMarkerVisualProfiles.get(marketOverlayActiveTimelineAnnotation.id) ?? null
+    if (!activeProfile) {
+      return 'none'
+    }
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    const previousProfile = previousAnnotation
+      ? marketOverlayMarkerVisualProfiles.get(previousAnnotation.id) ?? null
+      : null
+    const nextProfile = nextAnnotation ? marketOverlayMarkerVisualProfiles.get(nextAnnotation.id) ?? null : null
+    const toneScore = (tone: MarketOverlayMarkerVisualProfile['tone']) => {
+      if (tone === 'up') {
+        return 1
+      }
+      if (tone === 'down') {
+        return -1
+      }
+      return 0
+    }
+    const formatSigned = (value: number) => `${value >= 0 ? '+' : ''}${value}`
+    const activeScore = toneScore(activeProfile.tone)
+    const prevScore = previousProfile ? toneScore(previousProfile.tone) : null
+    const nextScore = nextProfile ? toneScore(nextProfile.tone) : null
+    const prevStep = prevScore === null ? null : prevScore - activeScore
+    const nextStep = nextScore === null ? null : nextScore - activeScore
+    const availableCount = Number(prevStep !== null) + Number(nextStep !== null)
+    const netStep = (prevStep ?? 0) + (nextStep ?? 0)
+    const bias = netStep === 0 ? 'flat' : netStep > 0 ? 'warming' : 'cooling'
+    const phase =
+      availableCount === 0
+        ? 'isolated'
+        : availableCount === 1
+          ? (prevStep ?? nextStep ?? 0) === 0
+            ? 'anchored-edge'
+            : (prevStep ?? nextStep ?? 0) > 0
+              ? 'warming-edge'
+              : 'cooling-edge'
+          : (prevStep ?? 0) === 0 && (nextStep ?? 0) === 0
+            ? 'locked'
+            : Math.sign(prevStep ?? 0) === Math.sign(nextStep ?? 0)
+              ? 'tilted'
+              : (prevStep ?? 0) === -(nextStep ?? 0)
+                ? 'balanced-swing'
+                : 'mixed'
+    const spread = prevStep === null || nextStep === null ? 'n/a' : formatSigned(prevStep - nextStep)
+    return `active:${activeProfile.tone}|score:${formatSigned(activeScore)} · prev:${prevScore === null ? 'n/a' : `${previousProfile?.tone ?? 'n/a'}|step:${formatSigned(prevStep ?? 0)}`} · next:${nextScore === null ? 'n/a' : `${nextProfile?.tone ?? 'n/a'}|step:${formatSigned(nextStep ?? 0)}`} · netStep:${formatSigned(netStep)}|bias:${bias}|spread:${spread}|phase:${phase}|coverage:${availableCount}/2 · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayMarkerVisualProfiles,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayMarkerVisualNeighborTensionSummary = useMemo(() => {
+    if (!marketOverlayActiveTimelineAnnotation || marketOverlayActiveTimelineIndex < 0) {
+      return 'none'
+    }
+    const activeProfile = marketOverlayMarkerVisualProfiles.get(marketOverlayActiveTimelineAnnotation.id) ?? null
+    if (!activeProfile) {
+      return 'none'
+    }
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    const previousProfile = previousAnnotation
+      ? marketOverlayMarkerVisualProfiles.get(previousAnnotation.id) ?? null
+      : null
+    const nextProfile = nextAnnotation ? marketOverlayMarkerVisualProfiles.get(nextAnnotation.id) ?? null : null
+    const toneScore = (tone: MarketOverlayMarkerVisualProfile['tone']) => {
+      if (tone === 'up') {
+        return 1
+      }
+      if (tone === 'down') {
+        return -1
+      }
+      return 0
+    }
+    const formatSigned = (value: number) => `${value >= 0 ? '+' : ''}${value}`
+    const activeScore = toneScore(activeProfile.tone)
+    const previousDelta = previousProfile ? toneScore(previousProfile.tone) - activeScore : null
+    const nextDelta = nextProfile ? toneScore(nextProfile.tone) - activeScore : null
+    const coverage = Number(previousDelta !== null) + Number(nextDelta !== null)
+    const tension = Math.abs(previousDelta ?? 0) + Math.abs(nextDelta ?? 0)
+    const net = (previousDelta ?? 0) + (nextDelta ?? 0)
+    const vector = net === 0 ? 'balanced' : net > 0 ? 'up' : 'down'
+    const phase =
+      coverage === 0
+        ? 'isolated'
+        : coverage === 1
+          ? Math.abs(previousDelta ?? nextDelta ?? 0) < 1e-9
+            ? 'anchored-edge'
+            : Math.abs(previousDelta ?? nextDelta ?? 0) === 1
+              ? 'skewed-edge'
+              : 'stretched-edge'
+          : tension === 0
+            ? 'calm'
+            : tension === 2 && net === 0
+              ? 'balanced-pull'
+              : tension >= 3
+                ? 'fractured'
+                : 'tilted'
+    return `active:${activeProfile.tone}|score:${formatSigned(activeScore)} · prev:${previousProfile ? `${previousProfile.tone}|Δa:${formatSigned(previousDelta ?? 0)}` : 'n/a'} · next:${nextProfile ? `${nextProfile.tone}|Δa:${formatSigned(nextDelta ?? 0)}` : 'n/a'} · net:${formatSigned(net)}|tension:${tension}|vector:${vector}|phase:${phase}|coverage:${coverage}/2 · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayMarkerVisualProfiles,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayMarkerVisualNeighborCadenceSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const activeProfile = marketOverlayMarkerVisualProfiles.get(marketOverlayActiveTimelineAnnotation.id) ?? null
+    if (!activeProfile) {
+      return 'none'
+    }
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    const previousProfile = previousAnnotation
+      ? marketOverlayMarkerVisualProfiles.get(previousAnnotation.id) ?? null
+      : null
+    const nextProfile = nextAnnotation ? marketOverlayMarkerVisualProfiles.get(nextAnnotation.id) ?? null : null
+    const pointIndexByTime = new Map(
+      marketOverlayChartPoints.map((point, index) => [point.time, index] as const),
+    )
+    const activePointIndex = pointIndexByTime.get(marketOverlayActiveTimelineAnnotation.time) ?? -1
+    const computeStepGap = (annotation: MarketOverlayTimelineAnnotation | null) => {
+      if (!annotation || activePointIndex < 0) {
+        return null
+      }
+      const index = pointIndexByTime.get(annotation.time) ?? -1
+      if (index < 0) {
+        return null
+      }
+      return Math.abs(index - activePointIndex)
+    }
+    const previousGap = computeStepGap(previousAnnotation)
+    const nextGap = computeStepGap(nextAnnotation)
+    const coverage = Number(previousGap !== null) + Number(nextGap !== null)
+    const totalGap = (previousGap ?? 0) + (nextGap ?? 0)
+    const averageGap = coverage === 0 ? null : totalGap / coverage
+    const cadence =
+      coverage === 0
+        ? 'isolated'
+        : coverage === 1
+          ? 'edge'
+          : previousGap === nextGap
+            ? 'symmetric'
+            : (previousGap ?? 0) < (nextGap ?? 0)
+              ? 'front-weighted'
+              : 'back-weighted'
+    return `active:${activeProfile.tone}|slot:${marketOverlayActiveTimelineIndex + 1}/${marketOverlayScopedTimelineAnnotations.length} · prev:${previousProfile ? previousProfile.tone : 'none'}|Δstep:${previousGap ?? 'n/a'} · next:${nextProfile ? nextProfile.tone : 'none'}|Δstep:${nextGap ?? 'n/a'} · cadence:${cadence}|avgGap:${averageGap === null ? 'n/a' : averageGap.toFixed(2)}|coverage:${coverage}/2 · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayMarkerVisualProfiles,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayMarkerVisualNeighborCadenceDriftSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const activeProfile = marketOverlayMarkerVisualProfiles.get(marketOverlayActiveTimelineAnnotation.id) ?? null
+    if (!activeProfile) {
+      return 'none'
+    }
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    const previousProfile = previousAnnotation
+      ? marketOverlayMarkerVisualProfiles.get(previousAnnotation.id) ?? null
+      : null
+    const nextProfile = nextAnnotation ? marketOverlayMarkerVisualProfiles.get(nextAnnotation.id) ?? null : null
+    const toneScore = (tone: MarketOverlayMarkerVisualProfile['tone']) => {
+      if (tone === 'up') {
+        return 1
+      }
+      if (tone === 'down') {
+        return -1
+      }
+      return 0
+    }
+    const pointIndexByTime = new Map(
+      marketOverlayChartPoints.map((point, index) => [point.time, index] as const),
+    )
+    const activePointIndex = pointIndexByTime.get(marketOverlayActiveTimelineAnnotation.time) ?? -1
+    const resolveGap = (annotation: MarketOverlayTimelineAnnotation | null) => {
+      if (!annotation || activePointIndex < 0) {
+        return null
+      }
+      const index = pointIndexByTime.get(annotation.time) ?? -1
+      if (index < 0) {
+        return null
+      }
+      return Math.abs(index - activePointIndex)
+    }
+    const activeScore = toneScore(activeProfile.tone)
+    const previousToneDelta = previousProfile ? toneScore(previousProfile.tone) - activeScore : null
+    const nextToneDelta = nextProfile ? toneScore(nextProfile.tone) - activeScore : null
+    const previousGap = resolveGap(previousAnnotation)
+    const nextGap = resolveGap(nextAnnotation)
+    const toWeightedDelta = (toneDelta: number | null, gap: number | null) => {
+      if (toneDelta === null || gap === null) {
+        return null
+      }
+      return toneDelta / Math.max(1, gap)
+    }
+    const previousWeighted = toWeightedDelta(previousToneDelta, previousGap)
+    const nextWeighted = toWeightedDelta(nextToneDelta, nextGap)
+    const coverage = Number(previousWeighted !== null) + Number(nextWeighted !== null)
+    const net = (previousWeighted ?? 0) + (nextWeighted ?? 0)
+    const direction = Math.abs(net) < 1e-9 ? 'balanced' : net > 0 ? 'warming' : 'cooling'
+    const pressure =
+      coverage === 0
+        ? 'isolated'
+        : Math.abs(net) < 0.5
+          ? 'gentle'
+          : Math.abs(net) < 1
+            ? 'moderate'
+            : 'strong'
+    const spread =
+      previousWeighted === null || nextWeighted === null ? null : previousWeighted - nextWeighted
+    const formatSigned = (value: number, digits = 2) => `${value >= 0 ? '+' : ''}${value.toFixed(digits)}`
+    return `active:${activeProfile.tone}|score:${activeScore >= 0 ? '+' : ''}${activeScore} · prev:${previousProfile ? `${previousProfile.tone}|Δtone:${previousToneDelta === null ? 'n/a' : `${previousToneDelta >= 0 ? '+' : ''}${previousToneDelta}`}|Δstep:${previousGap ?? 'n/a'}|weight:${previousWeighted === null ? 'n/a' : formatSigned(previousWeighted)}` : 'n/a'} · next:${nextProfile ? `${nextProfile.tone}|Δtone:${nextToneDelta === null ? 'n/a' : `${nextToneDelta >= 0 ? '+' : ''}${nextToneDelta}`}|Δstep:${nextGap ?? 'n/a'}|weight:${nextWeighted === null ? 'n/a' : formatSigned(nextWeighted)}` : 'n/a'} · drift:${formatSigned(net)}|direction:${direction}|pressure:${pressure}|spread:${spread === null ? 'n/a' : formatSigned(spread)}|coverage:${coverage}/2 · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayMarkerVisualProfiles,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+  const marketOverlayMarkerVisualNeighborCadenceCoherenceSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const activeProfile = marketOverlayMarkerVisualProfiles.get(marketOverlayActiveTimelineAnnotation.id) ?? null
+    if (!activeProfile) {
+      return 'none'
+    }
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    const previousProfile = previousAnnotation
+      ? marketOverlayMarkerVisualProfiles.get(previousAnnotation.id) ?? null
+      : null
+    const nextProfile = nextAnnotation ? marketOverlayMarkerVisualProfiles.get(nextAnnotation.id) ?? null : null
+    const toneScore = (tone: MarketOverlayMarkerVisualProfile['tone']) => {
+      if (tone === 'up') {
+        return 1
+      }
+      if (tone === 'down') {
+        return -1
+      }
+      return 0
+    }
+    const pointIndexByTime = new Map(
+      marketOverlayChartPoints.map((point, index) => [point.time, index] as const),
+    )
+    const activePointIndex = pointIndexByTime.get(marketOverlayActiveTimelineAnnotation.time) ?? -1
+    const resolveGap = (annotation: MarketOverlayTimelineAnnotation | null) => {
+      if (!annotation || activePointIndex < 0) {
+        return null
+      }
+      const index = pointIndexByTime.get(annotation.time) ?? -1
+      if (index < 0) {
+        return null
+      }
+      return Math.abs(index - activePointIndex)
+    }
+    const activeScore = toneScore(activeProfile.tone)
+    const previousGap = resolveGap(previousAnnotation)
+    const nextGap = resolveGap(nextAnnotation)
+    const previousWeight =
+      previousProfile && previousGap !== null
+        ? (toneScore(previousProfile.tone) - activeScore) / Math.max(1, previousGap)
+        : null
+    const nextWeight =
+      nextProfile && nextGap !== null ? (toneScore(nextProfile.tone) - activeScore) / Math.max(1, nextGap) : null
+    const coverage = Number(previousWeight !== null) + Number(nextWeight !== null)
+    const net = (previousWeight ?? 0) + (nextWeight ?? 0)
+    const direction = Math.abs(net) < 1e-9 ? 'balanced' : net > 0 ? 'warming' : 'cooling'
+    const coherence =
+      coverage === 0
+        ? 'none'
+        : coverage === 1
+          ? 'one-sided'
+          : Math.sign(previousWeight ?? 0) === Math.sign(nextWeight ?? 0)
+            ? 'aligned'
+            : (previousWeight ?? 0) === 0 || (nextWeight ?? 0) === 0
+              ? 'transitional'
+              : 'opposed'
+    const dispersion =
+      previousWeight === null || nextWeight === null ? null : Math.abs(previousWeight - nextWeight)
+    const intensity =
+      Math.abs(net) < 1e-9 ? 'idle' : Math.abs(net) < 0.5 ? 'light' : Math.abs(net) < 1 ? 'medium' : 'strong'
+    const formatSigned = (value: number, digits = 2) => `${value >= 0 ? '+' : ''}${value.toFixed(digits)}`
+    return `active:${activeProfile.tone}|score:${activeScore >= 0 ? '+' : ''}${activeScore} · prev:${previousProfile ? `${previousProfile.tone}|weight:${previousWeight === null ? 'n/a' : formatSigned(previousWeight)}` : 'n/a'} · next:${nextProfile ? `${nextProfile.tone}|weight:${nextWeight === null ? 'n/a' : formatSigned(nextWeight)}` : 'n/a'} · net:${formatSigned(net)}|direction:${direction}|coherence:${coherence}|dispersion:${dispersion === null ? 'n/a' : formatSigned(dispersion)}|intensity:${intensity}|coverage:${coverage}/2 · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayMarkerVisualProfiles,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+
+  useEffect(() => {
+    if (marketOverlayScopedVisibleAnnotations.length === 0) {
+      if (marketOverlaySelectedMarkerId !== null) {
+        setMarketOverlaySelectedMarkerId(null)
+      }
+      return
+    }
+    if (marketOverlaySelectionMode === 'follow-latest') {
+      const latestScoped =
+        marketOverlayScopedTimelineAnnotations[marketOverlayScopedTimelineAnnotations.length - 1] ?? null
+      if (!latestScoped) {
+        if (marketOverlaySelectedMarkerId !== null) {
+          setMarketOverlaySelectedMarkerId(null)
+        }
+        return
+      }
+      if (marketOverlaySelectedMarkerId !== latestScoped.id) {
+        setMarketOverlaySelectedMarkerId(latestScoped.id)
+      }
+      return
+    }
+    if (
+      marketOverlaySelectedMarkerId &&
+      marketOverlayScopedVisibleAnnotations.some((annotation) => annotation.id === marketOverlaySelectedMarkerId)
+    ) {
+      return
+    }
+    setMarketOverlaySelectedMarkerId(marketOverlayScopedVisibleAnnotations[0].id)
+  }, [
+    marketOverlayScopedTimelineAnnotations,
+    marketOverlayScopedVisibleAnnotations,
+    marketOverlaySelectedMarkerId,
+    marketOverlaySelectionMode,
+  ])
+
+  const selectRelativeMarketOverlayMarker = useCallback(
+    (offset: number) => {
+      if (
+        isMarketOverlayNavigationLocked ||
+        marketOverlayActiveTimelineIndex < 0 ||
+        marketOverlayTimelineCount === 0
+      ) {
+        return
+      }
+      const rawTargetIndex = marketOverlayActiveTimelineIndex + offset
+      const targetIndex =
+        marketOverlayMarkerWrap === 'wrap'
+          ? ((rawTargetIndex % marketOverlayTimelineCount) + marketOverlayTimelineCount) %
+            marketOverlayTimelineCount
+          : Math.max(0, Math.min(marketOverlayTimelineCount - 1, rawTargetIndex))
+      if (targetIndex === marketOverlayActiveTimelineIndex) {
+        return
+      }
+      const target = marketOverlayScopedTimelineAnnotations[targetIndex]
+      if (!target) {
+        return
+      }
+      setMarketOverlaySelectedMarkerId(target.id)
+    },
+    [
+      isMarketOverlayNavigationLocked,
+      marketOverlayActiveTimelineIndex,
+      marketOverlayMarkerWrap,
+      marketOverlayScopedTimelineAnnotations,
+      marketOverlayTimelineCount,
+    ],
+  )
+
+  const selectPreviousMarketOverlayMarker = useCallback(() => {
+    if (!canSelectPreviousMarketOverlayMarker) {
+      return
+    }
+    selectRelativeMarketOverlayMarker(-1)
+  }, [canSelectPreviousMarketOverlayMarker, selectRelativeMarketOverlayMarker])
+
+  const selectNextMarketOverlayMarker = useCallback(() => {
+    if (!canSelectNextMarketOverlayMarker) {
+      return
+    }
+    selectRelativeMarketOverlayMarker(1)
+  }, [canSelectNextMarketOverlayMarker, selectRelativeMarketOverlayMarker])
+
+  const selectPreviousBucketMarketOverlayMarker = useCallback(() => {
+    if (!canSelectPreviousBucketMarketOverlayMarker) {
+      return
+    }
+    const previousBucketMarker = marketOverlayScopedTimelineAnnotations[marketOverlayPreviousBucketIndex]
+    if (!previousBucketMarker) {
+      return
+    }
+    setMarketOverlaySelectedMarkerId(previousBucketMarker.id)
+  }, [
+    canSelectPreviousBucketMarketOverlayMarker,
+    marketOverlayPreviousBucketIndex,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+
+  const selectNextBucketMarketOverlayMarker = useCallback(() => {
+    if (!canSelectNextBucketMarketOverlayMarker) {
+      return
+    }
+    const nextBucketMarker = marketOverlayScopedTimelineAnnotations[marketOverlayNextBucketIndex]
+    if (!nextBucketMarker) {
+      return
+    }
+    setMarketOverlaySelectedMarkerId(nextBucketMarker.id)
+  }, [
+    canSelectNextBucketMarketOverlayMarker,
+    marketOverlayNextBucketIndex,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+
+  const selectPreviousSameKindMarketOverlayMarker = useCallback(() => {
+    if (!canSelectPreviousSameKindMarketOverlayMarker) {
+      return
+    }
+    const previousSameKind = marketOverlayScopedTimelineAnnotations[marketOverlayPreviousSameKindIndex]
+    if (!previousSameKind) {
+      return
+    }
+    setMarketOverlaySelectedMarkerId(previousSameKind.id)
+  }, [
+    canSelectPreviousSameKindMarketOverlayMarker,
+    marketOverlayPreviousSameKindIndex,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+
+  const selectNextSameKindMarketOverlayMarker = useCallback(() => {
+    if (!canSelectNextSameKindMarketOverlayMarker) {
+      return
+    }
+    const nextSameKind = marketOverlayScopedTimelineAnnotations[marketOverlayNextSameKindIndex]
+    if (!nextSameKind) {
+      return
+    }
+    setMarketOverlaySelectedMarkerId(nextSameKind.id)
+  }, [
+    canSelectNextSameKindMarketOverlayMarker,
+    marketOverlayNextSameKindIndex,
+    marketOverlayScopedTimelineAnnotations,
+  ])
+
+  const selectSkipBackwardMarketOverlayMarker = useCallback(() => {
+    if (!canSelectSkipBackwardMarketOverlayMarker) {
+      return
+    }
+    selectRelativeMarketOverlayMarker(-MARKET_OVERLAY_MARKER_SKIP_STEP)
+  }, [canSelectSkipBackwardMarketOverlayMarker, selectRelativeMarketOverlayMarker])
+
+  const selectSkipForwardMarketOverlayMarker = useCallback(() => {
+    if (!canSelectSkipForwardMarketOverlayMarker) {
+      return
+    }
+    selectRelativeMarketOverlayMarker(MARKET_OVERLAY_MARKER_SKIP_STEP)
+  }, [canSelectSkipForwardMarketOverlayMarker, selectRelativeMarketOverlayMarker])
+
+  const selectOldestMarketOverlayMarker = useCallback(() => {
+    if (!canSelectOldestMarketOverlayMarker) {
+      return
+    }
+    const oldest = marketOverlayScopedTimelineAnnotations[0]
+    if (!oldest) {
+      return
+    }
+    setMarketOverlaySelectedMarkerId(oldest.id)
+  }, [canSelectOldestMarketOverlayMarker, marketOverlayScopedTimelineAnnotations])
+
+  const selectLatestMarketOverlayMarker = useCallback(() => {
+    if (!canSelectLatestMarketOverlayMarker) {
+      return
+    }
+    const latest =
+      marketOverlayScopedTimelineAnnotations[marketOverlayScopedTimelineAnnotations.length - 1]
+    if (!latest) {
+      return
+    }
+    setMarketOverlaySelectedMarkerId(latest.id)
+  }, [canSelectLatestMarketOverlayMarker, marketOverlayScopedTimelineAnnotations])
+
+  const onMarketOverlayMarkerKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLButtonElement>) => {
+      const normalizedKey = event.key.toLowerCase()
+      if ((event.key === 'ArrowLeft' || event.key === 'ArrowUp') && event.shiftKey) {
+        event.preventDefault()
+        selectSkipBackwardMarketOverlayMarker()
+        return
+      }
+      if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+        event.preventDefault()
+        selectPreviousMarketOverlayMarker()
+        return
+      }
+      if ((event.key === 'ArrowRight' || event.key === 'ArrowDown') && event.shiftKey) {
+        event.preventDefault()
+        selectSkipForwardMarketOverlayMarker()
+        return
+      }
+      if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+        event.preventDefault()
+        selectNextMarketOverlayMarker()
+        return
+      }
+      if (event.key === 'PageUp') {
+        event.preventDefault()
+        selectSkipBackwardMarketOverlayMarker()
+        return
+      }
+      if (event.key === 'PageDown') {
+        event.preventDefault()
+        selectSkipForwardMarketOverlayMarker()
+        return
+      }
+      if (event.key === ',' || event.key === '<') {
+        event.preventDefault()
+        selectPreviousBucketMarketOverlayMarker()
+        return
+      }
+      if (event.key === '.' || event.key === '>') {
+        event.preventDefault()
+        selectNextBucketMarketOverlayMarker()
+        return
+      }
+      if (normalizedKey === 'o') {
+        event.preventDefault()
+        setMarketOverlayTimelineOrder('oldest-first')
+        return
+      }
+      if (normalizedKey === 'l') {
+        event.preventDefault()
+        setMarketOverlayTimelineOrder('newest-first')
+        return
+      }
+      if (normalizedKey === 'g') {
+        event.preventDefault()
+        setMarketOverlayBucketScope((current) =>
+          current === 'all-buckets' ? 'latest-bucket' : 'all-buckets',
+        )
+        return
+      }
+      if (normalizedKey === 'w') {
+        event.preventDefault()
+        setMarketOverlayMarkerWrap((current) => (current === 'bounded' ? 'wrap' : 'bounded'))
+        return
+      }
+      if (normalizedKey === 's') {
+        event.preventDefault()
+        setMarketOverlaySelectionMode((current) =>
+          current === 'sticky' ? 'follow-latest' : 'sticky',
+        )
+        return
+      }
+      if (normalizedKey === 'a') {
+        event.preventDefault()
+        setMarketOverlayMarkerFocus('all')
+        return
+      }
+      if (normalizedKey === 't') {
+        event.preventDefault()
+        setMarketOverlayMarkerFocus('trade')
+        return
+      }
+      if (normalizedKey === 'r') {
+        event.preventDefault()
+        setMarketOverlayMarkerFocus('risk')
+        return
+      }
+      if (normalizedKey === 'd') {
+        event.preventDefault()
+        setMarketOverlayMarkerFocus('feed')
+        return
+      }
+      if (normalizedKey === 'z') {
+        event.preventDefault()
+        setMarketOverlayMarkerFocus((current) => {
+          const currentIndex = MARKET_OVERLAY_MARKER_FOCUS_ORDER.indexOf(current)
+          const safeIndex = currentIndex < 0 ? 0 : currentIndex
+          const direction = event.shiftKey ? -1 : 1
+          return MARKET_OVERLAY_MARKER_FOCUS_ORDER[
+            (safeIndex + direction + MARKET_OVERLAY_MARKER_FOCUS_ORDER.length) %
+              MARKET_OVERLAY_MARKER_FOCUS_ORDER.length
+          ]
+        })
+        return
+      }
+      if (normalizedKey === 'y') {
+        event.preventDefault()
+        setMarketOverlayMarkerAgeFilter((current) => {
+          const currentIndex = MARKET_OVERLAY_MARKER_AGE_FILTER_ORDER.indexOf(current)
+          const safeIndex = currentIndex < 0 ? 0 : currentIndex
+          const direction = event.shiftKey ? -1 : 1
+          return MARKET_OVERLAY_MARKER_AGE_FILTER_ORDER[
+            (safeIndex + direction + MARKET_OVERLAY_MARKER_AGE_FILTER_ORDER.length) %
+              MARKET_OVERLAY_MARKER_AGE_FILTER_ORDER.length
+          ]
+        })
+        return
+      }
+      if (normalizedKey === 'v') {
+        event.preventDefault()
+        setMarketOverlayMarkerWindow((current) => {
+          const currentIndex = MARKET_OVERLAY_MARKER_WINDOW_ORDER.indexOf(current)
+          const safeIndex = currentIndex < 0 ? MARKET_OVERLAY_MARKER_WINDOW_ORDER.indexOf(5) : currentIndex
+          const direction = event.shiftKey ? -1 : 1
+          return MARKET_OVERLAY_MARKER_WINDOW_ORDER[
+            (safeIndex + direction + MARKET_OVERLAY_MARKER_WINDOW_ORDER.length) %
+              MARKET_OVERLAY_MARKER_WINDOW_ORDER.length
+          ]
+        })
+        return
+      }
+      if (normalizedKey === 'b') {
+        event.preventDefault()
+        setMarketOverlayMarkerBucket((current) => {
+          const currentIndex = MARKET_OVERLAY_MARKER_BUCKET_ORDER.indexOf(current)
+          const safeIndex = currentIndex < 0 ? 0 : currentIndex
+          const direction = event.shiftKey ? -1 : 1
+          return MARKET_OVERLAY_MARKER_BUCKET_ORDER[
+            (safeIndex + direction + MARKET_OVERLAY_MARKER_BUCKET_ORDER.length) %
+              MARKET_OVERLAY_MARKER_BUCKET_ORDER.length
+          ]
+        })
+        return
+      }
+      if (normalizedKey === 'k') {
+        event.preventDefault()
+        setMarketOverlayMarkerDeltaBasis((current) => {
+          const currentIndex = MARKET_OVERLAY_MARKER_DELTA_BASIS_ORDER.indexOf(current)
+          if (currentIndex < 0) {
+            return 'latest'
+          }
+          return MARKET_OVERLAY_MARKER_DELTA_BASIS_ORDER[
+            (currentIndex + 1) % MARKET_OVERLAY_MARKER_DELTA_BASIS_ORDER.length
+          ]
+        })
+        return
+      }
+      if (normalizedKey === 'h') {
+        event.preventDefault()
+        setMarketOverlayMarkerDeltaBasis('latest')
+        return
+      }
+      if (normalizedKey === 'm') {
+        event.preventDefault()
+        setMarketOverlayMarkerDeltaBasis('average')
+        return
+      }
+      if (normalizedKey === 'q') {
+        event.preventDefault()
+        setMarketOverlayMarkerBasisAgreement('all')
+        return
+      }
+      if (normalizedKey === 'e') {
+        event.preventDefault()
+        setMarketOverlayMarkerBasisAgreement('agree')
+        return
+      }
+      if (normalizedKey === 'x') {
+        event.preventDefault()
+        setMarketOverlayMarkerBasisAgreement('diverge')
+        return
+      }
+      if (normalizedKey === 'c') {
+        event.preventDefault()
+        setMarketOverlayMarkerBasisAgreement((current) => {
+          const currentIndex = MARKET_OVERLAY_MARKER_BASIS_AGREEMENT_ORDER.indexOf(current)
+          if (currentIndex < 0) {
+            return 'all'
+          }
+          const direction = event.shiftKey ? -1 : 1
+          return MARKET_OVERLAY_MARKER_BASIS_AGREEMENT_ORDER[
+            (currentIndex + direction + MARKET_OVERLAY_MARKER_BASIS_AGREEMENT_ORDER.length) %
+              MARKET_OVERLAY_MARKER_BASIS_AGREEMENT_ORDER.length
+          ]
+        })
+        return
+      }
+      if (normalizedKey === 'p') {
+        event.preventDefault()
+        setMarketOverlayMarkerDivergencePreview((current) => {
+          const currentIndex = MARKET_OVERLAY_MARKER_DIVERGENCE_PREVIEW_ORDER.indexOf(current)
+          const safeIndex = currentIndex < 0 ? 0 : currentIndex
+          const direction = event.shiftKey ? -1 : 1
+          return MARKET_OVERLAY_MARKER_DIVERGENCE_PREVIEW_ORDER[
+            (safeIndex + direction + MARKET_OVERLAY_MARKER_DIVERGENCE_PREVIEW_ORDER.length) %
+              MARKET_OVERLAY_MARKER_DIVERGENCE_PREVIEW_ORDER.length
+          ]
+        })
+        return
+      }
+      if (normalizedKey === 'u') {
+        event.preventDefault()
+        setMarketOverlayMarkerDeltaFilter('latest-up')
+        return
+      }
+      if (normalizedKey === 'j') {
+        event.preventDefault()
+        setMarketOverlayMarkerDeltaFilter('latest-down')
+        return
+      }
+      if (normalizedKey === 'f') {
+        event.preventDefault()
+        setMarketOverlayMarkerDeltaFilter('latest-flat')
+        return
+      }
+      if (normalizedKey === 'n') {
+        event.preventDefault()
+        setMarketOverlayMarkerDeltaFilter('latest-unavailable')
+        return
+      }
+      if (event.key === '0') {
+        event.preventDefault()
+        setMarketOverlayMarkerDeltaFilter('all')
+        return
+      }
+      if (event.key === '+' || event.key === '=') {
+        event.preventDefault()
+        setMarketOverlayMarkerDeltaFilter((current) => {
+          const currentIndex = MARKET_OVERLAY_MARKER_DELTA_FILTER_ORDER.indexOf(current)
+          if (currentIndex < 0) {
+            return 'all'
+          }
+          return MARKET_OVERLAY_MARKER_DELTA_FILTER_ORDER[
+            (currentIndex + 1) % MARKET_OVERLAY_MARKER_DELTA_FILTER_ORDER.length
+          ]
+        })
+        return
+      }
+      if (event.key === '-' || event.key === '_') {
+        event.preventDefault()
+        setMarketOverlayMarkerDeltaFilter((current) => {
+          const currentIndex = MARKET_OVERLAY_MARKER_DELTA_FILTER_ORDER.indexOf(current)
+          if (currentIndex < 0) {
+            return 'all'
+          }
+          return MARKET_OVERLAY_MARKER_DELTA_FILTER_ORDER[
+            (currentIndex - 1 + MARKET_OVERLAY_MARKER_DELTA_FILTER_ORDER.length) %
+              MARKET_OVERLAY_MARKER_DELTA_FILTER_ORDER.length
+          ]
+        })
+        return
+      }
+      if (/^[1-9]$/.test(event.key)) {
+        event.preventDefault()
+        if (isMarketOverlayNavigationLocked) {
+          return
+        }
+        const numericIndex = Number(event.key) - 1
+        if (numericIndex < 0 || numericIndex >= marketOverlayTimelineCount) {
+          return
+        }
+        const target = marketOverlayScopedTimelineAnnotations[numericIndex]
+        if (!target) {
+          return
+        }
+        setMarketOverlaySelectedMarkerId(target.id)
+        return
+      }
+      if (event.key === '[') {
+        event.preventDefault()
+        selectPreviousSameKindMarketOverlayMarker()
+        return
+      }
+      if (event.key === ']') {
+        event.preventDefault()
+        selectNextSameKindMarketOverlayMarker()
+        return
+      }
+      if (event.key === 'Home') {
+        event.preventDefault()
+        selectOldestMarketOverlayMarker()
+        return
+      }
+      if (event.key === 'End') {
+        event.preventDefault()
+        selectLatestMarketOverlayMarker()
+      }
+    },
+    [
+      isMarketOverlayNavigationLocked,
+      marketOverlayScopedTimelineAnnotations,
+      marketOverlayTimelineCount,
+      selectLatestMarketOverlayMarker,
+      selectNextBucketMarketOverlayMarker,
+      selectNextSameKindMarketOverlayMarker,
+      selectNextMarketOverlayMarker,
+      selectOldestMarketOverlayMarker,
+      selectPreviousBucketMarketOverlayMarker,
+      selectPreviousSameKindMarketOverlayMarker,
+      selectPreviousMarketOverlayMarker,
+      selectSkipBackwardMarketOverlayMarker,
+      selectSkipForwardMarketOverlayMarker,
+    ],
+  )
+
+  useEffect(() => {
+    const container = marketOverlayChartContainerRef.current
+    if (!container || typeof window.ResizeObserver === 'undefined') {
+      setMarketOverlayChartRuntime('fallback')
+      return
+    }
+
+    let disposed = false
+    let resizeObserver: ResizeObserver | null = null
+
+    const initChart = async () => {
+      try {
+        const lightweightCharts = (await import('lightweight-charts')) as LightweightChartsModule
+        if (disposed) {
+          return
+        }
+
+        const chart = lightweightCharts.createChart(container, {
+          width: Math.max(container.clientWidth, 240),
+          height: Math.max(container.clientHeight, 140),
+          layout: {
+            background: { color: '#081224' },
+            textColor: '#9fb0cc',
+          },
+          grid: {
+            vertLines: { color: '#203556' },
+            horzLines: { color: '#203556' },
+          },
+          rightPriceScale: {
+            borderColor: '#2d4a7e',
+          },
+          timeScale: {
+            borderColor: '#2d4a7e',
+            timeVisible: false,
+            secondsVisible: false,
+          },
+        })
+
+        const addLineSeries = (
+          color: string,
+          lineWidth: number,
+        ): MarketOverlayChartSeries | null => {
+          if (chart.addLineSeries) {
+            return chart.addLineSeries({ color, lineWidth })
+          }
+          if (chart.addSeries && lightweightCharts.LineSeries) {
+            return chart.addSeries(lightweightCharts.LineSeries, { color, lineWidth })
+          }
+          return null
+        }
+
+        const priceSeries = addLineSeries('#84d3f8', 2)
+        if (!priceSeries) {
+          chart.remove()
+          setMarketOverlayChartRuntime('fallback')
+          return
+        }
+        const trendSeries = addLineSeries('#e9cf7a', 1)
+        const baselineSeries = addLineSeries('#9fb0cc', 1)
+
+        marketOverlayChartRef.current = chart
+        marketOverlayPriceSeriesRef.current = priceSeries
+        marketOverlayTrendSeriesRef.current = trendSeries
+        marketOverlayBaselineSeriesRef.current = baselineSeries
+        priceSeries.setData([])
+        trendSeries?.setData([])
+        baselineSeries?.setData([])
+        chart.timeScale().fitContent()
+        setMarketOverlayChartRuntime('ready')
+
+        resizeObserver = new ResizeObserver((entries) => {
+          const next = entries[0]
+          if (!next || disposed || !marketOverlayChartRef.current) {
+            return
+          }
+          window.requestAnimationFrame(() => {
+            if (disposed || !marketOverlayChartRef.current) {
+              return
+            }
+            marketOverlayChartRef.current.applyOptions({
+              width: Math.max(next.contentRect.width, 240),
+              height: Math.max(next.contentRect.height, 140),
+            })
+          })
+        })
+        resizeObserver.observe(container)
+      } catch {
+        if (!disposed) {
+          setMarketOverlayChartRuntime('error')
+        }
+      }
+    }
+
+    void initChart()
+
+    return () => {
+      disposed = true
+      resizeObserver?.disconnect()
+      marketOverlayChartRef.current?.remove?.()
+      marketOverlayChartRef.current = null
+      marketOverlayPriceSeriesRef.current = null
+      marketOverlayTrendSeriesRef.current = null
+      marketOverlayBaselineSeriesRef.current = null
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!marketOverlayPriceSeriesRef.current || !marketOverlayChartRef.current) {
+      return
+    }
+    marketOverlayPriceSeriesRef.current.setData(marketOverlayChartPoints)
+    if (marketOverlayTrendSeriesRef.current) {
+      marketOverlayTrendSeriesRef.current.setData(
+        marketOverlayChartLens === 'price-only' ? [] : marketOverlayTrendLinePoints,
+      )
+    }
+    if (marketOverlayBaselineSeriesRef.current) {
+      marketOverlayBaselineSeriesRef.current.setData(
+        marketOverlayChartLens === 'diagnostics' ? marketOverlayBaselinePoints : [],
+      )
+    }
+    marketOverlayPriceSeriesRef.current.setMarkers?.(marketOverlayChartMarkers)
+    marketOverlayChartRef.current.timeScale().fitContent()
+  }, [
+    marketOverlayChartMarkers,
+    marketOverlayBaselinePoints,
+    marketOverlayChartLens,
+    marketOverlayChartPoints,
+    marketOverlayTrendLinePoints,
+  ])
+
+  const websocketUrl = useMemo(() => {
+    const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws'
+    const host = window.location.host || 'localhost:8000'
+    return `${protocol}://${host}/ws`
+  }, [])
+
+  const helperResetToneClass = useMemo(
+    () => resolveHelperResetTone(helperDiagnosticsLastResetAt, helperResetStaleThresholdHours),
+    [helperDiagnosticsLastResetAt, helperResetStaleThresholdHours],
+  )
+
+  const helperResetLockToggleCount = useMemo(
+    () =>
+      quickActionHistory.filter((entry) => entry.method.startsWith('helper.reset.lock.toggle')).length,
+    [quickActionHistory],
+  )
+
+  const helperResetLockToggleToneClass = useMemo(
+    () => resolveLockCounterTone(helperResetLockToggleCount),
+    [helperResetLockToggleCount],
+  )
+
+  const helperResetLockSourceCounts = useMemo(() => {
+    const counts: Record<'Alt+L' | 'controls' | 'snapshot', number> = {
+      'Alt+L': 0,
+      controls: 0,
+      snapshot: 0,
+    }
+    for (const entry of quickActionHistory) {
+      if (!entry.method.startsWith('helper.reset.lock.toggle.')) {
+        continue
+      }
+      const source = entry.method.replace('helper.reset.lock.toggle.', '') as
+        | 'Alt+L'
+        | 'controls'
+        | 'snapshot'
+      if (source in counts) {
+        counts[source] += 1
+      }
+    }
+    return counts
+  }, [quickActionHistory])
+
+  const lockTelemetrySummaryLines = useMemo(
+    () => [
+      `lockCounterResetAt=${helperLockCountersLastResetAt ?? 'never'}`,
+      `lockToggleTotal=${helperResetLockToggleCount}`,
+      `lockToggleTone=${helperResetLockToggleToneClass.replace('counter-tone-', '')}`,
+      `lockToggleAlt+L=${helperResetLockSourceCounts['Alt+L']}`,
+      `lockToggleAlt+LTone=${resolveLockCounterTone(helperResetLockSourceCounts['Alt+L']).replace(
+        'counter-tone-',
+        '',
+      )}`,
+      `lockToggleControls=${helperResetLockSourceCounts.controls}`,
+      `lockToggleControlsTone=${resolveLockCounterTone(helperResetLockSourceCounts.controls).replace(
+        'counter-tone-',
+        '',
+      )}`,
+      `lockToggleSnapshot=${helperResetLockSourceCounts.snapshot}`,
+      `lockToggleSnapshotTone=${resolveLockCounterTone(helperResetLockSourceCounts.snapshot).replace(
+        'counter-tone-',
+        '',
+      )}`,
+    ],
+    [
+      helperLockCountersLastResetAt,
+      helperResetLockSourceCounts,
+      helperResetLockToggleCount,
+      helperResetLockToggleToneClass,
+    ],
+  )
+
+  const lockTelemetryToastDetails = useMemo(
+    () =>
+      `toggles: ${helperResetLockToggleCount}, tone: ${helperResetLockToggleToneClass.replace(
+        'counter-tone-',
+        '',
+      )}, reset: ${helperLockCountersLastResetAt ?? 'never'}`,
+    [helperLockCountersLastResetAt, helperResetLockToggleCount, helperResetLockToggleToneClass],
+  )
+
+  const lockTelemetrySourceToastDetails = useMemo(
+    () =>
+      `sources: Alt+L=${helperResetLockSourceCounts['Alt+L']}, controls=${helperResetLockSourceCounts.controls}, snapshot=${helperResetLockSourceCounts.snapshot}`,
+    [helperResetLockSourceCounts],
+  )
+
+  const lockTelemetryToastDetailsWithSources = useMemo(
+    () => `${lockTelemetryToastDetails}; ${lockTelemetrySourceToastDetails}`,
+    [lockTelemetrySourceToastDetails, lockTelemetryToastDetails],
+  )
+
+  const lockTelemetryToastDetailsWithLabelAndSources = useMemo(
+    () => `lock ${lockTelemetryToastDetailsWithSources}`,
+    [lockTelemetryToastDetailsWithSources],
+  )
+
+  const lockTelemetryFailureSuffix = useMemo(
+    () =>
+      isBlockTelemetryVisible
+        ? ` Lock telemetry: ${lockTelemetryToastDetailsWithLabelAndSources}.`
+        : '',
+    [isBlockTelemetryVisible, lockTelemetryToastDetailsWithLabelAndSources],
+  )
+
+  const lockTelemetrySuccessSentence = useMemo(
+    () =>
+      isBlockTelemetryVisible
+        ? ` Lock telemetry: ${lockTelemetryToastDetailsWithLabelAndSources}.`
+        : '',
+    [isBlockTelemetryVisible, lockTelemetryToastDetailsWithLabelAndSources],
+  )
+
+  const lockTelemetrySuccessParenthetical = useMemo(
+    () =>
+      isBlockTelemetryVisible
+        ? ` (${lockTelemetryToastDetailsWithLabelAndSources})`
+        : '',
+    [isBlockTelemetryVisible, lockTelemetryToastDetailsWithLabelAndSources],
+  )
+
+  const lockStateTelemetryParenthetical = useCallback(
+    (lockState: 'locked' | 'unlocked'): string =>
+      isBlockTelemetryVisible
+        ? ` (lock: ${lockState}, ${lockTelemetryToastDetailsWithSources})`
+        : ` (lock: ${lockState})`,
+    [isBlockTelemetryVisible, lockTelemetryToastDetailsWithSources],
+  )
+
+  const eventBlockLockTelemetryRef = useRef(lockTelemetryToastDetailsWithLabelAndSources)
+  const eventBlockTelemetryVisibleRef = useRef(isBlockTelemetryVisible)
+
+  useEffect(() => {
+    eventBlockLockTelemetryRef.current = lockTelemetryToastDetailsWithLabelAndSources
+  }, [lockTelemetryToastDetailsWithLabelAndSources])
+
+  useEffect(() => {
+    eventBlockTelemetryVisibleRef.current = isBlockTelemetryVisible
+  }, [isBlockTelemetryVisible])
+
+  const appendLockTelemetryToBlockPayload = useCallback(
+    (baseContent: string): string =>
+      isBlockTelemetryVisible
+        ? `${baseContent}\n\n[LockTelemetry] ${lockTelemetryToastDetailsWithLabelAndSources}`
+        : baseContent,
+    [isBlockTelemetryVisible, lockTelemetryToastDetailsWithLabelAndSources],
+  )
+
+  const withLockTelemetrySection = useCallback(
+    (lines: string[]): string[] =>
+      isBlockTelemetryVisible ? [...lines, '[LockTelemetry]', ...lockTelemetrySummaryLines] : lines,
+    [isBlockTelemetryVisible, lockTelemetrySummaryLines],
+  )
+
+  const toggleHelperResetLock = useCallback((source: 'Alt+L' | 'controls' | 'snapshot') => {
+    const now = Date.now()
+    const lockEntry: QuickActionHistory = {
+      id: `hist_${now}_helper_reset_lock_${source}`,
+      method: `helper.reset.lock.toggle.${source}`,
+      status: 'ok',
+      durationMs: 0,
+      timestamp: now,
+    }
+    setQuickActionHistory((current) =>
+      [lockEntry, ...current].slice(0, 20),
+    )
+    setIsHelperResetLocked((current) => {
+      const next = !current
+      setHintModeLiveNote(`Helper reset lock ${next ? 'locked' : 'unlocked'} via ${source}.`)
+      return next
+    })
+  }, [])
+
+  const appendBlock = useCallback((item: BlockItem) => {
+    setBlocks((current) => {
+      blockIdCounterRef.current += 1
+      const dedupedItem: BlockItem = {
+        ...item,
+        id: `${item.id}_${blockIdCounterRef.current}`,
+      }
+      return [dedupedItem, ...current].slice(0, 25)
+    })
+  }, [])
+
+  const appendMarketOverlayAnnotation = useCallback(
+    (
+      kind: MarketOverlayAnnotationKind,
+      label: string,
+      tone: MarketOverlayAnnotationTone = 'neutral',
+      timestamp = Date.now(),
+    ) => {
+      setMarketOverlayAnnotations((current) =>
+        [
+          {
+            id: `overlay_ann_${timestamp}_${kind}_${current.length}`,
+            kind,
+            label,
+            tone,
+            timestamp,
+          },
+          ...current,
+        ].slice(0, 8),
+      )
+    },
+    [],
+  )
+
+  const resetHelperLockCounters = useCallback(() => {
+    if (helperResetLockToggleCount === 0) {
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'helper lock counters already empty',
+        content: `No helper reset lock toggle history to clear.${lockTelemetryFailureSuffix}`,
+        severity: 'warn',
+      })
+      return
+    }
+    setQuickActionHistory((current) =>
+      current.filter((entry) => !entry.method.startsWith('helper.reset.lock.toggle.')),
+    )
+    setHelperLockCountersLastResetAt(new Date().toISOString())
+    appendBlock({
+      id: `blk_${Date.now()}`,
+      title: 'helper lock counters reset',
+      content: `Reset helper lock counters${lockTelemetrySuccessParenthetical}.`,
+      severity: 'info',
+    })
+  }, [
+    appendBlock,
+    helperResetLockToggleCount,
+    lockTelemetryFailureSuffix,
+    lockTelemetrySuccessParenthetical,
+  ])
+
+  const pushHistory = useCallback((item: QuickActionHistory) => {
+    setQuickActionHistory((current) => [item, ...current].slice(0, 20))
+  }, [])
+
+  const patchHistory = useCallback((historyId: string, patch: Partial<QuickActionHistory>) => {
+    setQuickActionHistory((current) =>
+      current.map((entry) => (entry.id === historyId ? { ...entry, ...patch } : entry)),
+    )
+  }, [])
+
+  const sendRequest = useCallback(
+    async (method: string, params: Record<string, unknown>): Promise<Record<string, unknown> | null> => {
+      const socket = wsRef.current
+      if (!socket || socket.readyState !== WebSocket.OPEN) {
+        setLastErrorByMethod((current) => ({
+          ...current,
+          [method]: new Date().toISOString(),
+        }))
+        pushHistory({
+          id: `hist_${Date.now()}`,
+          method,
+          status: 'skipped',
+          timestamp: Date.now(),
+        })
+        appendBlock({
+          id: `blk_${Date.now()}`,
+          title: `${method} failed`,
+          content: `Gateway is not connected.${lockTelemetryFailureSuffix}`,
+          severity: 'error',
+        })
+        return null
+      }
+
+      const minRequestGapMs = Math.max(Number.parseInt(minRequestGapMsInput, 10) || 0, 0)
+      const nowMs = Date.now()
+      const lastSentAtMs = requestGuardsRef.current.get(method) ?? 0
+      if (nowMs - lastSentAtMs < minRequestGapMs) {
+        pushHistory({
+          id: `hist_${nowMs}`,
+          method,
+          status: 'debounced',
+          durationMs: 0,
+          timestamp: nowMs,
+        })
+        appendBlock({
+          id: `blk_${nowMs}`,
+          title: `${method} debounced`,
+          content: `Skipped duplicate request within ${minRequestGapMs}ms guard window.${lockTelemetryFailureSuffix}`,
+          severity: 'warn',
+        })
+        return null
+      }
+      requestGuardsRef.current.set(method, nowMs)
+
+      requestCounter.current += 1
+      const requestId = `req_${requestCounter.current}`
+      const payload = {
+        type: 'req',
+        id: requestId,
+        method,
+        params,
+      }
+      const historyId = `hist_${requestId}`
+      pushHistory({
+        id: historyId,
+        method,
+        status: 'sent',
+        durationMs: 0,
+        timestamp: nowMs,
+      })
+
+      const responsePromise = new Promise<GatewayResponse>((resolve) => {
+        pendingRequestsRef.current.set(requestId, resolve)
+      })
+
+      socket.send(JSON.stringify(payload))
+      const response = await responsePromise
+      const durationMs = Date.now() - nowMs
+
+      if (!response.ok) {
+        setLastErrorByMethod((current) => ({
+          ...current,
+          [method]: new Date().toISOString(),
+        }))
+        patchHistory(historyId, {
+          status: 'error',
+          durationMs,
+        })
+        const rejectionMessage = response.error?.message ?? 'Unknown error'
+        appendBlock({
+          id: `blk_${Date.now()}`,
+          title: `${method} rejected`,
+          content: /[.!?]$/.test(rejectionMessage)
+            ? `${rejectionMessage}${lockTelemetryFailureSuffix}`
+            : `${rejectionMessage}.${lockTelemetryFailureSuffix}`,
+          severity: 'error',
+        })
+        return null
+      }
+
+      patchHistory(historyId, {
+        status: 'ok',
+        durationMs,
+      })
+      setLastSuccessByMethod((current) => ({
+        ...current,
+        [method]: new Date().toISOString(),
+      }))
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: `${method} response`,
+        content: appendLockTelemetryToBlockPayload(JSON.stringify(response.payload ?? {}, null, 2)),
+        severity: 'info',
+      })
+      return response.payload ?? {}
+    },
+    [
+      appendBlock,
+      appendLockTelemetryToBlockPayload,
+      lockTelemetryFailureSuffix,
+      minRequestGapMsInput,
+      patchHistory,
+      pushHistory,
+    ],
+  )
+
+  const sendPing = useCallback(() => {
+    void sendRequest('gateway.ping', {})
+  }, [sendRequest])
+
+  const sendStatus = useCallback(() => {
+    void sendRequest('gateway.status', {})
+  }, [sendRequest])
+
+  const sendRiskPreview = useCallback(() => {
+    void sendRequest('risk.preview', {
+      intent: {
+        account_id: 'acct_demo_1',
+        symbol: 'ETHUSDm',
+        action: 'PLACE_MARKET_ORDER',
+        side: 'buy',
+        volume: 0.1,
+        stop_loss: 2400.0,
+        take_profit: 2700.0,
+      },
+      policy: {
+        allowed_symbols: ['ETHUSDm'],
+        max_volume: 0.2,
+        max_concurrent_positions: 2,
+        max_daily_loss: 100.0,
+        require_stop_loss: true,
+      },
+      snapshot: {
+        open_positions: 0,
+        daily_pnl: -20.0,
+      },
+    })
+  }, [sendRequest])
+
+  const applyRiskStatusPayload = useCallback((payload: Record<string, unknown> | null) => {
+    if (!payload) {
+      return
+    }
+    if ('emergencyStopActive' in payload && typeof payload.emergencyStopActive === 'boolean') {
+      setRiskEmergencyStopActive(payload.emergencyStopActive)
+    }
+    if ('lastAction' in payload) {
+      setRiskLastEmergencyAction(typeof payload.lastAction === 'string' ? payload.lastAction : null)
+    }
+    if ('lastReason' in payload) {
+      setRiskLastEmergencyReason(typeof payload.lastReason === 'string' ? payload.lastReason : null)
+    }
+    if ('updatedAt' in payload) {
+      setRiskLastEmergencyUpdatedAt(typeof payload.updatedAt === 'string' ? payload.updatedAt : null)
+    }
+    if ('actionCounts' in payload && typeof payload.actionCounts === 'object' && payload.actionCounts) {
+      const actionCounts = payload.actionCounts as Record<string, unknown>
+      setRiskEmergencyActionCounts({
+        pause_trading:
+          typeof actionCounts.pause_trading === 'number' ? actionCounts.pause_trading : 0,
+        cancel_all: typeof actionCounts.cancel_all === 'number' ? actionCounts.cancel_all : 0,
+        close_all: typeof actionCounts.close_all === 'number' ? actionCounts.close_all : 0,
+        disable_live: typeof actionCounts.disable_live === 'number' ? actionCounts.disable_live : 0,
+      })
+    }
+  }, [])
+
+  const sendRiskStatus = useCallback(async () => {
+    const payload = await sendRequest('risk.status', {})
+    applyRiskStatusPayload(payload)
+  }, [applyRiskStatusPayload, sendRequest])
+
+  const sendRiskEmergencyStop = useCallback(async () => {
+    const payload = await sendRequest('risk.emergencyStop', {
+      action: riskEmergencyAction,
+      reason: riskEmergencyReason.trim() || DEFAULT_RISK_EMERGENCY_REASON,
+    })
+    applyRiskStatusPayload(payload)
+  }, [applyRiskStatusPayload, riskEmergencyAction, riskEmergencyReason, sendRequest])
+
+  const sendRiskResume = useCallback(async () => {
+    const payload = await sendRequest('risk.resume', {
+      reason: riskEmergencyReason.trim() || DEFAULT_RISK_EMERGENCY_REASON,
+    })
+    applyRiskStatusPayload(payload)
+  }, [applyRiskStatusPayload, riskEmergencyReason, sendRequest])
+
+  const sendInterventionEmergencyAction = useCallback(
+    async (action: RiskEmergencyAction) => {
+      const payload = await sendRequest('risk.emergencyStop', {
+        action,
+        reason: riskEmergencyReason.trim() || `intervention:${action}`,
+      })
+      applyRiskStatusPayload(payload)
+    },
+    [applyRiskStatusPayload, riskEmergencyReason, sendRequest],
+  )
+
+  const sendInterventionResume = useCallback(async () => {
+    const payload = await sendRequest('risk.resume', {
+      reason: riskEmergencyReason.trim() || 'intervention:resume',
+    })
+    applyRiskStatusPayload(payload)
+  }, [applyRiskStatusPayload, riskEmergencyReason, sendRequest])
+
+  const sendTradePlace = useCallback(() => {
+    const accountId = managedAccountId.trim() || DEFAULT_PRESET_TEMPLATE.managedAccountId
+    const symbol = feedSymbol.trim() || DEFAULT_PRESET_TEMPLATE.feedSymbol
+    void sendRequest('trades.place', {
+      intent: {
+        account_id: accountId,
+        symbol,
+        action: 'PLACE_MARKET_ORDER',
+        side: 'buy',
+        volume: 0.1,
+        stop_loss: 2400.0,
+        take_profit: 2700.0,
+      },
+      policy: {
+        allowed_symbols: [symbol],
+        max_volume: 0.2,
+        max_concurrent_positions: 2,
+        max_daily_loss: 100.0,
+        require_stop_loss: true,
+      },
+      snapshot: {
+        open_positions: 0,
+        daily_pnl: -20.0,
+      },
+    })
+  }, [feedSymbol, managedAccountId, sendRequest])
+
+  const sendTradeModify = useCallback(() => {
+    void sendRequest('trades.modify', {
+      accountId: managedAccountId.trim() || DEFAULT_PRESET_TEMPLATE.managedAccountId,
+      orderId: TRADE_ORDER_REFERENCE_ID,
+      openPrice: 2500.0,
+      stopLoss: 2450.0,
+      takeProfit: 2600.0,
+    })
+  }, [managedAccountId, sendRequest])
+
+  const sendTradeCancel = useCallback(() => {
+    void sendRequest('trades.cancel', {
+      accountId: managedAccountId.trim() || DEFAULT_PRESET_TEMPLATE.managedAccountId,
+      orderId: TRADE_ORDER_REFERENCE_ID,
+    })
+  }, [managedAccountId, sendRequest])
+
+  const sendTradeClosePosition = useCallback(() => {
+    void sendRequest('trades.closePosition', {
+      accountId: managedAccountId.trim() || DEFAULT_PRESET_TEMPLATE.managedAccountId,
+      positionId: TRADE_POSITION_REFERENCE_ID,
+    })
+  }, [managedAccountId, sendRequest])
+
+  const sendAgentsList = useCallback(async () => {
+    const payload = await sendRequest('agents.list', {})
+    const agentsRaw = payload?.agents
+    const agents = Array.isArray(agentsRaw) ? agentsRaw : []
+    setAgentCount(agents.length)
+    setOnboardingChecklist((current) => ({
+      ...current,
+      agent: agents.length > 0,
+    }))
+  }, [sendRequest])
+
+  const sendAgentCreate = useCallback(async () => {
+    const payload = await sendRequest('agents.create', {
+      agentId: managedAgentId.trim() || DEFAULT_AGENT_ID,
+      label: managedAgentLabel.trim() || DEFAULT_AGENT_LABEL,
+      soulTemplate: DEFAULT_AGENT_SOUL_TEMPLATE,
+      manualTemplate: DEFAULT_AGENT_MANUAL_TEMPLATE,
+    })
+    const agent = payload?.agent
+    if (agent && typeof agent === 'object') {
+      if ('agentId' in agent && typeof agent.agentId === 'string') {
+        setManagedAgentId(agent.agentId)
+      }
+      if ('label' in agent && typeof agent.label === 'string') {
+        setManagedAgentLabel(agent.label)
+      }
+      setOnboardingChecklist((current) => ({
+        ...current,
+        agent: true,
+      }))
+    }
+  }, [managedAgentId, managedAgentLabel, sendRequest])
+
+  const sendAccountsList = useCallback(async () => {
+    const payload = await sendRequest('accounts.list', {})
+    const accountsRaw = payload?.accounts
+    const accounts = Array.isArray(accountsRaw) ? accountsRaw : []
+    setAccountCount(accounts.length)
+    const hasConnectedAccount = accounts.some((account) => {
+      if (!account || typeof account !== 'object' || !('status' in account)) {
+        return false
+      }
+      return account.status === 'connected'
+    })
+    setOnboardingChecklist((current) => ({
+      ...current,
+      account: hasConnectedAccount,
+    }))
+  }, [sendRequest])
+
+  const sendAccountConnect = useCallback(async () => {
+    const symbols = managedAccountSymbolsInput
+      .split(',')
+      .map((value) => value.trim())
+      .filter((value) => value.length > 0)
+    const payload = await sendRequest('accounts.connect', {
+      accountId: managedAccountId,
+      connectorId: 'metaapi_mcp',
+      providerAccountId: managedProviderAccountId,
+      mode: 'demo',
+      label: managedAccountLabel,
+      allowedSymbols: symbols,
+    })
+    const account = payload?.account
+    if (account && typeof account === 'object') {
+      if ('accountId' in account && typeof account.accountId === 'string') {
+        setManagedAccountId(account.accountId)
+      }
+      if ('status' in account && typeof account.status === 'string') {
+        setAccountConnectionStatus(account.status)
+        setOnboardingChecklist((current) => ({
+          ...current,
+          account: account.status === 'connected',
+        }))
+      }
+    }
+  }, [
+    managedAccountId,
+    managedAccountLabel,
+    managedAccountSymbolsInput,
+    managedProviderAccountId,
+    sendRequest,
+  ])
+
+  const sendAccountDisconnect = useCallback(async () => {
+    if (!managedAccountId) {
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'accounts.disconnect skipped',
+        content: `No managed account id available.${lockTelemetryFailureSuffix}`,
+        severity: 'warn',
+      })
+      return
+    }
+    const payload = await sendRequest('accounts.disconnect', { accountId: managedAccountId })
+    const account = payload?.account
+    if (account && typeof account === 'object' && 'status' in account) {
+      if (typeof account.status === 'string') {
+        setAccountConnectionStatus(account.status)
+        setOnboardingChecklist((current) => ({
+          ...current,
+          account: account.status === 'connected',
+        }))
+      }
+    }
+  }, [appendBlock, lockTelemetryFailureSuffix, managedAccountId, sendRequest])
+
+  const sendFeedsList = useCallback(async () => {
+    const payload = await sendRequest('feeds.list', {})
+    const feedsRaw = payload?.feeds
+    const subscriptionsRaw = payload?.subscriptions
+    const feeds = Array.isArray(feedsRaw) ? feedsRaw : []
+    const subscriptions = Array.isArray(subscriptionsRaw) ? subscriptionsRaw : []
+    setFeedCount(feeds.length)
+    setSubscriptionCount(subscriptions.length)
+    setOnboardingChecklist((current) => ({
+      ...current,
+      feed: subscriptions.length > 0,
+    }))
+    const nextActiveId = subscriptions
+      .map((item) => {
+        if (item && typeof item === 'object' && 'subscriptionId' in item) {
+          const value = item.subscriptionId
+          return typeof value === 'string' ? value : null
+        }
+        return null
+      })
+      .find((value): value is string => value !== null)
+    setActiveSubscriptionId(nextActiveId ?? null)
+  }, [sendRequest])
+
+  const sendDevicesList = useCallback(async () => {
+    const payload = await sendRequest('devices.list', {})
+    const devicesRaw = payload?.devices
+    const devices = Array.isArray(devicesRaw) ? devicesRaw : []
+    setDeviceCount(devices.length)
+  }, [sendRequest])
+
+  const sendDevicePair = useCallback(async () => {
+    const payload = await sendRequest('devices.pair', {
+      deviceId: managedDeviceId,
+      platform: managedDevicePlatform,
+      label: managedDeviceLabel,
+      pushToken: managedDevicePairPushToken,
+    })
+    const device = payload?.device
+    if (device && typeof device === 'object' && 'deviceId' in device) {
+      if (typeof device.deviceId === 'string') {
+        setManagedDeviceId(device.deviceId)
+      }
+    }
+  }, [
+    managedDeviceId,
+    managedDeviceLabel,
+    managedDevicePairPushToken,
+    managedDevicePlatform,
+    sendRequest,
+  ])
+
+  const sendDeviceRegisterPush = useCallback(async () => {
+    if (!managedDeviceId) {
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'devices.registerPush skipped',
+        content: `No managed device id available.${lockTelemetryFailureSuffix}`,
+        severity: 'warn',
+      })
+      return
+    }
+
+    const payload = await sendRequest('devices.registerPush', {
+      deviceId: managedDeviceId,
+      pushToken: managedDeviceRotatePushToken,
+    })
+    const device = payload?.device
+    if (device && typeof device === 'object' && 'deviceId' in device) {
+      if (typeof device.deviceId === 'string') {
+        setManagedDeviceId(device.deviceId)
+      }
+    }
+  }, [appendBlock, lockTelemetryFailureSuffix, managedDeviceId, managedDeviceRotatePushToken, sendRequest])
+
+  const sendDeviceNotifyTest = useCallback(async () => {
+    if (!managedDeviceId) {
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'devices.notifyTest skipped',
+        content: `No managed device id available.${lockTelemetryFailureSuffix}`,
+        severity: 'warn',
+      })
+      return
+    }
+
+    await sendRequest('devices.notifyTest', {
+      deviceId: managedDeviceId,
+      message: managedDeviceNotifyMessage.trim() || DEVICE_NOTIFY_TEST_MESSAGE,
+    })
+  }, [
+    appendBlock,
+    lockTelemetryFailureSuffix,
+    managedDeviceId,
+    managedDeviceNotifyMessage,
+    sendRequest,
+  ])
+
+  const sendDeviceUnpair = useCallback(async () => {
+    if (!managedDeviceId) {
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'devices.unpair skipped',
+        content: `No managed device id available.${lockTelemetryFailureSuffix}`,
+        severity: 'warn',
+      })
+      return
+    }
+
+    const payload = await sendRequest('devices.unpair', {
+      deviceId: managedDeviceId,
+    })
+    if (!payload) {
+      return
+    }
+    if (payload.status === 'removed') {
+      setDeviceCount((current) => (current === null ? current : Math.max(current - 1, 0)))
+    }
+  }, [appendBlock, lockTelemetryFailureSuffix, managedDeviceId, sendRequest])
+
+  const sendFeedSubscribe = useCallback(async () => {
+    const payload = await sendRequest('feeds.subscribe', {
+      topics: [feedTopic],
+      symbols: [feedSymbol],
+      timeframes: [feedTimeframe],
+    })
+    if (!payload) {
+      return
+    }
+
+    const subscriptionCountRaw = payload.subscriptionCount
+    if (typeof subscriptionCountRaw === 'number') {
+      setSubscriptionCount(subscriptionCountRaw)
+    }
+
+    const subscription = payload.subscription
+    if (subscription && typeof subscription === 'object' && 'subscriptionId' in subscription) {
+      const subscriptionId = subscription.subscriptionId
+      if (typeof subscriptionId === 'string') {
+        setActiveSubscriptionId(subscriptionId)
+        setOnboardingChecklist((current) => ({
+          ...current,
+          feed: true,
+        }))
+      }
+    }
+  }, [feedSymbol, feedTimeframe, feedTopic, sendRequest])
+
+  const sendFeedUnsubscribe = useCallback(async () => {
+    if (!activeSubscriptionId) {
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'feeds.unsubscribe skipped',
+        content: `No active feed subscription id available.${lockTelemetryFailureSuffix}`,
+        severity: 'warn',
+      })
+      return
+    }
+
+    const payload = await sendRequest('feeds.unsubscribe', {
+      subscriptionId: activeSubscriptionId,
+    })
+    if (!payload) {
+      return
+    }
+
+    const subscriptionCountRaw = payload.subscriptionCount
+    if (typeof subscriptionCountRaw === 'number') {
+      setSubscriptionCount(subscriptionCountRaw)
+    }
+    if (payload.status === 'removed') {
+      setActiveSubscriptionId(null)
+      setOnboardingChecklist((current) => ({
+        ...current,
+        feed: false,
+      }))
+    }
+  }, [activeSubscriptionId, appendBlock, lockTelemetryFailureSuffix, sendRequest])
+
+  const sendFeedGetCandles = useCallback(async () => {
+    const payload = await sendRequest('feeds.getCandles', {
+      symbol: feedSymbol,
+      timeframe: feedTimeframe,
+      limit: FEED_CANDLE_FETCH_LIMIT,
+    })
+    const candlesRaw = payload?.candles
+    if (!Array.isArray(candlesRaw)) {
+      setLastFetchedCandlesCount(0)
+      setMarketOverlayRecentCloses([])
+      return
+    }
+    setLastFetchedCandlesCount(candlesRaw.length)
+    setMarketOverlayRecentCloses(
+      candlesRaw
+        .map((candle) => {
+          if (
+            candle &&
+            typeof candle === 'object' &&
+            'close' in candle &&
+            typeof candle.close === 'number'
+          ) {
+            return candle.close
+          }
+          return null
+        })
+        .filter((close): close is number => close !== null)
+        .slice(-5),
+    )
+  }, [feedSymbol, feedTimeframe, sendRequest])
+
+  const sendMarketplaceSignals = useCallback(async () => {
+    const payload = await sendRequest('marketplace.signals', {})
+    const signalsRaw = payload?.signals
+    setMarketplaceSignalCount(Array.isArray(signalsRaw) ? signalsRaw.length : 0)
+  }, [sendRequest])
+
+  const formatCopytradeControlSummary = useCallback(
+    (payload: unknown, fallbackStatus: string): string => {
+      if (!payload || typeof payload !== 'object') {
+        return `status:${fallbackStatus} · paused:n/a · strategy:${COPYTRADE_PREVIEW_STRATEGY_ID}`
+      }
+      const statusRaw = 'status' in payload && typeof payload.status === 'string' ? payload.status : null
+      const pausedRaw = 'paused' in payload && typeof payload.paused === 'boolean' ? payload.paused : null
+      const strategyRaw =
+        'strategyId' in payload && typeof payload.strategyId === 'string'
+          ? payload.strategyId
+          : COPYTRADE_PREVIEW_STRATEGY_ID
+      return `status:${statusRaw ?? fallbackStatus} · paused:${
+        pausedRaw === null ? 'n/a' : pausedRaw ? 'yes' : 'no'
+      } · strategy:${strategyRaw}`
+    },
+    [],
+  )
+
+  const sendMarketplaceFollow = useCallback(async () => {
+    const accountId = managedAccountId.trim() || DEFAULT_PRESET_TEMPLATE.managedAccountId
+    const payload = await sendRequest('marketplace.follow', {
+      accountId,
+      strategyId: COPYTRADE_PREVIEW_STRATEGY_ID,
+    })
+    if (!payload) {
+      return
+    }
+    const status = typeof payload.status === 'string' ? payload.status : 'following'
+    const followId = typeof payload.followId === 'string' ? payload.followId : null
+    setMarketplaceFollowsSummary(
+      `${status}:${COPYTRADE_PREVIEW_STRATEGY_ID}${followId ? `#${followId}` : ''}`,
+    )
+  }, [managedAccountId, sendRequest])
+
+  const sendMarketplaceUnfollow = useCallback(async () => {
+    const accountId = managedAccountId.trim() || DEFAULT_PRESET_TEMPLATE.managedAccountId
+    const payload = await sendRequest('marketplace.unfollow', {
+      accountId,
+      strategyId: COPYTRADE_PREVIEW_STRATEGY_ID,
+    })
+    if (!payload) {
+      return
+    }
+    const status = typeof payload.status === 'string' ? payload.status : 'unfollowed'
+    setMarketplaceFollowsSummary(`${status}:${COPYTRADE_PREVIEW_STRATEGY_ID}`)
+  }, [managedAccountId, sendRequest])
+
+  const sendMarketplaceMyFollows = useCallback(async () => {
+    const accountId = managedAccountId.trim() || DEFAULT_PRESET_TEMPLATE.managedAccountId
+    const payload = await sendRequest('marketplace.myFollows', {
+      accountId,
+    })
+    if (!payload) {
+      return
+    }
+    const follows = Array.isArray(payload.follows) ? payload.follows : []
+    const firstFollow =
+      follows.length > 0 && follows[0] && typeof follows[0] === 'object' ? follows[0] : null
+    const firstStrategyId =
+      firstFollow && 'strategyId' in firstFollow && typeof firstFollow.strategyId === 'string'
+        ? firstFollow.strategyId
+        : 'none'
+    setMarketplaceFollowsSummary(`count:${follows.length} · primary:${firstStrategyId}`)
+  }, [managedAccountId, sendRequest])
+
+  const sendCopytradePreview = useCallback(async () => {
+    const accountId = managedAccountId.trim() || DEFAULT_PRESET_TEMPLATE.managedAccountId
+    const symbol = feedSymbol.trim() || DEFAULT_PRESET_TEMPLATE.feedSymbol
+    const timeframe = feedTimeframe.trim() || DEFAULT_PRESET_TEMPLATE.feedTimeframe
+    const payload = await sendRequest('copytrade.preview', {
+      accountId,
+      signal: {
+        signalId: COPYTRADE_PREVIEW_SIGNAL_ID,
+        strategyId: COPYTRADE_PREVIEW_STRATEGY_ID,
+        ts: new Date().toISOString(),
+        symbol,
+        timeframe,
+        action: 'OPEN',
+        side: 'buy',
+        volume: 0.35,
+        entry: 2500.0,
+        stopLoss: 2450.0,
+        takeProfit: 2600.0,
+      },
+      constraints: {
+        allowedSymbols: [symbol],
+        maxVolume: 0.2,
+        directionFilter: 'both',
+        maxSignalAgeSeconds: 300,
+      },
+    })
+    if (!payload) {
+      return
+    }
+    const blockedReason = typeof payload.blockedReason === 'string' ? payload.blockedReason : null
+    const deduped = payload.deduped === true
+    const intent = payload.intent
+    const intentVolume =
+      intent && typeof intent === 'object' && 'volume' in intent && typeof intent.volume === 'number'
+        ? intent.volume
+        : null
+    if (blockedReason) {
+      setCopytradePreviewSummary(`blocked:${blockedReason}`)
+      return
+    }
+    if (deduped) {
+      setCopytradePreviewSummary('deduped')
+      return
+    }
+    if (intentVolume !== null) {
+      setCopytradePreviewSummary(`allowed (volume: ${intentVolume})`)
+      return
+    }
+    setCopytradePreviewSummary('allowed')
+  }, [feedSymbol, feedTimeframe, managedAccountId, sendRequest])
+
+  const sendCopytradeStatus = useCallback(async () => {
+    const accountId = managedAccountId.trim() || DEFAULT_PRESET_TEMPLATE.managedAccountId
+    const payload = await sendRequest('copytrade.status', {
+      accountId,
+      strategyId: COPYTRADE_PREVIEW_STRATEGY_ID,
+    })
+    if (!payload) {
+      return
+    }
+    setCopytradeControlSummary(formatCopytradeControlSummary(payload, 'active'))
+  }, [formatCopytradeControlSummary, managedAccountId, sendRequest])
+
+  const sendCopytradePause = useCallback(async () => {
+    const accountId = managedAccountId.trim() || DEFAULT_PRESET_TEMPLATE.managedAccountId
+    const payload = await sendRequest('copytrade.pause', {
+      accountId,
+      strategyId: COPYTRADE_PREVIEW_STRATEGY_ID,
+    })
+    if (!payload) {
+      return
+    }
+    setCopytradeControlSummary(formatCopytradeControlSummary(payload, 'paused'))
+  }, [formatCopytradeControlSummary, managedAccountId, sendRequest])
+
+  const sendCopytradeResume = useCallback(async () => {
+    const accountId = managedAccountId.trim() || DEFAULT_PRESET_TEMPLATE.managedAccountId
+    const payload = await sendRequest('copytrade.resume', {
+      accountId,
+      strategyId: COPYTRADE_PREVIEW_STRATEGY_ID,
+    })
+    if (!payload) {
+      return
+    }
+    setCopytradeControlSummary(formatCopytradeControlSummary(payload, 'active'))
+  }, [formatCopytradeControlSummary, managedAccountId, sendRequest])
+
+  const runOnboardingFlow = useCallback(async () => {
+    await sendAccountConnect()
+    await sendAgentCreate()
+    await sendFeedSubscribe()
+  }, [sendAccountConnect, sendAgentCreate, sendFeedSubscribe])
+
+  const collectCurrentPreset = useCallback((): QuickActionPreset => {
+    return {
+      managedAccountId,
+      managedProviderAccountId,
+      managedAccountLabel,
+      managedAccountSymbolsInput,
+      managedDeviceId,
+      managedDevicePlatform,
+      managedDeviceLabel,
+      managedDevicePairPushToken,
+      managedDeviceRotatePushToken,
+      managedDeviceNotifyMessage,
+      riskEmergencyAction,
+      riskEmergencyReason,
+      feedTopic,
+      feedSymbol,
+      feedTimeframe,
+      refreshSecondsInput,
+      minRequestGapMsInput,
+    }
+  }, [
+    feedSymbol,
+    feedTimeframe,
+    feedTopic,
+    managedAccountId,
+    managedAccountLabel,
+    managedAccountSymbolsInput,
+    managedDeviceId,
+    managedDeviceLabel,
+    managedDevicePairPushToken,
+    managedDevicePlatform,
+    managedDeviceRotatePushToken,
+    managedDeviceNotifyMessage,
+    riskEmergencyAction,
+    riskEmergencyReason,
+    managedProviderAccountId,
+    minRequestGapMsInput,
+    refreshSecondsInput,
+  ])
+
+  const applyPreset = useCallback((preset: QuickActionPreset) => {
+    setManagedAccountId(preset.managedAccountId)
+    setManagedProviderAccountId(preset.managedProviderAccountId)
+    setManagedAccountLabel(preset.managedAccountLabel)
+    setManagedAccountSymbolsInput(preset.managedAccountSymbolsInput)
+    setManagedDeviceId(preset.managedDeviceId)
+    setManagedDevicePlatform(preset.managedDevicePlatform)
+    setManagedDeviceLabel(preset.managedDeviceLabel)
+    setManagedDevicePairPushToken(preset.managedDevicePairPushToken)
+    setManagedDeviceRotatePushToken(preset.managedDeviceRotatePushToken)
+    setManagedDeviceNotifyMessage(preset.managedDeviceNotifyMessage)
+    setRiskEmergencyAction(preset.riskEmergencyAction)
+    setRiskEmergencyReason(preset.riskEmergencyReason)
+    setFeedTopic(preset.feedTopic)
+    setFeedSymbol(preset.feedSymbol)
+    setFeedTimeframe(preset.feedTimeframe)
+    setRefreshSecondsInput(preset.refreshSecondsInput)
+    setMinRequestGapMsInput(preset.minRequestGapMsInput)
+  }, [])
+
+  const readPresetStore = useCallback((): Record<string, QuickActionPreset> => {
+    return readPresetStoreFromStorage()
+  }, [])
+
+  const writePresetStore = useCallback((store: Record<string, QuickActionPreset>) => {
+    window.localStorage.setItem(PRESETS_STORAGE_KEY, JSON.stringify(store))
+    setAvailablePresetNames(Object.keys(store).sort())
+  }, [])
+
+  const savePreset = useCallback(() => {
+    const normalizedName = presetNameInput.trim()
+    if (!normalizedName) {
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'preset save skipped',
+        content: `Preset name is required.${lockTelemetryFailureSuffix}`,
+        severity: 'warn',
+      })
+      return
+    }
+    const store = readPresetStore()
+    store[normalizedName] = collectCurrentPreset()
+    writePresetStore(store)
+    setSelectedPresetName(normalizedName)
+    appendBlock({
+      id: `blk_${Date.now()}`,
+      title: 'preset saved',
+      content: `Saved preset: ${normalizedName}.${lockTelemetrySuccessSentence}`,
+      severity: 'info',
+    })
+  }, [
+    appendBlock,
+    collectCurrentPreset,
+    lockTelemetryFailureSuffix,
+    lockTelemetrySuccessSentence,
+    presetNameInput,
+    readPresetStore,
+    writePresetStore,
+  ])
+
+  const loadSelectedPreset = useCallback(() => {
+    if (!selectedPresetName) {
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'preset load skipped',
+        content: `Select a preset first.${lockTelemetryFailureSuffix}`,
+        severity: 'warn',
+      })
+      return
+    }
+    const store = readPresetStore()
+    const preset = store[selectedPresetName]
+    if (!preset) {
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'preset load failed',
+        content: `Preset not found: ${selectedPresetName}.${lockTelemetryFailureSuffix}`,
+        severity: 'error',
+      })
+      return
+    }
+    applyPreset(preset)
+    appendBlock({
+      id: `blk_${Date.now()}`,
+      title: 'preset loaded',
+      content: `Loaded preset: ${selectedPresetName}.${lockTelemetrySuccessSentence}`,
+      severity: 'info',
+    })
+  }, [
+    appendBlock,
+    applyPreset,
+    lockTelemetryFailureSuffix,
+    lockTelemetrySuccessSentence,
+    readPresetStore,
+    selectedPresetName,
+  ])
+
+  const deleteSelectedPreset = useCallback(() => {
+    if (!selectedPresetName) {
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'preset delete skipped',
+        content: `Select a preset first.${lockTelemetryFailureSuffix}`,
+        severity: 'warn',
+      })
+      return
+    }
+    const store = readPresetStore()
+    if (!(selectedPresetName in store)) {
+      return
+    }
+    delete store[selectedPresetName]
+    writePresetStore(store)
+    appendBlock({
+      id: `blk_${Date.now()}`,
+      title: 'preset deleted',
+      content: `Deleted preset: ${selectedPresetName}.${lockTelemetrySuccessSentence}`,
+      severity: 'info',
+    })
+    setSelectedPresetName('')
+  }, [
+    appendBlock,
+    lockTelemetryFailureSuffix,
+    lockTelemetrySuccessSentence,
+    readPresetStore,
+    selectedPresetName,
+    writePresetStore,
+  ])
+
+  const exportPresetsJson = useCallback(async () => {
+    const store = readPresetStore()
+    const serialized = JSON.stringify(store, null, 2)
+    try {
+      if (!navigator.clipboard?.writeText) {
+        throw new Error('Clipboard API unavailable')
+      }
+      await navigator.clipboard.writeText(serialized)
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'presets exported',
+        content: `Copied ${Object.keys(store).length} presets JSON to clipboard${lockTelemetrySuccessParenthetical}.`,
+        severity: 'info',
+      })
+    } catch {
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'presets export failed',
+        content: `Clipboard access failed or is unavailable.${lockTelemetryFailureSuffix}`,
+        severity: 'warn',
+      })
+    }
+  }, [
+    appendBlock,
+    lockTelemetryFailureSuffix,
+    lockTelemetrySuccessParenthetical,
+    readPresetStore,
+  ])
+
+  const importPresetsJson = useCallback(() => {
+    const source = presetImportInput.trim()
+    if (!source) {
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'preset import skipped',
+        content: `Import JSON field is empty.${lockTelemetryFailureSuffix}`,
+        severity: 'warn',
+      })
+      return
+    }
+
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(source)
+    } catch {
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'preset import failed',
+        content: `Invalid JSON payload.${lockTelemetryFailureSuffix}`,
+        severity: 'error',
+      })
+      return
+    }
+
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'preset import failed',
+        content: `Expected a JSON object keyed by preset name.${lockTelemetryFailureSuffix}`,
+        severity: 'error',
+      })
+      return
+    }
+
+    const incomingRaw = parsed as Record<string, unknown>
+    const incoming: Record<string, QuickActionPreset> = {}
+    const acceptedNames: string[] = []
+    const rejectedNames: string[] = []
+    for (const [name, value] of Object.entries(incomingRaw)) {
+      if (!name.trim()) {
+        rejectedNames.push('(empty)')
+        continue
+      }
+      const sanitized = sanitizePreset(value)
+      if (!sanitized) {
+        rejectedNames.push(name)
+        continue
+      }
+      incoming[name] = sanitized
+      acceptedNames.push(name)
+    }
+    const store = readPresetStore()
+    const conflicts = acceptedNames.filter((name) => name in store).length
+    const merged =
+      presetImportMode === 'merge' ? { ...incoming, ...store } : { ...store, ...incoming }
+    const createdCount = acceptedNames.length - conflicts
+    const preservedCount = presetImportMode === 'merge' ? conflicts : 0
+    const overwrittenCount = presetImportMode === 'overwrite' ? conflicts : 0
+    writePresetStore(merged)
+    setPresetImportInput('')
+    setPresetImportReport({
+      mode: presetImportMode,
+      accepted: acceptedNames,
+      rejected: rejectedNames,
+      createdCount,
+      preservedCount,
+      overwrittenCount,
+      importedAt: new Date().toISOString(),
+    })
+    appendBlock({
+      id: `blk_${Date.now()}`,
+      title: 'presets imported',
+      content:
+        `Imported ${acceptedNames.length} preset entries (${presetImportMode}). ` +
+        `Created ${createdCount}, preserved ${preservedCount}, overwritten ${overwrittenCount}, ` +
+        `rejected ${rejectedNames.length}.${lockTelemetrySuccessSentence}`,
+      severity: 'info',
+    })
+  }, [
+    appendBlock,
+    lockTelemetryFailureSuffix,
+    lockTelemetrySuccessSentence,
+    presetImportInput,
+    presetImportMode,
+    readPresetStore,
+    writePresetStore,
+  ])
+
+  const copyPresetImportReport = useCallback(async () => {
+    if (!presetImportReport) {
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'import report copy skipped',
+        content: `No preset import report available yet.${lockTelemetryFailureSuffix}`,
+        severity: 'warn',
+      })
+      return
+    }
+    const summaryLines = [
+      `mode=${presetImportReport.mode}`,
+      `importedAt=${presetImportReport.importedAt}`,
+      `accepted=${summarizeNames(presetImportReport.accepted)}`,
+      `rejected=${summarizeNames(presetImportReport.rejected)}`,
+      `created=${presetImportReport.createdCount}`,
+      `preserved=${presetImportReport.preservedCount}`,
+      `overwritten=${presetImportReport.overwrittenCount}`,
+    ]
+    try {
+      if (!navigator.clipboard?.writeText) {
+        throw new Error('Clipboard API unavailable')
+      }
+      await navigator.clipboard.writeText(withLockTelemetrySection(summaryLines).join('\n'))
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'import report copied',
+        content: `Preset import report copied to clipboard${lockTelemetrySuccessParenthetical}.`,
+        severity: 'info',
+      })
+    } catch {
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'import report copy failed',
+        content: `Clipboard access failed or is unavailable.${lockTelemetryFailureSuffix}`,
+        severity: 'warn',
+      })
+    }
+  }, [
+    appendBlock,
+    lockTelemetryFailureSuffix,
+    lockTelemetrySuccessParenthetical,
+    presetImportReport,
+    withLockTelemetrySection,
+  ])
+
+  const lastImportSummaryText = useMemo(() => {
+    if (!presetImportReport) {
+      return 'Last import: none'
+    }
+    return `Last import: ${presetImportReport.importedAt} · accepted ${presetImportReport.accepted.length} · rejected ${presetImportReport.rejected.length}`
+  }, [presetImportReport])
+
+  const copyPresetImportNames = useCallback(async () => {
+    if (!presetImportReport) {
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'import names copy skipped',
+        content: `No preset import report available yet.${lockTelemetryFailureSuffix}`,
+        severity: 'warn',
+      })
+      return
+    }
+    const payload = [
+      '[ImportNames]',
+      `accepted:${presetImportReport.accepted.join(',')}`,
+      `rejected:${presetImportReport.rejected.join(',')}`,
+    ].join('\n')
+    try {
+      if (!navigator.clipboard?.writeText) {
+        throw new Error('Clipboard API unavailable')
+      }
+      await navigator.clipboard.writeText(withLockTelemetrySection(payload.split('\n')).join('\n'))
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'import names copied',
+        content: `Copied full accepted/rejected import names to clipboard${lockTelemetrySuccessParenthetical}.`,
+        severity: 'info',
+      })
+    } catch {
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'import names copy failed',
+        content: `Clipboard access failed or is unavailable.${lockTelemetryFailureSuffix}`,
+        severity: 'warn',
+      })
+    }
+  }, [
+    appendBlock,
+    lockTelemetryFailureSuffix,
+    lockTelemetrySuccessParenthetical,
+    presetImportReport,
+    withLockTelemetrySection,
+  ])
+
+  const copyLastImportSummary = useCallback(async () => {
+    if (!presetImportReport) {
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'last summary copy skipped',
+        content: `No preset import report available yet.${lockTelemetryFailureSuffix}`,
+        severity: 'warn',
+      })
+      return
+    }
+    try {
+      if (!navigator.clipboard?.writeText) {
+        throw new Error('Clipboard API unavailable')
+      }
+      await navigator.clipboard.writeText(
+        withLockTelemetrySection([lastImportSummaryText]).join('\n'),
+      )
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'last summary copied',
+        content: `Copied last import summary to clipboard${lockTelemetrySuccessParenthetical}.`,
+        severity: 'info',
+      })
+    } catch {
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'last summary copy failed',
+        content: `Clipboard access failed or is unavailable.${lockTelemetryFailureSuffix}`,
+        severity: 'warn',
+      })
+    }
+  }, [
+    appendBlock,
+    lastImportSummaryText,
+    lockTelemetryFailureSuffix,
+    lockTelemetrySuccessParenthetical,
+    presetImportReport,
+    withLockTelemetrySection,
+  ])
+
+  const copyImportShortcutCheatSheet = useCallback(async () => {
+    const cheatSheetLines = [
+      'Import Shortcuts',
+      '- Ctrl/Cmd+Enter: run preset JSON import',
+      '- Esc: clear preset JSON input',
+      '- Alt+L: toggle helper reset lock',
+      '- Import mode overwrite: incoming presets replace conflicts',
+      '- Import mode merge: existing presets keep conflicts',
+      `- Active mode: ${presetImportMode}`,
+      `- Helper reset format: ${helperResetTimestampFormat}`,
+      `- Helper reset stale-after hours: ${helperResetStaleThresholdHours}`,
+      `- Helper reset lock: ${isHelperResetLocked ? 'locked' : 'unlocked'}`,
+    ]
+    if (isBlockTelemetryVisible) {
+      cheatSheetLines.push(
+        '- [LockTelemetry]',
+        `- Helper lock counter reset at: ${helperLockCountersLastResetAt ?? 'never'}`,
+        `- Helper lock toggle total: ${helperResetLockToggleCount}`,
+        `- Helper lock toggle tone: ${helperResetLockToggleToneClass.replace('counter-tone-', '')}`,
+        `- Helper lock toggle Alt+L: ${helperResetLockSourceCounts['Alt+L']}`,
+        `- Helper lock toggle controls: ${helperResetLockSourceCounts.controls}`,
+        `- Helper lock toggle snapshot: ${helperResetLockSourceCounts.snapshot}`,
+      )
+    }
+    const cheatSheet = cheatSheetLines.join('\n')
+    try {
+      if (!navigator.clipboard?.writeText) {
+        throw new Error('Clipboard API unavailable')
+      }
+      await navigator.clipboard.writeText(cheatSheet)
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'shortcut cheat-sheet copied',
+        content: `Copied import shortcut cheat-sheet to clipboard${lockStateTelemetryParenthetical(
+          isHelperResetLocked ? 'locked' : 'unlocked',
+        )}.`,
+        severity: 'info',
+      })
+    } catch {
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'shortcut cheat-sheet copy failed',
+        content: `Clipboard access failed or is unavailable.${lockTelemetryFailureSuffix}`,
+        severity: 'warn',
+      })
+    }
+  }, [
+    appendBlock,
+    helperResetStaleThresholdHours,
+    helperLockCountersLastResetAt,
+    helperResetLockSourceCounts,
+    helperResetLockToggleCount,
+    helperResetLockToggleToneClass,
+    helperResetTimestampFormat,
+    isHelperResetLocked,
+    isBlockTelemetryVisible,
+    lockTelemetryFailureSuffix,
+    lockStateTelemetryParenthetical,
+    presetImportMode,
+  ])
+
+  const copyHelperDiagnosticsSummary = useCallback(async () => {
+    const summary = [
+      '[HelperDiagnostics]',
+      `expanded=${isImportHelperDiagnosticsExpanded ? 'yes' : 'no'}`,
+      `enabled=${Number(isImportHintVisible) + Number(showShortcutLegendInStatus)}/2`,
+      `density=${shortcutLegendDensity}`,
+      `resetAt=${helperDiagnosticsLastResetAt ?? 'never'}`,
+      `resetFormat=${helperResetTimestampFormat}`,
+      `resetBadgeVisible=${isHelperResetBadgeVisible ? 'yes' : 'no'}`,
+      `resetBadgeSection=${isHelperResetBadgeSectionExpanded ? 'expanded' : 'collapsed'}`,
+      `resetLock=${isHelperResetLocked ? 'locked' : 'unlocked'}`,
+      `resetStaleAfterHours=${helperResetStaleThresholdHours}`,
+      `blockTelemetry=${isBlockTelemetryVisible ? 'visible' : 'hidden'}`,
+      `hintVisible=${isImportHintVisible ? 'yes' : 'no'}`,
+      `legendVisible=${showShortcutLegendInStatus ? 'yes' : 'no'}`,
+      `legendOrder=${shortcutLegendOrder}`,
+    ].join('\n')
+    try {
+      if (!navigator.clipboard?.writeText) {
+        throw new Error('Clipboard API unavailable')
+      }
+      await navigator.clipboard.writeText(withLockTelemetrySection(summary.split('\n')).join('\n'))
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'helper summary copied',
+        content: `Copied helper diagnostics summary to clipboard${lockStateTelemetryParenthetical(
+          isHelperResetLocked ? 'locked' : 'unlocked',
+        )}.`,
+        severity: 'info',
+      })
+    } catch {
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'helper summary copy failed',
+        content: `Clipboard access failed or is unavailable.${lockTelemetryFailureSuffix}`,
+        severity: 'warn',
+      })
+    }
+  }, [
+    appendBlock,
+    isImportHelperDiagnosticsExpanded,
+    isImportHintVisible,
+    helperDiagnosticsLastResetAt,
+    isHelperResetBadgeSectionExpanded,
+    isHelperResetBadgeVisible,
+    isHelperResetLocked,
+    helperResetStaleThresholdHours,
+    helperResetTimestampFormat,
+    isBlockTelemetryVisible,
+    lockTelemetryFailureSuffix,
+    lockStateTelemetryParenthetical,
+    shortcutLegendDensity,
+    shortcutLegendOrder,
+    showShortcutLegendInStatus,
+    withLockTelemetrySection,
+  ])
+
+  const copyHelperResetBadge = useCallback(async () => {
+    const resetText = helperDiagnosticsLastResetAt
+      ? formatTimestamp(helperDiagnosticsLastResetAt, helperResetTimestampFormat)
+      : 'never'
+    const payload = [
+      '[ResetBadge]',
+      `last reset=${resetText}`,
+      `resetFormat=${helperResetTimestampFormat}`,
+      `staleAfterHours=${helperResetStaleThresholdHours}`,
+      `resetLock=${isHelperResetLocked ? 'locked' : 'unlocked'}`,
+      `resetBadgeVisible=${isHelperResetBadgeVisible ? 'yes' : 'no'}`,
+      `resetBadgeSection=${isHelperResetBadgeSectionExpanded ? 'expanded' : 'collapsed'}`,
+    ].join('\n')
+    try {
+      if (!navigator.clipboard?.writeText) {
+        throw new Error('Clipboard API unavailable')
+      }
+      await navigator.clipboard.writeText(withLockTelemetrySection(payload.split('\n')).join('\n'))
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'helper reset badge copied',
+        content: `Copied helper reset badge text to clipboard${lockStateTelemetryParenthetical(
+          isHelperResetLocked ? 'locked' : 'unlocked',
+        )}.`,
+        severity: 'info',
+      })
+    } catch {
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'helper reset badge copy failed',
+        content: `Clipboard access failed or is unavailable.${lockTelemetryFailureSuffix}`,
+        severity: 'warn',
+      })
+    }
+  }, [
+    appendBlock,
+    helperDiagnosticsLastResetAt,
+    isHelperResetBadgeSectionExpanded,
+    isHelperResetBadgeVisible,
+    isHelperResetLocked,
+    lockStateTelemetryParenthetical,
+    lockTelemetryFailureSuffix,
+    helperResetStaleThresholdHours,
+    helperResetTimestampFormat,
+    withLockTelemetrySection,
+  ])
+
+  const resetHelperDiagnosticsPreferences = useCallback(() => {
+    if (isHelperResetLocked) {
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'helper diagnostics reset locked',
+        content: `Unlock reset controls before resetting helper diagnostics preferences.${lockTelemetryFailureSuffix}`,
+        severity: 'warn',
+      })
+      return
+    }
+    setIsImportHintVisible(true)
+    setIsImportHelperDiagnosticsExpanded(true)
+    setImportHintMode('detailed')
+    setShowShortcutLegendInStatus(false)
+    setIsImportSnapshotTogglesExpanded(true)
+    setShortcutLegendOrder('import-first')
+    setShortcutLegendDensity('chips')
+    setHelperDiagnosticsDisplayMode('compact')
+    setIsHelperResetBadgeVisible(true)
+    setIsHelperResetBadgeSectionExpanded(true)
+    setHelperResetStaleThresholdHours(24)
+    setIsBlockTelemetryVisible(true)
+    setHelperDiagnosticsLastResetAt(new Date().toISOString())
+    appendBlock({
+      id: `blk_${Date.now()}`,
+      title: 'helper diagnostics reset',
+      content: `Reset helper diagnostics preferences to defaults${lockTelemetrySuccessParenthetical}.`,
+      severity: 'info',
+    })
+  }, [
+    appendBlock,
+    isHelperResetLocked,
+    lockTelemetryFailureSuffix,
+    lockTelemetrySuccessParenthetical,
+  ])
+
+  const clearPresetImportReport = useCallback(() => {
+    if (!presetImportReport) {
+      return
+    }
+    setPresetImportReport(null)
+    appendBlock({
+      id: `blk_${Date.now()}`,
+      title: 'import report cleared',
+      content: `Cleared the latest preset import diagnostics${lockTelemetrySuccessParenthetical}.`,
+      severity: 'info',
+    })
+  }, [appendBlock, lockTelemetrySuccessParenthetical, presetImportReport])
+
+  useEffect(() => {
+    if (!autoRefreshEnabled) {
+      return
+    }
+    const refreshSeconds = Math.max(Number.parseInt(refreshSecondsInput, 10) || 0, 1)
+    const intervalId = window.setInterval(() => {
+      void sendAgentsList()
+      void sendAccountsList()
+      void sendFeedsList()
+      void sendDevicesList()
+    }, refreshSeconds * 1000)
+
+    return () => {
+      window.clearInterval(intervalId)
+    }
+  }, [
+    autoRefreshEnabled,
+    refreshSecondsInput,
+    sendAccountsList,
+    sendAgentsList,
+    sendDevicesList,
+    sendFeedsList,
+  ])
+
+  useEffect(() => {
+    const socket = new WebSocket(websocketUrl)
+    const pendingMap = pendingRequestsRef.current
+    wsRef.current = socket
+
+    socket.onopen = () => {
+      setConnectionStatus('connected')
+      requestCounter.current += 1
+      socket.send(
+        JSON.stringify({
+          type: 'req',
+          id: `req_${requestCounter.current}`,
+          method: 'gateway.connect',
+          params: {
+            client: {
+              name: 'web-dashboard',
+              kind: 'web',
+              platform: 'browser',
+              version: '0.1.0',
+            },
+            protocol: {
+              min: 1,
+              max: 1,
+            },
+          },
+        }),
+      )
+    }
+
+    socket.onclose = () => {
+      setConnectionStatus('disconnected')
+    }
+
+    socket.onmessage = (message) => {
+      const parsed = JSON.parse(message.data) as GatewayResponse | GatewayEvent
+
+      if (parsed.type === 'res') {
+        if (parsed.id.startsWith('req_') && parsed.id === `req_${requestCounter.current}`) {
+          if (parsed.ok && parsed.payload?.protocol && parsed.payload?.session) {
+            const protocol = parsed.payload.protocol as { selected?: number }
+            const session = parsed.payload.session as { sessionId?: string }
+            setProtocolVersion(protocol.selected ?? null)
+            setSessionId(session.sessionId ?? null)
+          }
+        }
+
+        const resolver = pendingRequestsRef.current.get(parsed.id)
+        if (resolver) {
+          pendingRequestsRef.current.delete(parsed.id)
+          resolver(parsed)
+        }
+        return
+      }
+
+      if (parsed.type === 'event') {
+        if (parsed.event === 'event.account.status') {
+          const payload = parsed.payload ?? {}
+          const account = payload.account
+          if (account && typeof account === 'object') {
+            if ('accountId' in account && typeof account.accountId === 'string') {
+              setManagedAccountId(account.accountId)
+            }
+            if ('status' in account && typeof account.status === 'string') {
+              setAccountConnectionStatus(account.status)
+              setOnboardingChecklist((current) => ({
+                ...current,
+                account: account.status === 'connected',
+              }))
+            }
+          }
+        }
+        if (parsed.event === 'event.risk.emergencyStop') {
+          const payload = parsed.payload ?? {}
+          const statusPayload = (
+            'status' in payload && payload.status && typeof payload.status === 'object'
+              ? (payload.status as Record<string, unknown>)
+              : null
+          )
+          applyRiskStatusPayload(statusPayload)
+        }
+        if (parsed.event === 'event.trade.canceled' || parsed.event === 'event.trade.closed') {
+          const payload = parsed.payload ?? {}
+          const status = typeof payload.status === 'string' ? payload.status : undefined
+          const action: TradeControlBadge['action'] =
+            parsed.event === 'event.trade.canceled' ? 'canceled' : 'closed'
+          setTradeControlEvents((current) =>
+            [
+              {
+                id: `trade_ctrl_${Date.now()}`,
+                action,
+                status,
+              },
+              ...current,
+            ].slice(0, 6),
+          )
+          appendMarketOverlayAnnotation(
+            'trade',
+            `${action}:${status ?? 'unknown'}`,
+            action === 'closed' ? 'positive' : 'neutral',
+          )
+        }
+        if (parsed.event === 'event.risk.alert') {
+          const payload = parsed.payload ?? {}
+          const status = typeof payload.status === 'string' ? payload.status : undefined
+          let kind = 'risk_alert'
+          if ('kind' in payload && typeof payload.kind === 'string' && payload.kind.length > 0) {
+            kind = payload.kind
+          } else if (
+            'decision' in payload &&
+            payload.decision &&
+            typeof payload.decision === 'object' &&
+            'violations' in payload.decision &&
+            Array.isArray(payload.decision.violations) &&
+            payload.decision.violations.length > 0 &&
+            payload.decision.violations[0] &&
+            typeof payload.decision.violations[0] === 'object' &&
+            'code' in payload.decision.violations[0] &&
+            typeof payload.decision.violations[0].code === 'string'
+          ) {
+            kind = payload.decision.violations[0].code
+          }
+          setRiskAlerts((current) =>
+            [
+              {
+                id: `risk_alert_${Date.now()}`,
+                kind,
+                status,
+              },
+              ...current,
+            ].slice(0, 6),
+          )
+          appendMarketOverlayAnnotation('risk', `${kind}:${status ?? 'active'}`, 'warning')
+        }
+        if (parsed.event === 'event.agent.status') {
+          const payload = parsed.payload ?? {}
+          const agent = payload.agent
+          if (agent && typeof agent === 'object') {
+            if ('agentId' in agent && typeof agent.agentId === 'string') {
+              setManagedAgentId(agent.agentId)
+            }
+            if ('label' in agent && typeof agent.label === 'string') {
+              setManagedAgentLabel(agent.label)
+            }
+            setOnboardingChecklist((current) => ({
+              ...current,
+              agent: true,
+            }))
+          }
+        }
+        if (parsed.event === 'event.feed.event') {
+          const payload = parsed.payload ?? {}
+          const action =
+            typeof payload.action === 'string' && payload.action.length > 0
+              ? payload.action
+              : 'unknown'
+          const subscriptionIdRaw = payload.subscriptionId
+          const subscriptionId =
+            typeof subscriptionIdRaw === 'string' ? subscriptionIdRaw : undefined
+          setFeedLifecycle((current) =>
+            [
+              {
+                id: `feed_evt_${Date.now()}`,
+                action,
+                subscriptionId,
+              },
+              ...current,
+            ].slice(0, 6),
+          )
+          appendMarketOverlayAnnotation('feed', `${action}${subscriptionId ? `:${subscriptionId}` : ''}`)
+        }
+        if (parsed.event === 'event.copytrade.execution') {
+          const payload = parsed.payload ?? {}
+          const statusPayload =
+            'status' in payload && payload.status && typeof payload.status === 'object'
+              ? payload.status
+              : payload
+          const action = typeof payload.action === 'string' ? payload.action : 'execution'
+          setCopytradeControlSummary(
+            `event:${action} · ${formatCopytradeControlSummary(statusPayload, 'active')}`,
+          )
+        }
+        appendBlock({
+          id: `blk_${Date.now()}`,
+          title: parsed.event,
+          content:
+            eventBlockTelemetryVisibleRef.current
+              ? `${JSON.stringify(parsed.payload ?? {}, null, 2)}\n\n` +
+                `[LockTelemetry] ${eventBlockLockTelemetryRef.current}`
+              : JSON.stringify(parsed.payload ?? {}, null, 2),
+          severity: 'info',
+        })
+      }
+    }
+
+    return () => {
+      socket.close()
+      wsRef.current = null
+      pendingMap.clear()
+    }
+  }, [
+    appendBlock,
+    appendMarketOverlayAnnotation,
+    applyRiskStatusPayload,
+    formatCopytradeControlSummary,
+    websocketUrl,
+  ])
+
+  useEffect(() => {
+    window.localStorage.setItem(HISTORY_FILTER_STORAGE_KEY, historyFilter)
+  }, [historyFilter])
+
+  useEffect(() => {
+    window.localStorage.setItem(TIMESTAMP_FORMAT_STORAGE_KEY, timestampFormat)
+  }, [timestampFormat])
+
+  useEffect(() => {
+    window.localStorage.setItem(PRESET_IMPORT_MODE_STORAGE_KEY, presetImportMode)
+  }, [presetImportMode])
+
+  useEffect(() => {
+    window.localStorage.setItem(
+      PRESET_IMPORT_REPORT_EXPANDED_STORAGE_KEY,
+      isPresetImportReportExpanded ? 'expanded' : 'collapsed',
+    )
+  }, [isPresetImportReportExpanded])
+
+  useEffect(() => {
+    window.localStorage.setItem(
+      IMPORT_HINT_VISIBILITY_STORAGE_KEY,
+      isImportHintVisible ? 'visible' : 'hidden',
+    )
+  }, [isImportHintVisible])
+
+  useEffect(() => {
+    window.localStorage.setItem(
+      IMPORT_HELPER_DIAGNOSTICS_STORAGE_KEY,
+      isImportHelperDiagnosticsExpanded ? 'expanded' : 'collapsed',
+    )
+  }, [isImportHelperDiagnosticsExpanded])
+
+  useEffect(() => {
+    window.localStorage.setItem(
+      IMPORT_HELPER_DIAGNOSTICS_MODE_STORAGE_KEY,
+      helperDiagnosticsDisplayMode,
+    )
+  }, [helperDiagnosticsDisplayMode])
+
+  useEffect(() => {
+    if (helperDiagnosticsLastResetAt) {
+      window.localStorage.setItem(HELPER_DIAGNOSTICS_RESET_AT_STORAGE_KEY, helperDiagnosticsLastResetAt)
+      return
+    }
+    window.localStorage.removeItem(HELPER_DIAGNOSTICS_RESET_AT_STORAGE_KEY)
+  }, [helperDiagnosticsLastResetAt])
+
+  useEffect(() => {
+    if (helperLockCountersLastResetAt) {
+      window.localStorage.setItem(
+        HELPER_LOCK_COUNTERS_RESET_AT_STORAGE_KEY,
+        helperLockCountersLastResetAt,
+      )
+      return
+    }
+    window.localStorage.removeItem(HELPER_LOCK_COUNTERS_RESET_AT_STORAGE_KEY)
+  }, [helperLockCountersLastResetAt])
+
+  useEffect(() => {
+    window.localStorage.setItem(
+      BLOCK_TELEMETRY_VISIBILITY_STORAGE_KEY,
+      isBlockTelemetryVisible ? 'visible' : 'hidden',
+    )
+  }, [isBlockTelemetryVisible])
+
+  useEffect(() => {
+    window.localStorage.setItem(MARKET_OVERLAY_MODE_STORAGE_KEY, marketOverlayMode)
+  }, [marketOverlayMode])
+
+  useEffect(() => {
+    window.localStorage.setItem(MARKET_OVERLAY_CHART_LENS_STORAGE_KEY, marketOverlayChartLens)
+  }, [marketOverlayChartLens])
+
+  useEffect(() => {
+    window.localStorage.setItem(MARKET_OVERLAY_MARKER_FOCUS_STORAGE_KEY, marketOverlayMarkerFocus)
+  }, [marketOverlayMarkerFocus])
+
+  useEffect(() => {
+    window.localStorage.setItem(
+      MARKET_OVERLAY_MARKER_WINDOW_STORAGE_KEY,
+      String(marketOverlayMarkerWindow),
+    )
+  }, [marketOverlayMarkerWindow])
+
+  useEffect(() => {
+    window.localStorage.setItem(
+      MARKET_OVERLAY_MARKER_AGE_FILTER_STORAGE_KEY,
+      marketOverlayMarkerAgeFilter,
+    )
+  }, [marketOverlayMarkerAgeFilter])
+
+  useEffect(() => {
+    window.localStorage.setItem(
+      MARKET_OVERLAY_MARKER_DELTA_FILTER_STORAGE_KEY,
+      marketOverlayMarkerDeltaFilter,
+    )
+  }, [marketOverlayMarkerDeltaFilter])
+
+  useEffect(() => {
+    window.localStorage.setItem(
+      MARKET_OVERLAY_MARKER_DELTA_BASIS_STORAGE_KEY,
+      marketOverlayMarkerDeltaBasis,
+    )
+  }, [marketOverlayMarkerDeltaBasis])
+
+  useEffect(() => {
+    window.localStorage.setItem(
+      MARKET_OVERLAY_MARKER_DIVERGENCE_PREVIEW_STORAGE_KEY,
+      String(marketOverlayMarkerDivergencePreview),
+    )
+  }, [marketOverlayMarkerDivergencePreview])
+
+  useEffect(() => {
+    window.localStorage.setItem(
+      MARKET_OVERLAY_MARKER_BASIS_AGREEMENT_STORAGE_KEY,
+      marketOverlayMarkerBasisAgreement,
+    )
+  }, [marketOverlayMarkerBasisAgreement])
+
+  useEffect(() => {
+    window.localStorage.setItem(MARKET_OVERLAY_MARKER_BUCKET_STORAGE_KEY, marketOverlayMarkerBucket)
+  }, [marketOverlayMarkerBucket])
+
+  useEffect(() => {
+    window.localStorage.setItem(MARKET_OVERLAY_BUCKET_SCOPE_STORAGE_KEY, marketOverlayBucketScope)
+  }, [marketOverlayBucketScope])
+
+  useEffect(() => {
+    window.localStorage.setItem(MARKET_OVERLAY_TIMELINE_ORDER_STORAGE_KEY, marketOverlayTimelineOrder)
+  }, [marketOverlayTimelineOrder])
+
+  useEffect(() => {
+    window.localStorage.setItem(MARKET_OVERLAY_MARKER_WRAP_STORAGE_KEY, marketOverlayMarkerWrap)
+  }, [marketOverlayMarkerWrap])
+
+  useEffect(() => {
+    window.localStorage.setItem(MARKET_OVERLAY_SELECTION_MODE_STORAGE_KEY, marketOverlaySelectionMode)
+  }, [marketOverlaySelectionMode])
+
+  useEffect(() => {
+    window.localStorage.setItem(HELPER_RESET_TIMESTAMP_FORMAT_STORAGE_KEY, helperResetTimestampFormat)
+  }, [helperResetTimestampFormat])
+
+  useEffect(() => {
+    window.localStorage.setItem(
+      HELPER_RESET_BADGE_VISIBILITY_STORAGE_KEY,
+      isHelperResetBadgeVisible ? 'visible' : 'hidden',
+    )
+  }, [isHelperResetBadgeVisible])
+
+  useEffect(() => {
+    window.localStorage.setItem(
+      HELPER_RESET_BADGE_SECTION_STORAGE_KEY,
+      isHelperResetBadgeSectionExpanded ? 'expanded' : 'collapsed',
+    )
+  }, [isHelperResetBadgeSectionExpanded])
+
+  useEffect(() => {
+    window.localStorage.setItem(
+      HELPER_RESET_LOCK_STORAGE_KEY,
+      isHelperResetLocked ? 'locked' : 'unlocked',
+    )
+  }, [isHelperResetLocked])
+
+  useEffect(() => {
+    window.localStorage.setItem(
+      HELPER_RESET_STALE_THRESHOLD_HOURS_STORAGE_KEY,
+      String(helperResetStaleThresholdHours),
+    )
+  }, [helperResetStaleThresholdHours])
+
+  useEffect(() => {
+    window.localStorage.setItem(IMPORT_HINT_MODE_STORAGE_KEY, importHintMode)
+  }, [importHintMode])
+
+  useEffect(() => {
+    window.localStorage.setItem(
+      STATUS_SHORTCUT_LEGEND_STORAGE_KEY,
+      showShortcutLegendInStatus ? 'visible' : 'hidden',
+    )
+  }, [showShortcutLegendInStatus])
+
+  useEffect(() => {
+    window.localStorage.setItem(
+      IMPORT_SNAPSHOT_TOGGLES_STORAGE_KEY,
+      isImportSnapshotTogglesExpanded ? 'expanded' : 'collapsed',
+    )
+  }, [isImportSnapshotTogglesExpanded])
+
+  useEffect(() => {
+    window.localStorage.setItem(STATUS_SHORTCUT_LEGEND_ORDER_STORAGE_KEY, shortcutLegendOrder)
+  }, [shortcutLegendOrder])
+
+  useEffect(() => {
+    window.localStorage.setItem(STATUS_SHORTCUT_LEGEND_DENSITY_STORAGE_KEY, shortcutLegendDensity)
+  }, [shortcutLegendDensity])
+
+  const filteredHistory =
+    historyFilter === 'all'
+      ? quickActionHistory
+      : quickActionHistory.filter((entry) => entry.status === historyFilter)
+
+  const statusLegendShortcuts = useMemo<ShortcutLegendItem[]>(
+    () =>
+      shortcutLegendOrder === 'clear-first'
+        ? [
+            {
+              label: 'Esc',
+              title: 'Clear preset JSON input',
+              inlineLabel: 'Esc=clear',
+            },
+            {
+              label: 'Ctrl/Cmd+Enter',
+              title: 'Run preset JSON import',
+              inlineLabel: 'Ctrl/Cmd+Enter=import',
+            },
+            {
+              label: '/',
+              title: 'Toggle compact/detailed hints (empty input only)',
+              inlineLabel: '/=mode',
+            },
+            {
+              label: 'Alt+L',
+              title: 'Toggle helper reset lock',
+              inlineLabel: 'Alt+L=lock',
+            },
+          ]
+        : [
+            {
+              label: 'Ctrl/Cmd+Enter',
+              title: 'Run preset JSON import',
+              inlineLabel: 'Ctrl/Cmd+Enter=import',
+            },
+            {
+              label: 'Esc',
+              title: 'Clear preset JSON input',
+              inlineLabel: 'Esc=clear',
+            },
+            {
+              label: '/',
+              title: 'Toggle compact/detailed hints (empty input only)',
+              inlineLabel: '/=mode',
+            },
+            {
+              label: 'Alt+L',
+              title: 'Toggle helper reset lock',
+              inlineLabel: 'Alt+L=lock',
+            },
+          ],
+    [shortcutLegendOrder],
+  )
+
+  const copyStatusShortcutLegend = useCallback(async () => {
+    const payload = [
+      'Status Shortcut Legend',
+      `mode=${importHintMode}`,
+      `order=${shortcutLegendOrder}`,
+      `density=${shortcutLegendDensity}`,
+      `legendVisible=${showShortcutLegendInStatus ? 'yes' : 'no'}`,
+    ]
+    const payloadWithTelemetry = [
+      ...withLockTelemetrySection(payload),
+      '[Legend]',
+      ...statusLegendShortcuts.map((item) => `${item.label}\t${item.title}\t${item.inlineLabel}`),
+    ].join('\n')
+    try {
+      if (!navigator.clipboard?.writeText) {
+        throw new Error('Clipboard API unavailable')
+      }
+      await navigator.clipboard.writeText(payloadWithTelemetry)
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'status legend copied',
+        content: `Copied status shortcut legend to clipboard${lockStateTelemetryParenthetical(
+          isHelperResetLocked ? 'locked' : 'unlocked',
+        )}.`,
+        severity: 'info',
+      })
+    } catch {
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'status legend copy failed',
+        content: `Clipboard access failed or is unavailable.${lockTelemetryFailureSuffix}`,
+        severity: 'warn',
+      })
+    }
+  }, [
+    appendBlock,
+    importHintMode,
+    isHelperResetLocked,
+    lockTelemetryFailureSuffix,
+    lockStateTelemetryParenthetical,
+    shortcutLegendDensity,
+    shortcutLegendOrder,
+    showShortcutLegendInStatus,
+    statusLegendShortcuts,
+    withLockTelemetrySection,
+  ])
+
+  const copyHistoryToClipboard = useCallback(async () => {
+    if (filteredHistory.length === 0) {
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'history copy skipped',
+        content: `No quick-action history entries available for current filter.${lockTelemetryFailureSuffix}`,
+        severity: 'warn',
+      })
+      return
+    }
+
+    const text = [
+      ...withLockTelemetrySection([`filter=${historyFilter}`]),
+      '[Entries]',
+      ...filteredHistory
+        .slice(0, 10)
+        .map((entry) => `${entry.method}\t${entry.status}\t${entry.durationMs ?? 0}ms`),
+    ].join('\n')
+
+    try {
+      if (!navigator.clipboard?.writeText) {
+        throw new Error('Clipboard API unavailable')
+      }
+      await navigator.clipboard.writeText(text)
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'history copied',
+        content: `Copied ${Math.min(filteredHistory.length, 10)} history entries${lockTelemetrySuccessParenthetical}.`,
+        severity: 'info',
+      })
+    } catch {
+      appendBlock({
+        id: `blk_${Date.now()}`,
+        title: 'history copy failed',
+        content: `Clipboard access failed or is unavailable.${lockTelemetryFailureSuffix}`,
+        severity: 'warn',
+      })
+    }
+  }, [
+    appendBlock,
+    filteredHistory,
+    lockTelemetryFailureSuffix,
+    historyFilter,
+    lockTelemetrySuccessParenthetical,
+    withLockTelemetrySection,
+  ])
+
+  const refreshMarketOverlaySnapshot = useCallback(() => {
+    const candles = lastFetchedCandlesCount ?? 0
+    const tradeEvents = tradeControlEvents.length
+    const alerts = riskAlerts.length
+    const chartPoints = marketOverlayChartPoints.length
+    const chartLens = marketOverlayChartLens
+    const markerFocus = marketOverlayMarkerFocus
+    const markerWindow = marketOverlayMarkerWindow
+    const markerAge = marketOverlayMarkerAgeFilter
+    const markerAgreement = marketOverlayMarkerBasisAgreement
+    const markerDeltaFilter = marketOverlayMarkerDeltaFilter
+    const markerDeltaBasis = marketOverlayMarkerDeltaBasis
+    const markerAgreementMatched = `${marketOverlayAgreementScopedTimelineAnnotations.length}/${marketOverlayBucketScopedTimelineAnnotations.length}`
+    const markerDeltaMatched = `${marketOverlayScopedTimelineAnnotations.length}/${marketOverlayAgreementScopedTimelineAnnotations.length}`
+    const markerBucket = marketOverlayMarkerBucket
+    const bucketScope = marketOverlayBucketScope
+    const timelineOrder = marketOverlayTimelineOrder
+    const markerWrap = marketOverlayMarkerWrap
+    const markerSelection = marketOverlaySelectionMode
+    const markerNavigation = marketOverlayMarkerNavigationLabel.replace(' · ', '|')
+    const markerSummary = `t${marketOverlayAnnotationSummary.tradeCount}/r${marketOverlayAnnotationSummary.riskCount}/f${marketOverlayAnnotationSummary.feedCount}`
+    const correlationHint = marketOverlayCorrelationHint
+    const trendLabel = marketOverlayTrend.label
+    const volatilitySummary = marketOverlayVolatility.summary
+    const pulseSummary = marketOverlayPulse.summary
+    const regimeSummary = marketOverlayRegime.summary
+    const summaryByMode: Record<MarketOverlayMode, string> = {
+      'price-only': `candles:${candles} · chartPoints:${chartPoints} · chartLens:${chartLens} · markerFocus:${markerFocus} · markerWindow:${markerWindow} · markerAge:${markerAge} · markerAgreement:${markerAgreement} · markerAgreementMatched:${markerAgreementMatched} · markerDelta:${markerDeltaFilter} · markerDeltaBasis:${markerDeltaBasis} · markerDeltaMatched:${markerDeltaMatched} · markerBucket:${markerBucket} · bucketScope:${bucketScope} · timelineOrder:${timelineOrder} · markerWrap:${markerWrap} · markerSelection:${markerSelection} · markerNav:${markerNavigation} · markers:${markerSummary} · corr:${correlationHint} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
+      'with-trades': `candles:${candles} · tradeEvents:${tradeEvents} · chartPoints:${chartPoints} · chartLens:${chartLens} · markerFocus:${markerFocus} · markerWindow:${markerWindow} · markerAge:${markerAge} · markerAgreement:${markerAgreement} · markerAgreementMatched:${markerAgreementMatched} · markerDelta:${markerDeltaFilter} · markerDeltaBasis:${markerDeltaBasis} · markerDeltaMatched:${markerDeltaMatched} · markerBucket:${markerBucket} · bucketScope:${bucketScope} · timelineOrder:${timelineOrder} · markerWrap:${markerWrap} · markerSelection:${markerSelection} · markerNav:${markerNavigation} · markers:${markerSummary} · corr:${correlationHint} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
+      'with-risk': `candles:${candles} · tradeEvents:${tradeEvents} · riskAlerts:${alerts} · chartPoints:${chartPoints} · chartLens:${chartLens} · markerFocus:${markerFocus} · markerWindow:${markerWindow} · markerAge:${markerAge} · markerAgreement:${markerAgreement} · markerAgreementMatched:${markerAgreementMatched} · markerDelta:${markerDeltaFilter} · markerDeltaBasis:${markerDeltaBasis} · markerDeltaMatched:${markerDeltaMatched} · markerBucket:${markerBucket} · bucketScope:${bucketScope} · timelineOrder:${timelineOrder} · markerWrap:${markerWrap} · markerSelection:${markerSelection} · markerNav:${markerNavigation} · markers:${markerSummary} · corr:${correlationHint} · trend:${trendLabel} · vol:${volatilitySummary} · pulse:${pulseSummary} · regime:${regimeSummary}`,
+    }
+    setMarketOverlaySnapshotSummary(summaryByMode[marketOverlayMode])
+    setMarketOverlaySnapshotAt(new Date().toISOString())
+  }, [
+    lastFetchedCandlesCount,
+    marketOverlayAnnotationSummary.feedCount,
+    marketOverlayAnnotationSummary.riskCount,
+    marketOverlayAnnotationSummary.tradeCount,
+    marketOverlayCorrelationHint,
+    marketOverlayChartLens,
+    marketOverlayMarkerNavigationLabel,
+    marketOverlayMarkerBucket,
+    marketOverlayBucketScope,
+    marketOverlayMarkerAgeFilter,
+    marketOverlayMarkerBasisAgreement,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayAgreementScopedTimelineAnnotations.length,
+    marketOverlayBucketScopedTimelineAnnotations.length,
+    marketOverlayMarkerWrap,
+    marketOverlaySelectionMode,
+    marketOverlayTimelineOrder,
+    marketOverlayMarkerFocus,
+    marketOverlayMarkerWindow,
+    marketOverlayScopedTimelineAnnotations.length,
+    marketOverlayChartPoints.length,
+    marketOverlayMode,
+    marketOverlayPulse.summary,
+    marketOverlayRegime.summary,
+    marketOverlayTrend.label,
+    marketOverlayVolatility.summary,
+    riskAlerts.length,
+    tradeControlEvents.length,
+  ])
+
+  return (
+    <div className="dashboard-shell">
+      <header className="dashboard-header">
+        <h1>MT5 Claude Trader v2</h1>
+        <span className={`status-chip status-${connectionStatus}`}>{connectionStatus}</span>
+      </header>
+
+      <main className="dashboard-grid">
+        <section className="panel market-panel">
+          <h2>Market Panel</h2>
+          <div className="placeholder-chart" aria-label="Market Overlay Chart">
+            <div
+              ref={marketOverlayChartContainerRef}
+              className={`market-overlay-chart-surface runtime-${marketOverlayChartRuntime}`}
+            />
+            <p aria-label="Overlay Chart Summary" className="market-overlay-chart-summary">
+              Chart: {marketOverlayChartSummary}
+            </p>
+            <p aria-label="Overlay Marker Summary" className="market-overlay-marker-summary">
+              Markers: trade:{marketOverlayAnnotationSummary.tradeCount} · risk:
+              {marketOverlayAnnotationSummary.riskCount} · feed:
+              {marketOverlayAnnotationSummary.feedCount} · latest:
+              {marketOverlayAnnotationSummary.latestLabel}
+            </p>
+            <p aria-label="Overlay Marker Drilldown" className="market-overlay-marker-drilldown">
+              Marker focus: {marketOverlayMarkerDrilldown.focus} · window:
+              {marketOverlayMarkerDrilldown.window} · age:
+              {marketOverlayMarkerDrilldown.ageFilter} · scope:
+              {marketOverlayMarkerDrilldown.bucketScope} · order:
+              {marketOverlayMarkerDrilldown.timelineOrder} · visible:
+              {marketOverlayMarkerDrilldown.visibleCount} · latest:
+              {marketOverlayMarkerDrilldown.latestLabel}
+            </p>
+            <p aria-label="Overlay Correlation Hint" className="market-overlay-correlation-hint">
+              Correlation: {marketOverlayCorrelationHint}
+            </p>
+            <p
+              aria-label="Overlay Marker Drilldown Detail"
+              className="market-overlay-marker-drilldown-detail"
+            >
+              Marker detail: {marketOverlayMarkerDrilldownDetail}
+            </p>
+            <p aria-label="Overlay Marker Active Basis Agreement">
+              Active basis agreement: {marketOverlayActiveMarkerBasisAgreementDetail}
+            </p>
+            <p aria-label="Overlay Marker Active Delta Rank">
+              Active delta rank: {marketOverlayActiveMarkerDeltaRank}
+            </p>
+            <p aria-label="Overlay Marker Active Delta Position Summary">
+              Active delta position: {marketOverlayActiveMarkerDeltaPositionSummary}
+            </p>
+            <p aria-label="Overlay Marker Active Delta Range Context Summary">
+              Active delta range context: {marketOverlayActiveMarkerDeltaRangeContextSummary}
+            </p>
+            <p aria-label="Overlay Marker Active Neighbor Percentile Summary">
+              Active neighbor percentiles: {marketOverlayActiveMarkerNeighborPercentileSummary}
+            </p>
+            <p aria-label="Overlay Marker Active Neighbor Basis Relation Summary">
+              Active neighbor basis relation: {marketOverlayActiveMarkerNeighborBasisRelationSummary}
+            </p>
+            <p aria-label="Overlay Marker Active Neighbor Spread Change Summary">
+              Active neighbor spread change: {marketOverlayActiveMarkerNeighborSpreadChangeSummary}
+            </p>
+            <p aria-label="Overlay Marker Active Neighbor Basis Transition Summary">
+              Active neighbor basis transition: {marketOverlayActiveMarkerNeighborBasisTransitionSummary}
+            </p>
+            <p aria-label="Overlay Marker Active Neighbor Delta Trend Summary">
+              Active neighbor delta trend: {marketOverlayActiveMarkerNeighborDeltaTrendSummary}
+            </p>
+            <p aria-label="Overlay Marker Active Neighbor Delta Acceleration Summary">
+              Active neighbor delta acceleration: {marketOverlayActiveMarkerNeighborDeltaAccelerationSummary}
+            </p>
+            <p aria-label="Overlay Marker Active Neighbor Tone Transition Summary">
+              Active neighbor tone transition: {marketOverlayActiveMarkerNeighborToneTransitionSummary}
+            </p>
+            <p aria-label="Overlay Marker Active Neighbor Consensus Summary">
+              Active neighbor consensus: {marketOverlayActiveMarkerNeighborConsensusSummary}
+            </p>
+            <p aria-label="Overlay Marker Active Neighbor Consensus Balance Summary">
+              Active neighbor consensus balance: {marketOverlayActiveMarkerNeighborConsensusBalanceSummary}
+            </p>
+            <p aria-label="Overlay Marker Active Neighbor Consensus Transition Summary">
+              Active neighbor consensus transition: {marketOverlayActiveMarkerNeighborConsensusTransitionSummary}
+            </p>
+            <p aria-label="Overlay Marker Active Neighbor Consensus Volatility Summary">
+              Active neighbor consensus volatility: {marketOverlayActiveMarkerNeighborConsensusVolatilitySummary}
+            </p>
+            <p aria-label="Overlay Marker Active Neighbor Delta Relation Summary">
+              Active neighbor delta relation: {marketOverlayActiveMarkerNeighborDeltaRelationSummary}
+            </p>
+            <p aria-label="Overlay Marker Active Neighbor Polarity Relation Summary">
+              Active neighbor polarity relation: {marketOverlayActiveMarkerNeighborPolarityRelationSummary}
+            </p>
+            <p aria-label="Overlay Marker Active Neighbor Polarity Transition Summary">
+              Active neighbor polarity transition: {marketOverlayActiveMarkerNeighborPolarityTransitionSummary}
+            </p>
+            <p aria-label="Overlay Marker Active Neighbor Polarity Shift Summary">
+              Active neighbor polarity shift: {marketOverlayActiveMarkerNeighborPolarityShiftSummary}
+            </p>
+            <p aria-label="Overlay Marker Active Neighbor Magnitude Ratio Summary">
+              Active neighbor magnitude ratio: {marketOverlayActiveMarkerNeighborMagnitudeRatioSummary}
+            </p>
+            <p aria-label="Overlay Marker Active Neighbor Magnitude Ratio Gap Summary">
+              Active neighbor magnitude ratio gap: {marketOverlayActiveMarkerNeighborMagnitudeRatioGapSummary}
+            </p>
+            <p aria-label="Overlay Marker Active Neighbor Magnitude Ratio Side Summary">
+              Active neighbor magnitude ratio side: {marketOverlayActiveMarkerNeighborMagnitudeRatioSideSummary}
+            </p>
+            <p aria-label="Overlay Marker Active Neighbor Magnitude Side Vote Summary">
+              Active neighbor magnitude side vote: {marketOverlayActiveMarkerNeighborMagnitudeSideVoteSummary}
+            </p>
+            <p aria-label="Overlay Marker Active Neighbor Magnitude Side Transition Summary">
+              Active neighbor magnitude side transition:{' '}
+              {marketOverlayActiveMarkerNeighborMagnitudeSideTransitionSummary}
+            </p>
+            <p aria-label="Overlay Marker Active Neighbor Magnitude Side Drift Summary">
+              Active neighbor magnitude side drift: {marketOverlayActiveMarkerNeighborMagnitudeSideDriftSummary}
+            </p>
+            <p aria-label="Overlay Marker Active Neighbor Magnitude Side Regime Summary">
+              Active neighbor magnitude side regime: {marketOverlayActiveMarkerNeighborMagnitudeSideRegimeSummary}
+            </p>
+            <p aria-label="Overlay Marker Active Neighbor Magnitude Side Pressure Summary">
+              Active neighbor magnitude side pressure:{' '}
+              {marketOverlayActiveMarkerNeighborMagnitudeSidePressureSummary}
+            </p>
+            <p aria-label="Overlay Marker Active Neighbor Magnitude Side Certainty Summary">
+              Active neighbor magnitude side certainty:{' '}
+              {marketOverlayActiveMarkerNeighborMagnitudeSideCertaintySummary}
+            </p>
+            <p aria-label="Overlay Marker Active Neighbor Magnitude Side Coherence Summary">
+              Active neighbor magnitude side coherence:{' '}
+              {marketOverlayActiveMarkerNeighborMagnitudeSideCoherenceSummary}
+            </p>
+            <p aria-label="Overlay Marker Active Neighbor Magnitude Side Vector Summary">
+              Active neighbor magnitude side vector:{' '}
+              {marketOverlayActiveMarkerNeighborMagnitudeSideVectorSummary}
+            </p>
+            <p aria-label="Overlay Marker Active Neighbor Magnitude Side Entropy Summary">
+              Active neighbor magnitude side entropy:{' '}
+              {marketOverlayActiveMarkerNeighborMagnitudeSideEntropySummary}
+            </p>
+            <p aria-label="Overlay Marker Active Neighbor Magnitude Side Symmetry Summary">
+              Active neighbor magnitude side symmetry:{' '}
+              {marketOverlayActiveMarkerNeighborMagnitudeSideSymmetrySummary}
+            </p>
+            <p aria-label="Overlay Marker Active Neighbor Magnitude Side Consensus Index Summary">
+              Active neighbor magnitude side consensus index:{' '}
+              {marketOverlayActiveMarkerNeighborMagnitudeSideConsensusIndexSummary}
+            </p>
+            <p aria-label="Overlay Marker Active Neighbor Magnitude Side Conflict Score Summary">
+              Active neighbor magnitude side conflict score:{' '}
+              {marketOverlayActiveMarkerNeighborMagnitudeSideConflictScoreSummary}
+            </p>
+            <p aria-label="Overlay Marker Active Neighbor Magnitude Side Pulse Summary">
+              Active neighbor magnitude side pulse: {marketOverlayActiveMarkerNeighborMagnitudeSidePulseSummary}
+            </p>
+            <p aria-label="Overlay Marker Active Neighbor Magnitude Side Pulse Transition Summary">
+              Active neighbor magnitude side pulse transition:{' '}
+              {marketOverlayActiveMarkerNeighborMagnitudeSidePulseTransitionSummary}
+            </p>
+            <p aria-label="Overlay Marker Active Neighbor Magnitude Side Pulse Alignment Summary">
+              Active neighbor magnitude side pulse alignment:{' '}
+              {marketOverlayActiveMarkerNeighborMagnitudeSidePulseAlignmentSummary}
+            </p>
+            <p aria-label="Overlay Marker Active Neighbor Magnitude Side Pulse Momentum Summary">
+              Active neighbor magnitude side pulse momentum:{' '}
+              {marketOverlayActiveMarkerNeighborMagnitudeSidePulseMomentumSummary}
+            </p>
+            <p aria-label="Overlay Marker Active Delta Neighbors">
+              Active delta neighbors: {marketOverlayActiveMarkerNeighborDeltaSummary}
+            </p>
+            <p aria-label="Overlay Marker Active Neighbor Gap Summary">
+              Active neighbor gaps: {marketOverlayActiveMarkerNeighborGapSummary}
+            </p>
+            <p aria-label="Overlay Marker Active Basis Spread">
+              Active basis spread: {marketOverlayActiveMarkerBasisSpreadSummary}
+            </p>
+            <p aria-label="Overlay Marker Active Neighbor Delta Change">
+              Active neighbor delta change: {marketOverlayActiveMarkerNeighborDeltaChangeSummary}
+            </p>
+            <p aria-label="Overlay Marker Active Neighbor Tone Summary">
+              Active neighbor tones: {marketOverlayActiveMarkerNeighborToneSummary}
+            </p>
+            <p aria-label="Overlay Marker Event Candle Comparative Summary">
+              Marker event candle comparative: {marketOverlayMarkerEventCandleComparativeSummary}
+            </p>
+            <p aria-label="Overlay Marker Event Candle Transit Summary">
+              Marker event candle transit: {marketOverlayMarkerEventCandleTransitSummary}
+            </p>
+            <p aria-label="Overlay Marker Event Candle Comparative Drift Summary">
+              Marker event candle comparative drift:{' '}
+              {marketOverlayMarkerEventCandleComparativeDriftSummary}
+            </p>
+            <p aria-label="Overlay Marker Event Timeline Cadence Summary">
+              Marker event timeline cadence: {marketOverlayMarkerEventTimelineCadenceSummary}
+            </p>
+            <p aria-label="Overlay Marker Event Timeline Coupling Summary">
+              Marker event timeline coupling: {marketOverlayMarkerEventTimelineCouplingSummary}
+            </p>
+            <p aria-label="Overlay Marker Event Timeline Tension Summary">
+              Marker event timeline tension: {marketOverlayMarkerEventTimelineTensionSummary}
+            </p>
+            <p aria-label="Overlay Marker Visual Focus Summary">
+              Marker visual focus: {marketOverlayMarkerVisualFocusSummary}
+            </p>
+            <p aria-label="Overlay Marker Visual Distribution Summary">
+              Marker visual distribution: {marketOverlayMarkerVisualDistributionSummary}
+            </p>
+            <p aria-label="Overlay Marker Visual Transition Summary">
+              Marker visual transition: {marketOverlayMarkerVisualTransitionSummary}
+            </p>
+            <p aria-label="Overlay Marker Visual Context Drift Summary">
+              Marker visual context drift: {marketOverlayMarkerVisualContextDriftSummary}
+            </p>
+            <p aria-label="Overlay Marker Visual Role Pulse Summary">
+              Marker visual role pulse: {marketOverlayMarkerVisualRolePulseSummary}
+            </p>
+            <p aria-label="Overlay Marker Visual Role Balance Summary">
+              Marker visual role balance: {marketOverlayMarkerVisualRoleBalanceSummary}
+            </p>
+            <p aria-label="Overlay Marker Visual Basis Drift Summary">
+              Marker visual basis drift: {marketOverlayMarkerVisualBasisDriftSummary}
+            </p>
+            <p aria-label="Overlay Marker Visual Neighbor Polarity Summary">
+              Marker visual neighbor polarity: {marketOverlayMarkerVisualNeighborPolaritySummary}
+            </p>
+            <p aria-label="Overlay Marker Visual Neighbor Phase Summary">
+              Marker visual neighbor phase: {marketOverlayMarkerVisualNeighborPhaseSummary}
+            </p>
+            <p aria-label="Overlay Marker Visual Neighbor Tension Summary">
+              Marker visual neighbor tension: {marketOverlayMarkerVisualNeighborTensionSummary}
+            </p>
+            <p aria-label="Overlay Marker Visual Neighbor Cadence Summary">
+              Marker visual neighbor cadence: {marketOverlayMarkerVisualNeighborCadenceSummary}
+            </p>
+            <p aria-label="Overlay Marker Visual Neighbor Cadence Drift Summary">
+              Marker visual neighbor cadence drift: {marketOverlayMarkerVisualNeighborCadenceDriftSummary}
+            </p>
+            <p aria-label="Overlay Marker Visual Neighbor Cadence Coherence Summary">
+              Marker visual neighbor cadence coherence:{' '}
+              {marketOverlayMarkerVisualNeighborCadenceCoherenceSummary}
+            </p>
+            <p
+              aria-label="Overlay Chart Runtime"
+              className={`market-overlay-chart-runtime runtime-${marketOverlayChartRuntime}`}
+            >
+              Runtime: {marketOverlayChartRuntime}
+            </p>
+          </div>
+          <section className="market-overlay-controls">
+            <label>
+              Marker Window
+              <select
+                value={marketOverlayMarkerWindow}
+                onChange={(event) =>
+                  setMarketOverlayMarkerWindow(
+                    Number.parseInt(event.target.value, 10) as MarketOverlayMarkerWindow,
+                  )
+                }
+              >
+                <option value="3">3</option>
+                <option value="5">5</option>
+                <option value="8">8</option>
+              </select>
+            </label>
+            <label>
+              Marker Focus
+              <select
+                value={marketOverlayMarkerFocus}
+                onChange={(event) =>
+                  setMarketOverlayMarkerFocus(event.target.value as MarketOverlayMarkerFocus)
+                }
+              >
+                <option value="all">all</option>
+                <option value="trade">trade</option>
+                <option value="risk">risk</option>
+                <option value="feed">feed</option>
+              </select>
+            </label>
+            <label>
+              Marker Age
+              <select
+                value={marketOverlayMarkerAgeFilter}
+                onChange={(event) =>
+                  setMarketOverlayMarkerAgeFilter(event.target.value as MarketOverlayMarkerAgeFilter)
+                }
+              >
+                <option value="all">all</option>
+                <option value="last-60s">last-60s</option>
+                <option value="last-300s">last-300s</option>
+              </select>
+            </label>
+            <label>
+              Delta Basis
+              <select
+                value={marketOverlayMarkerDeltaBasis}
+                onChange={(event) =>
+                  setMarketOverlayMarkerDeltaBasis(
+                    event.target.value as MarketOverlayMarkerDeltaBasis,
+                  )
+                }
+              >
+                <option value="latest">latest</option>
+                <option value="average">average</option>
+              </select>
+            </label>
+            <label>
+              Basis Agreement
+              <select
+                value={marketOverlayMarkerBasisAgreement}
+                onChange={(event) =>
+                  setMarketOverlayMarkerBasisAgreement(
+                    event.target.value as MarketOverlayMarkerBasisAgreement,
+                  )
+                }
+              >
+                <option value="all">all</option>
+                <option value="agree">agree</option>
+                <option value="diverge">diverge</option>
+              </select>
+            </label>
+            <label>
+              Basis Preview
+              <select
+                value={String(marketOverlayMarkerDivergencePreview)}
+                onChange={(event) =>
+                  setMarketOverlayMarkerDivergencePreview(
+                    Number.parseInt(event.target.value, 10) as MarketOverlayMarkerDivergencePreview,
+                  )
+                }
+              >
+                <option value="3">3</option>
+                <option value="5">5</option>
+                <option value="8">8</option>
+              </select>
+            </label>
+            <label>
+              Delta Filter
+              <select
+                value={marketOverlayMarkerDeltaFilter}
+                onChange={(event) =>
+                  setMarketOverlayMarkerDeltaFilter(event.target.value as MarketOverlayMarkerDeltaFilter)
+                }
+              >
+                <option value="all">all</option>
+                <option value="latest-up">latest-up</option>
+                <option value="latest-down">latest-down</option>
+                <option value="latest-flat">latest-flat</option>
+                <option value="latest-unavailable">latest-unavailable</option>
+              </select>
+            </label>
+            <label>
+              Marker Bucket
+              <select
+                value={marketOverlayMarkerBucket}
+                onChange={(event) =>
+                  setMarketOverlayMarkerBucket(event.target.value as MarketOverlayMarkerBucket)
+                }
+              >
+                <option value="none">none</option>
+                <option value="30s">30s</option>
+                <option value="60s">60s</option>
+              </select>
+            </label>
+            <label>
+              Bucket Scope
+              <select
+                value={marketOverlayBucketScope}
+                onChange={(event) =>
+                  setMarketOverlayBucketScope(event.target.value as MarketOverlayBucketScope)
+                }
+              >
+                <option value="all-buckets">all-buckets</option>
+                <option value="latest-bucket">latest-bucket</option>
+              </select>
+            </label>
+            <label>
+              Timeline Order
+              <select
+                value={marketOverlayTimelineOrder}
+                onChange={(event) =>
+                  setMarketOverlayTimelineOrder(event.target.value as MarketOverlayTimelineOrder)
+                }
+              >
+                <option value="newest-first">newest-first</option>
+                <option value="oldest-first">oldest-first</option>
+              </select>
+            </label>
+            <label>
+              Marker Wrap
+              <select
+                value={marketOverlayMarkerWrap}
+                onChange={(event) =>
+                  setMarketOverlayMarkerWrap(event.target.value as MarketOverlayMarkerWrap)
+                }
+              >
+                <option value="bounded">bounded</option>
+                <option value="wrap">wrap</option>
+              </select>
+            </label>
+            <label>
+              Selection Mode
+              <select
+                value={marketOverlaySelectionMode}
+                onChange={(event) =>
+                  setMarketOverlaySelectionMode(event.target.value as MarketOverlaySelectionMode)
+                }
+              >
+                <option value="sticky">sticky</option>
+                <option value="follow-latest">follow-latest</option>
+              </select>
+            </label>
+            <label>
+              Chart Lens
+              <select
+                value={marketOverlayChartLens}
+                onChange={(event) =>
+                  setMarketOverlayChartLens(event.target.value as MarketOverlayChartLens)
+                }
+              >
+                <option value="price-only">price-only</option>
+                <option value="price-and-trend">price-and-trend</option>
+                <option value="diagnostics">diagnostics</option>
+              </select>
+            </label>
+            <label>
+              Overlay Mode
+              <select
+                value={marketOverlayMode}
+                onChange={(event) => setMarketOverlayMode(event.target.value as MarketOverlayMode)}
+              >
+                <option value="price-only">price-only</option>
+                <option value="with-trades">with-trades</option>
+                <option value="with-risk">with-risk</option>
+              </select>
+            </label>
+            <div className="market-overlay-legend" aria-label="Overlay Legend">
+              <span className="overlay-chip active">price</span>
+              <span
+                className={`overlay-chip ${marketOverlayMode !== 'price-only' ? 'active' : 'inactive'}`}
+              >
+                trades
+              </span>
+              <span
+                className={`overlay-chip ${marketOverlayMode === 'with-risk' ? 'active' : 'inactive'}`}
+              >
+                risk
+              </span>
+              <span
+                className={`overlay-chip ${marketOverlayMode === 'with-risk' ? 'active' : 'inactive'}`}
+              >
+                feed
+              </span>
+            </div>
+            <div className="market-overlay-annotation-list" aria-label="Overlay Markers">
+              {marketOverlayScopedVisibleAnnotations.length === 0 ? (
+                <span className="overlay-marker-chip overlay-marker-none">none</span>
+              ) : (
+                marketOverlayScopedVisibleAnnotations.map((annotation) => (
+                  <button
+                    type="button"
+                    key={annotation.id}
+                    className={`overlay-marker-chip overlay-marker-${annotation.kind} overlay-marker-tone-${annotation.tone} ${marketOverlaySelectedMarkerId === annotation.id ? 'is-selected' : ''} ${isMarketOverlayNavigationLocked ? 'is-disabled' : ''}`}
+                    onClick={() => setMarketOverlaySelectedMarkerId(annotation.id)}
+                    onKeyDown={onMarketOverlayMarkerKeyDown}
+                    aria-pressed={marketOverlaySelectedMarkerId === annotation.id}
+                    disabled={isMarketOverlayNavigationLocked}
+                  >
+                    {annotation.kind}:{annotation.label}
+                  </button>
+                ))
+              )}
+            </div>
+            <p aria-label="Overlay Marker Timeline Bucket Summary">
+              Timeline buckets: {marketOverlayMarkerBucketSummary}
+            </p>
+            <p aria-label="Overlay Marker Bucket Navigation Summary">
+              Bucket nav: {marketOverlayMarkerBucketNavigationSummary}
+            </p>
+            <p aria-label="Overlay Marker Bucket Delta Summary">
+              Bucket deltas: {marketOverlayMarkerBucketDeltaSummary}
+            </p>
+            <p aria-label="Overlay Marker Chronology Summary">
+              Chronology: {marketOverlayMarkerChronologySummary}
+            </p>
+            <p aria-label="Overlay Marker Scope Summary">
+              Scope: {marketOverlayMarkerScopeSummary}
+            </p>
+            <p aria-label="Overlay Marker Pipeline Summary">
+              Pipeline: {marketOverlayMarkerFilterPipelineSummary}
+            </p>
+            <p aria-label="Overlay Marker Basis Agreement Summary">
+              Basis agreement: {marketOverlayMarkerBasisAgreementSummary}
+            </p>
+            <p aria-label="Overlay Marker Basis Agreement Shortcut Summary">
+              Basis agreement shortcuts: {marketOverlayMarkerBasisAgreementShortcutSummary}
+            </p>
+            <p aria-label="Overlay Marker Basis Agreement Cycle Preview Summary">
+              Basis agreement cycle preview: {marketOverlayMarkerBasisAgreementCyclePreviewSummary}
+            </p>
+            <p aria-label="Overlay Marker Basis Preview Shortcut Summary">
+              Basis preview shortcuts: {marketOverlayMarkerDivergencePreviewShortcutSummary}
+            </p>
+            <p aria-label="Overlay Marker Range Shortcut Summary">
+              Range shortcuts: {marketOverlayMarkerRangeShortcutSummary}
+            </p>
+            <p aria-label="Overlay Marker Basis Preview Count Summary">
+              Basis preview counts: {marketOverlayMarkerBasisPreviewCountSummary}
+            </p>
+            <p aria-label="Overlay Marker Basis Agreement Kind Summary">
+              Basis agreement kinds: {marketOverlayMarkerBasisAgreementKindSummary}
+            </p>
+            <p aria-label="Overlay Marker Delta Filter Summary">
+              Delta filter: {marketOverlayMarkerDeltaFilterSummary}
+            </p>
+            <p aria-label="Overlay Marker Delta Shortcut Summary">
+              Delta shortcuts: {marketOverlayMarkerDeltaShortcutSummary}
+            </p>
+            <p aria-label="Overlay Marker Delta Basis Shortcut Summary">
+              Delta basis shortcuts: {marketOverlayMarkerDeltaBasisShortcutSummary}
+            </p>
+            <p aria-label="Overlay Marker Delta Basis Comparison Summary">
+              Delta basis compare: {marketOverlayMarkerDeltaBasisComparisonSummary}
+            </p>
+            <p aria-label="Overlay Marker Delta Basis Divergence Summary">
+              Delta basis divergence: {marketOverlayMarkerDeltaBasisDivergenceSummary}
+            </p>
+            <p aria-label="Overlay Marker Delta Basis Agreement Items Summary">
+              Delta basis agreement items: {marketOverlayMarkerDeltaBasisAgreementItemsSummary}
+            </p>
+            <p aria-label="Overlay Marker Focus Shortcut Summary">
+              Focus shortcuts: {marketOverlayMarkerFocusShortcutSummary}
+            </p>
+            <p aria-label="Overlay Marker Mode Shortcut Summary">
+              Mode shortcuts: {marketOverlayMarkerModeShortcutSummary}
+            </p>
+            <p aria-label="Overlay Marker Delta Summary">Delta summary: {marketOverlayMarkerDeltaSummary}</p>
+            <p aria-label="Overlay Marker Delta Tone Summary">
+              Delta tones: {marketOverlayMarkerDeltaToneSummary}
+            </p>
+            <p aria-label="Overlay Marker Delta Alignment Summary">
+              Delta alignment: {marketOverlayMarkerDeltaAlignmentSummary}
+            </p>
+            <p aria-label="Overlay Marker Delta By Kind Summary">
+              Delta by kind: {marketOverlayMarkerDeltaByKindSummary}
+            </p>
+            <p aria-label="Overlay Marker Delta Dispersion Summary">
+              Delta dispersion: {marketOverlayMarkerDeltaDispersionSummary}
+            </p>
+            <p aria-label="Overlay Marker Delta Momentum Summary">
+              Delta momentum: {marketOverlayMarkerDeltaMomentumSummary}
+            </p>
+            <p aria-label="Overlay Marker Delta Polarity Summary">
+              Delta polarity: {marketOverlayMarkerDeltaPolaritySummary}
+            </p>
+            <p aria-label="Overlay Marker Delta Coverage Summary">
+              Delta coverage: {marketOverlayMarkerDeltaCoverageSummary}
+            </p>
+            <p aria-label="Overlay Marker Delta Confidence Summary">
+              Delta confidence: {marketOverlayMarkerDeltaConfidenceSummary}
+            </p>
+            <p aria-label="Overlay Marker Delta Extremes">
+              Delta extremes: {marketOverlayMarkerDeltaExtremes}
+            </p>
+            <p aria-label="Overlay Marker Behavior">Marker behavior: {marketOverlayMarkerBehaviorLabel}</p>
+            <p aria-label="Overlay Marker Navigation">Marker nav: {marketOverlayMarkerNavigationLabel}</p>
+            <p aria-label="Overlay Marker Navigation Targets">
+              Targets: {marketOverlayMarkerNavigationTargets}
+            </p>
+            <p aria-label="Overlay Marker Timeline Anchor Summary">
+              Timeline anchors: {marketOverlayMarkerTimelineAnchorSummary}
+            </p>
+            <p aria-label="Overlay Marker Distance Summary">
+              Distance: {marketOverlayMarkerDistanceSummary}
+            </p>
+            <p aria-label="Overlay Marker Kind Navigation Summary">
+              Kind nav: {marketOverlayMarkerKindNavigationSummary}
+            </p>
+            <p aria-label="Overlay Marker Interval Summary">
+              Intervals: {marketOverlayMarkerIntervalSummary}
+            </p>
+            <p aria-label="Overlay Marker Shortcut Hint">
+              Shortcuts: {marketOverlayMarkerShortcutHint}
+            </p>
+            <p aria-label="Overlay Marker Binding Summary">
+              Bindings: {marketOverlayMarkerBindingSummary}
+            </p>
+            <p aria-label="Overlay Marker Numeric Jump Summary">
+              Jump keys: {marketOverlayMarkerNumericJumpSummary}
+            </p>
+            <p aria-label="Overlay Marker Timeline Interaction Polish Summary">
+              Timeline interaction polish: {marketOverlayMarkerTimelineInteractionPolishSummary}
+            </p>
+            <p aria-label="Overlay Marker Timeline Interaction Route Summary">
+              Timeline interaction route: {marketOverlayMarkerTimelineInteractionRouteSummary}
+            </p>
+            <p aria-label="Overlay Marker Timeline Interaction Pressure Summary">
+              Timeline interaction pressure: {marketOverlayMarkerTimelineInteractionPressureSummary}
+            </p>
+            <p aria-label="Overlay Marker Timeline Interaction Readiness Summary">
+              Timeline interaction readiness: {marketOverlayMarkerTimelineInteractionReadinessSummary}
+            </p>
+            <p aria-label="Overlay Marker Timeline Interaction Coherence Summary">
+              Timeline interaction coherence: {marketOverlayMarkerTimelineInteractionCoherenceSummary}
+            </p>
+            <p aria-label="Overlay Marker Timeline Interaction Vector Summary">
+              Timeline interaction vector: {marketOverlayMarkerTimelineInteractionVectorSummary}
+            </p>
+            <p aria-label="Overlay Marker Timeline Interaction Entropy Summary">
+              Timeline interaction entropy: {marketOverlayMarkerTimelineInteractionEntropySummary}
+            </p>
+            <p aria-label="Overlay Marker Timeline Interaction Drift Summary">
+              Timeline interaction drift: {marketOverlayMarkerTimelineInteractionDriftSummary}
+            </p>
+            <p aria-label="Overlay Marker Timeline Interaction Parity Summary">
+              Timeline interaction parity: {marketOverlayMarkerTimelineInteractionParitySummary}
+            </p>
+            <div className="market-overlay-marker-navigation">
+              <button
+                type="button"
+                onClick={selectOldestMarketOverlayMarker}
+                disabled={!canSelectOldestMarketOverlayMarker}
+              >
+                Oldest Marker
+              </button>
+              <button
+                type="button"
+                onClick={selectPreviousBucketMarketOverlayMarker}
+                disabled={!canSelectPreviousBucketMarketOverlayMarker}
+              >
+                Previous Bucket
+              </button>
+              <button
+                type="button"
+                onClick={selectSkipBackwardMarketOverlayMarker}
+                disabled={!canSelectSkipBackwardMarketOverlayMarker}
+              >
+                Skip Back 2
+              </button>
+              <button
+                type="button"
+                onClick={selectPreviousMarketOverlayMarker}
+                disabled={!canSelectPreviousMarketOverlayMarker}
+              >
+                Previous Marker
+              </button>
+              <button
+                type="button"
+                onClick={selectPreviousSameKindMarketOverlayMarker}
+                disabled={!canSelectPreviousSameKindMarketOverlayMarker}
+              >
+                Previous Same Kind
+              </button>
+              <button
+                type="button"
+                onClick={selectNextMarketOverlayMarker}
+                disabled={!canSelectNextMarketOverlayMarker}
+              >
+                Next Marker
+              </button>
+              <button
+                type="button"
+                onClick={selectNextSameKindMarketOverlayMarker}
+                disabled={!canSelectNextSameKindMarketOverlayMarker}
+              >
+                Next Same Kind
+              </button>
+              <button
+                type="button"
+                onClick={selectSkipForwardMarketOverlayMarker}
+                disabled={!canSelectSkipForwardMarketOverlayMarker}
+              >
+                Skip Forward 2
+              </button>
+              <button
+                type="button"
+                onClick={selectNextBucketMarketOverlayMarker}
+                disabled={!canSelectNextBucketMarketOverlayMarker}
+              >
+                Next Bucket
+              </button>
+              <button
+                type="button"
+                onClick={selectLatestMarketOverlayMarker}
+                disabled={!canSelectLatestMarketOverlayMarker}
+              >
+                Latest Marker
+              </button>
+            </div>
+            <div className="market-overlay-timeline-list" aria-label="Overlay Marker Timeline">
+              {marketOverlayMarkerTimelineRows.length === 0 ? (
+                <span className="overlay-marker-chip overlay-marker-none">none</span>
+              ) : (
+                marketOverlayMarkerTimelineRows.map((row) => (
+                  <button
+                    key={row.id}
+                    type="button"
+                    className={`overlay-marker-timeline-row ${row.isSelected ? 'is-selected' : ''} ${isMarketOverlayNavigationLocked ? 'is-disabled' : ''}`}
+                    onClick={() => setMarketOverlaySelectedMarkerId(row.id)}
+                    onKeyDown={onMarketOverlayMarkerKeyDown}
+                    aria-pressed={row.isSelected}
+                    disabled={isMarketOverlayNavigationLocked}
+                  >
+                    {row.text}
+                  </button>
+                ))
+              )}
+            </div>
+            <p aria-label="Overlay Live Summary">Live: {marketOverlayLiveSummary}</p>
+            <p aria-label="Overlay Window Summary">Window: {marketOverlayWindowSummary}</p>
+            <p aria-label="Overlay Trend" className={`overlay-trend ${marketOverlayTrend.className}`}>
+              Trend: {marketOverlayTrend.label}
+            </p>
+            <p
+              aria-label="Overlay Volatility"
+              className={`overlay-volatility ${marketOverlayVolatility.className}`}
+            >
+              Volatility: {marketOverlayVolatility.label}
+            </p>
+            <p aria-label="Overlay Pulse" className={`overlay-pulse ${marketOverlayPulse.className}`}>
+              Pulse: {marketOverlayPulse.label}
+            </p>
+            <p aria-label="Overlay Regime" className={`overlay-regime ${marketOverlayRegime.className}`}>
+              Regime: {marketOverlayRegime.label}
+            </p>
+            <button type="button" onClick={refreshMarketOverlaySnapshot}>
+              Refresh Overlay Snapshot
+            </button>
+            <p aria-label="Overlay Snapshot Time">
+              Snapshot: {marketOverlaySnapshotAt ?? 'never'}
+            </p>
+            <p aria-label="Overlay Snapshot Summary">
+              Summary: {marketOverlaySnapshotSummary}
+            </p>
+          </section>
+        </section>
+
+        <section className="panel feed-panel">
+          <div className="panel-heading">
+            <h2>Agent Feed</h2>
+            <div className="actions">
+              <button type="button" onClick={sendPing}>
+                Ping
+              </button>
+              <button type="button" onClick={sendStatus}>
+                Status
+              </button>
+              <button type="button" onClick={sendRiskPreview}>
+                Risk Preview
+              </button>
+              <button type="button" onClick={() => void sendRiskStatus()}>
+                Risk Status
+              </button>
+              <button type="button" onClick={() => void sendRiskEmergencyStop()}>
+                Emergency Stop
+              </button>
+              <button type="button" onClick={() => void sendRiskResume()}>
+                Resume Risk
+              </button>
+              <button type="button" onClick={sendTradePlace}>
+                Place Trade
+              </button>
+              <button type="button" onClick={sendTradeModify}>
+                Modify Trade
+              </button>
+              <button type="button" onClick={sendTradeCancel}>
+                Cancel Trade
+              </button>
+              <button type="button" onClick={sendTradeClosePosition}>
+                Close Position
+              </button>
+              <button type="button" onClick={() => void sendAccountsList()}>
+                Accounts
+              </button>
+              <button type="button" onClick={() => void sendAgentsList()}>
+                Agents
+              </button>
+              <button type="button" onClick={() => void sendAgentCreate()}>
+                Create Agent
+              </button>
+              <button type="button" onClick={() => void runOnboardingFlow()}>
+                Run Onboarding Flow
+              </button>
+              <button type="button" onClick={() => void sendAccountConnect()}>
+                Connect Account
+              </button>
+              <button type="button" onClick={() => void sendAccountDisconnect()}>
+                Disconnect Account
+              </button>
+              <button type="button" onClick={() => void sendFeedsList()}>
+                Feeds
+              </button>
+              <button type="button" onClick={() => void sendMarketplaceSignals()}>
+                Marketplace Signals
+              </button>
+              <button type="button" onClick={() => void sendMarketplaceFollow()}>
+                Marketplace Follow
+              </button>
+              <button type="button" onClick={() => void sendMarketplaceUnfollow()}>
+                Marketplace Unfollow
+              </button>
+              <button type="button" onClick={() => void sendMarketplaceMyFollows()}>
+                Marketplace Follows
+              </button>
+              <button type="button" onClick={() => void sendDevicesList()}>
+                Devices
+              </button>
+              <button type="button" onClick={() => void sendDevicePair()}>
+                Pair Device
+              </button>
+              <button type="button" onClick={() => void sendDeviceRegisterPush()}>
+                Register Push
+              </button>
+              <button type="button" onClick={() => void sendDeviceNotifyTest()}>
+                Notify Device
+              </button>
+              <button type="button" onClick={() => void sendDeviceUnpair()}>
+                Unpair Device
+              </button>
+              <button type="button" onClick={() => void sendFeedSubscribe()}>
+                Subscribe Feed
+              </button>
+              <button type="button" onClick={() => void sendFeedGetCandles()}>
+                Get Candles
+              </button>
+              <button type="button" onClick={() => void sendCopytradePreview()}>
+                Copytrade Preview
+              </button>
+              <button type="button" onClick={() => void sendCopytradeStatus()}>
+                Copytrade Status
+              </button>
+              <button type="button" onClick={() => void sendCopytradePause()}>
+                Copytrade Pause
+              </button>
+              <button type="button" onClick={() => void sendCopytradeResume()}>
+                Copytrade Resume
+              </button>
+              <button
+                type="button"
+                onClick={() => void sendFeedUnsubscribe()}
+              >
+                Unsubscribe Feed
+              </button>
+            </div>
+          </div>
+          <section className="template-panel">
+            <h3>Quick Action Templates</h3>
+            <div className="template-grid">
+              <label>
+                Account ID
+                <input
+                  value={managedAccountId}
+                  onChange={(event) => setManagedAccountId(event.target.value)}
+                />
+              </label>
+              <label>
+                Provider Account ID
+                <input
+                  value={managedProviderAccountId}
+                  onChange={(event) => setManagedProviderAccountId(event.target.value)}
+                />
+              </label>
+              <label>
+                Account Label
+                <input
+                  value={managedAccountLabel}
+                  onChange={(event) => setManagedAccountLabel(event.target.value)}
+                />
+              </label>
+              <label>
+                Account Symbols (comma separated)
+                <input
+                  value={managedAccountSymbolsInput}
+                  onChange={(event) => setManagedAccountSymbolsInput(event.target.value)}
+                />
+              </label>
+              <label>
+                Agent ID
+                <input
+                  value={managedAgentId}
+                  onChange={(event) => setManagedAgentId(event.target.value)}
+                />
+              </label>
+              <label>
+                Agent Label
+                <input
+                  value={managedAgentLabel}
+                  onChange={(event) => setManagedAgentLabel(event.target.value)}
+                />
+              </label>
+              <label>
+                Device ID
+                <input
+                  value={managedDeviceId}
+                  onChange={(event) => setManagedDeviceId(event.target.value)}
+                />
+              </label>
+              <label>
+                Device Platform
+                <input
+                  value={managedDevicePlatform}
+                  onChange={(event) => setManagedDevicePlatform(event.target.value)}
+                />
+              </label>
+              <label>
+                Device Label
+                <input
+                  value={managedDeviceLabel}
+                  onChange={(event) => setManagedDeviceLabel(event.target.value)}
+                />
+              </label>
+              <label>
+                Device Pair Push Token
+                <input
+                  value={managedDevicePairPushToken}
+                  onChange={(event) => setManagedDevicePairPushToken(event.target.value)}
+                />
+              </label>
+              <label>
+                Device Rotate Push Token
+                <input
+                  value={managedDeviceRotatePushToken}
+                  onChange={(event) => setManagedDeviceRotatePushToken(event.target.value)}
+                />
+              </label>
+              <label>
+                Device Notify Message
+                <input
+                  value={managedDeviceNotifyMessage}
+                  onChange={(event) => setManagedDeviceNotifyMessage(event.target.value)}
+                />
+              </label>
+              <label>
+                Emergency Action
+                <select
+                  value={riskEmergencyAction}
+                  onChange={(event) =>
+                    setRiskEmergencyAction(event.target.value as RiskEmergencyAction)
+                  }
+                >
+                  <option value="pause_trading">pause_trading</option>
+                  <option value="cancel_all">cancel_all</option>
+                  <option value="close_all">close_all</option>
+                  <option value="disable_live">disable_live</option>
+                </select>
+              </label>
+              <label>
+                Emergency Reason
+                <input
+                  value={riskEmergencyReason}
+                  onChange={(event) => setRiskEmergencyReason(event.target.value)}
+                />
+              </label>
+              <label>
+                Feed Topic
+                <input value={feedTopic} onChange={(event) => setFeedTopic(event.target.value)} />
+              </label>
+              <label>
+                Feed Symbol
+                <input value={feedSymbol} onChange={(event) => setFeedSymbol(event.target.value)} />
+              </label>
+              <label>
+                Feed Timeframe
+                <input
+                  value={feedTimeframe}
+                  onChange={(event) => setFeedTimeframe(event.target.value)}
+                />
+              </label>
+              <label>
+                Refresh Interval (sec)
+                <input
+                  value={refreshSecondsInput}
+                  onChange={(event) => setRefreshSecondsInput(event.target.value)}
+                />
+              </label>
+              <label>
+                Min Request Gap (ms)
+                <input
+                  value={minRequestGapMsInput}
+                  onChange={(event) => setMinRequestGapMsInput(event.target.value)}
+                />
+              </label>
+              <label className="template-toggle">
+                <input
+                  type="checkbox"
+                  checked={autoRefreshEnabled}
+                  onChange={(event) => setAutoRefreshEnabled(event.target.checked)}
+                />
+                Enable Auto Refresh
+              </label>
+            </div>
+            <div className="preset-controls">
+              <label>
+                Preset Name
+                <input
+                  value={presetNameInput}
+                  onChange={(event) => setPresetNameInput(event.target.value)}
+                />
+              </label>
+              <button type="button" onClick={savePreset}>
+                Save Preset
+              </button>
+              <label>
+                Saved Presets
+                <select
+                  value={selectedPresetName}
+                  onChange={(event) => setSelectedPresetName(event.target.value)}
+                >
+                  <option value="">-- select preset --</option>
+                  {availablePresetNames.map((name) => (
+                    <option key={name} value={name}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button type="button" onClick={loadSelectedPreset}>
+                Load Preset
+              </button>
+              <button type="button" onClick={deleteSelectedPreset}>
+                Delete Preset
+              </button>
+              <button type="button" onClick={() => void exportPresetsJson()}>
+                Export Presets JSON
+              </button>
+              <button type="button" onClick={importPresetsJson}>
+                Import Presets JSON
+              </button>
+              <label>
+                Import Mode
+                <select
+                  value={presetImportMode}
+                  onChange={(event) => setPresetImportMode(event.target.value as PresetImportMode)}
+                >
+                  <option value="overwrite">overwrite</option>
+                  <option value="merge">merge</option>
+                </select>
+              </label>
+              <div className="import-mode-indicator" aria-label="Import Mode Badge">
+                <span className={`import-mode-badge mode-${presetImportMode}`}>
+                  {presetImportMode}
+                </span>
+              </div>
+            </div>
+            <label className="preset-import">
+              Import Presets JSON
+              <textarea
+                value={presetImportInput}
+                onChange={(event) => setPresetImportInput(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.altKey && event.key.toLowerCase() === 'l') {
+                    event.preventDefault()
+                    toggleHelperResetLock('Alt+L')
+                    return
+                  }
+                  if (
+                    event.key === '/' &&
+                    !event.ctrlKey &&
+                    !event.metaKey &&
+                    presetImportInput.trim().length === 0
+                  ) {
+                    event.preventDefault()
+                    setImportHintMode((current) => {
+                      const next = current === 'detailed' ? 'compact' : 'detailed'
+                      setHintModeLiveNote(`Hint mode set to ${next} via slash shortcut.`)
+                      return next
+                    })
+                    return
+                  }
+                  if (event.key === 'Escape') {
+                    event.preventDefault()
+                    setPresetImportInput('')
+                    return
+                  }
+                  if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+                    event.preventDefault()
+                    importPresetsJson()
+                  }
+                }}
+                placeholder='{"preset_name": { ... }}'
+              />
+            </label>
+            <div className="preset-import-helper-controls">
+              <button
+                type="button"
+                onClick={() =>
+                  setIsImportHelperDiagnosticsExpanded((current) => !current)
+                }
+              >
+                {isImportHelperDiagnosticsExpanded
+                  ? 'Collapse Helper Diagnostics'
+                  : 'Expand Helper Diagnostics'}
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  setIsHelperResetBadgeSectionExpanded((current) => !current)
+                }
+              >
+                {isHelperResetBadgeSectionExpanded
+                  ? 'Hide Reset Badge Tools'
+                  : 'Show Reset Badge Tools'}
+              </button>
+              {isHelperResetBadgeSectionExpanded && isHelperResetBadgeVisible ? (
+                <span
+                  className={`helper-reset-badge ${helperResetToneClass}`}
+                  aria-label="Helper Reset Badge"
+                >
+                  last reset:{' '}
+                  {helperDiagnosticsLastResetAt
+                    ? formatTimestamp(helperDiagnosticsLastResetAt, helperResetTimestampFormat)
+                    : 'never'}
+                </span>
+              ) : null}
+              {isHelperResetBadgeSectionExpanded && isHelperResetBadgeVisible ? (
+                <button
+                  type="button"
+                  className="summary-copy-button"
+                  onClick={() => void copyHelperResetBadge()}
+                >
+                  Copy Reset Badge
+                </button>
+              ) : null}
+            </div>
+            {isImportHelperDiagnosticsExpanded && isImportHintVisible ? (
+              <p className="preset-import-hint">
+                {importHintMode === 'compact' ? (
+                  <>
+                    Shortcuts: <span className="hotkey-chip">Ctrl/Cmd+Enter</span> import ·{' '}
+                    <span className="hotkey-chip">Esc</span> clear ·{' '}
+                    <span
+                      className="hotkey-chip"
+                      title="Slash toggles hint mode only when import input is empty."
+                    >
+                      /
+                    </span>{' '}
+                    mode.
+                  </>
+                ) : (
+                  <>
+                    Shortcut: <span className="hotkey-chip">Ctrl/Cmd+Enter</span> to import,{' '}
+                    <span className="hotkey-chip">Esc</span> to clear,{' '}
+                    <span
+                      className="hotkey-chip"
+                      title="Slash toggles hint mode only when import input is empty."
+                    >
+                      /
+                    </span>{' '}
+                    to toggle mode. Import mode{' '}
+                    <strong>{presetImportMode}</strong>{' '}
+                    {presetImportMode === 'merge'
+                      ? 'preserves existing conflicting presets.'
+                      : 'overwrites conflicting presets.'}
+                  </>
+                )}
+              </p>
+            ) : null}
+            <div className="sr-only" aria-live="polite">
+              {hintModeLiveNote}
+            </div>
+            {isImportHelperDiagnosticsExpanded ? (
+              <div className="preset-import-actions helper-diagnostics-actions">
+                <button type="button" onClick={() => setIsImportHintVisible((current) => !current)}>
+                  {isImportHintVisible ? 'Hide Hints' : 'Show Hints'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setImportHintMode((current) => (current === 'detailed' ? 'compact' : 'detailed'))
+                  }
+                >
+                  {importHintMode === 'detailed' ? 'Use Compact Hints' : 'Use Detailed Hints'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowShortcutLegendInStatus((current) => !current)}
+                >
+                  {showShortcutLegendInStatus ? 'Hide Legend in Status' : 'Show Legend in Status'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsHelperResetBadgeVisible((current) => !current)}
+                >
+                  {isHelperResetBadgeVisible ? 'Hide Reset Badge' : 'Show Reset Badge'}
+                </button>
+                <label>
+                  Legend Order
+                  <select
+                    value={shortcutLegendOrder}
+                    onChange={(event) => setShortcutLegendOrder(event.target.value as ShortcutLegendOrder)}
+                  >
+                    <option value="import-first">import-first</option>
+                    <option value="clear-first">clear-first</option>
+                  </select>
+                </label>
+                <label>
+                  Legend Density
+                  <select
+                    value={shortcutLegendDensity}
+                    onChange={(event) =>
+                      setShortcutLegendDensity(event.target.value as ShortcutLegendDensity)
+                    }
+                  >
+                    <option value="chips">chips</option>
+                    <option value="inline">inline</option>
+                  </select>
+                </label>
+                <button type="button" onClick={() => void copyImportShortcutCheatSheet()}>
+                  Copy Shortcut Cheat Sheet
+                </button>
+              </div>
+            ) : null}
+            <div className="preset-import-actions">
+              <button
+                type="button"
+                onClick={() => setPresetImportInput('')}
+                disabled={presetImportInput.trim().length === 0}
+              >
+                Clear Import JSON
+              </button>
+              <button
+                type="button"
+                onClick={() => void copyPresetImportReport()}
+              >
+                Copy Import Report
+              </button>
+              <button
+                type="button"
+                onClick={() => void copyLastImportSummary()}
+              >
+                Copy Last Summary
+              </button>
+              <button type="button" onClick={clearPresetImportReport} disabled={!presetImportReport}>
+                Clear Import Report
+              </button>
+              <button
+                type="button"
+                onClick={() => void copyPresetImportNames()}
+              >
+                Copy Full Names
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsPresetImportReportExpanded((current) => !current)}
+                disabled={!presetImportReport}
+                aria-expanded={isPresetImportReportExpanded}
+              >
+                {presetImportReport && isPresetImportReportExpanded ? 'Collapse Report' : 'Expand Report'}
+              </button>
+            </div>
+            <div className="preset-import-last-summary">
+              {lastImportSummaryText}
+            </div>
+            {presetImportReport ? (
+              <div className="preset-import-mini" aria-label="Import Report Summary Badges">
+                <span className="import-summary-badge badge-accepted">
+                  accepted:{presetImportReport.accepted.length}
+                </span>
+                <span className="import-summary-badge badge-rejected">
+                  rejected:{presetImportReport.rejected.length}
+                </span>
+                <span className="import-summary-badge badge-created">
+                  created:{presetImportReport.createdCount}
+                </span>
+                <span className="import-summary-badge badge-preserved">
+                  preserved:{presetImportReport.preservedCount}
+                </span>
+                <span className="import-summary-badge badge-overwritten">
+                  overwritten:{presetImportReport.overwrittenCount}
+                </span>
+              </div>
+            ) : null}
+            {presetImportReport && isPresetImportReportExpanded ? (
+              <div className="preset-import-report">
+                <div>
+                  <strong>Last Import</strong>
+                  <span>{presetImportReport.importedAt}</span>
+                </div>
+                <div>
+                  <strong>Mode</strong>
+                  <span className={`import-mode-badge mode-${presetImportReport.mode}`}>
+                    {presetImportReport.mode}
+                  </span>
+                </div>
+                <div>
+                  <strong>Accepted</strong>
+                  <span>{summarizeNames(presetImportReport.accepted)}</span>
+                </div>
+                <div>
+                  <strong>Rejected</strong>
+                  <span>{summarizeNames(presetImportReport.rejected)}</span>
+                </div>
+                <div>
+                  <strong>Created</strong>
+                  <span>{presetImportReport.createdCount}</span>
+                </div>
+                <div>
+                  <strong>Preserved</strong>
+                  <span>{presetImportReport.preservedCount}</span>
+                </div>
+                <div>
+                  <strong>Overwritten</strong>
+                  <span>{presetImportReport.overwrittenCount}</span>
+                </div>
+              </div>
+            ) : null}
+          </section>
+          <section className="template-panel intervention-panel">
+            <h3>Intervention Panel</h3>
+            <div className="actions">
+              <button
+                type="button"
+                onClick={() => void sendInterventionEmergencyAction('pause_trading')}
+              >
+                Pause Trading Now
+              </button>
+              <button
+                type="button"
+                onClick={() => void sendInterventionEmergencyAction('cancel_all')}
+              >
+                Cancel All Now
+              </button>
+              <button
+                type="button"
+                onClick={() => void sendInterventionEmergencyAction('close_all')}
+              >
+                Close All Now
+              </button>
+              <button
+                type="button"
+                onClick={() => void sendInterventionEmergencyAction('disable_live')}
+              >
+                Disable Live Now
+              </button>
+              <button type="button" onClick={() => void sendInterventionResume()}>
+                Resume Trading Now
+              </button>
+            </div>
+            <p aria-label="Intervention Summary">
+              Emergency status:{' '}
+              {riskEmergencyStopActive === null
+                ? 'n/a'
+                : riskEmergencyStopActive
+                  ? 'active'
+                  : 'inactive'}{' '}
+              · Last action: {riskLastEmergencyAction ?? 'none'} · Updated:{' '}
+              {riskLastEmergencyUpdatedAt ?? 'never'}
+            </p>
+          </section>
+          <section className="template-panel mobile-emergency-panel">
+            <h3>Mobile Emergency Controls</h3>
+            <div className="mobile-emergency-actions">
+              <button
+                type="button"
+                onClick={() => void sendInterventionEmergencyAction('pause_trading')}
+              >
+                Mobile Pause
+              </button>
+              <button
+                type="button"
+                onClick={() => void sendInterventionEmergencyAction('cancel_all')}
+              >
+                Mobile Cancel All
+              </button>
+              <button
+                type="button"
+                onClick={() => void sendInterventionEmergencyAction('close_all')}
+              >
+                Mobile Close All
+              </button>
+              <button
+                type="button"
+                onClick={() => void sendInterventionEmergencyAction('disable_live')}
+              >
+                Mobile Disable Live
+              </button>
+              <button type="button" onClick={() => void sendInterventionResume()}>
+                Mobile Resume
+              </button>
+            </div>
+            <p aria-label="Mobile Intervention Summary">
+              Emergency status:{' '}
+              {riskEmergencyStopActive === null
+                ? 'n/a'
+                : riskEmergencyStopActive
+                  ? 'active'
+                  : 'inactive'}{' '}
+              · Last action: {riskLastEmergencyAction ?? 'none'} · Updated:{' '}
+              {riskLastEmergencyUpdatedAt ?? 'never'}
+            </p>
+          </section>
+          <div className="block-list">
+            {blocks.length === 0 ? (
+              <p className="empty-state">No blocks yet. Connect and trigger gateway methods.</p>
+            ) : (
+              blocks.map((block) => {
+                const blockKind = resolveBlockRenderKind(block)
+                const markdownContent = stripBlockTelemetrySegment(block.content).trim()
+                const structuredPayload = parseStructuredBlockPayload(block.content)
+                const blockRenderSummary =
+                  blockKind === 'BacktestReport'
+                    ? (() => {
+                        const metrics =
+                          structuredPayload &&
+                          'metrics' in structuredPayload &&
+                          structuredPayload.metrics &&
+                          typeof structuredPayload.metrics === 'object'
+                            ? (structuredPayload.metrics as Record<string, unknown>)
+                            : null
+                        const trades =
+                          metrics && 'trades' in metrics && typeof metrics.trades === 'number'
+                            ? metrics.trades
+                            : null
+                        const winRateRaw =
+                          metrics && 'winRate' in metrics && typeof metrics.winRate === 'number'
+                            ? metrics.winRate
+                            : null
+                        const winRateLabel =
+                          winRateRaw === null ? 'n/a' : `${(winRateRaw * 100).toFixed(2)}%`
+                        const equityCurveSource =
+                          structuredPayload && 'equityCurve' in structuredPayload
+                            ? structuredPayload.equityCurve
+                            : metrics && 'equityCurve' in metrics
+                              ? metrics.equityCurve
+                              : null
+                        const equityCurveCount = Array.isArray(equityCurveSource)
+                          ? equityCurveSource.length
+                          : null
+                        return {
+                          label: 'Backtest summary',
+                          text: `trades:${trades ?? 'n/a'} · winRate:${winRateLabel} · curve:${equityCurveCount ?? 'n/a'}`,
+                        }
+                      })()
+                    : blockKind === 'SystemStatus'
+                      ? (() => {
+                          const status =
+                            structuredPayload &&
+                            'status' in structuredPayload &&
+                            typeof structuredPayload.status === 'string'
+                              ? structuredPayload.status
+                              : 'n/a'
+                          const connection =
+                            structuredPayload &&
+                            'connection' in structuredPayload &&
+                            typeof structuredPayload.connection === 'string'
+                              ? structuredPayload.connection
+                              : 'n/a'
+                          const protocolVersion =
+                            structuredPayload &&
+                            'protocolVersion' in structuredPayload &&
+                            typeof structuredPayload.protocolVersion === 'number'
+                              ? structuredPayload.protocolVersion
+                              : null
+                          return {
+                            label: 'System summary',
+                            text: `status:${status} · connection:${connection} · protocol:${protocolVersion === null ? 'n/a' : protocolVersion}`,
+                          }
+                        })()
+                      : blockKind === 'TradeProposal'
+                        ? (() => {
+                            const decisionPayload =
+                              structuredPayload &&
+                              'decision' in structuredPayload &&
+                              structuredPayload.decision &&
+                              typeof structuredPayload.decision === 'object'
+                                ? (structuredPayload.decision as Record<string, unknown>)
+                                : structuredPayload
+                            const allowedRaw =
+                              decisionPayload &&
+                              'allowed' in decisionPayload &&
+                              typeof decisionPayload.allowed === 'boolean'
+                                ? decisionPayload.allowed
+                                : null
+                            const violationsRaw =
+                              decisionPayload &&
+                              'violations' in decisionPayload &&
+                              Array.isArray(decisionPayload.violations)
+                                ? decisionPayload.violations
+                                : []
+                            return {
+                              label: 'Proposal summary',
+                              text: `allowed:${allowedRaw === null ? 'n/a' : allowedRaw ? 'yes' : 'no'} · violations:${violationsRaw.length}`,
+                            }
+                          })()
+                        : blockKind === 'TradeExecution'
+                          ? (() => {
+                              const executionPayload =
+                                structuredPayload &&
+                                'execution' in structuredPayload &&
+                                structuredPayload.execution &&
+                                typeof structuredPayload.execution === 'object'
+                                  ? (structuredPayload.execution as Record<string, unknown>)
+                                  : structuredPayload
+                              const status =
+                                executionPayload &&
+                                'status' in executionPayload &&
+                                typeof executionPayload.status === 'string'
+                                  ? executionPayload.status
+                                  : 'n/a'
+                              const orderId =
+                                executionPayload &&
+                                'orderId' in executionPayload &&
+                                typeof executionPayload.orderId === 'string'
+                                  ? executionPayload.orderId
+                                  : 'n/a'
+                              const symbol =
+                                executionPayload &&
+                                'symbol' in executionPayload &&
+                                typeof executionPayload.symbol === 'string'
+                                  ? executionPayload.symbol
+                                  : 'n/a'
+                              return {
+                                label: 'Execution summary',
+                                text: `status:${status} · order:${orderId} · symbol:${symbol}`,
+                              }
+                            })()
+                    : blockKind === 'RiskAlert'
+                      ? (() => {
+                          const decision =
+                            structuredPayload &&
+                            'decision' in structuredPayload &&
+                            structuredPayload.decision &&
+                            typeof structuredPayload.decision === 'object'
+                              ? (structuredPayload.decision as Record<string, unknown>)
+                              : structuredPayload
+                          const allowedRaw =
+                            decision &&
+                            'allowed' in decision &&
+                            typeof decision.allowed === 'boolean'
+                              ? decision.allowed
+                              : null
+                          const violationsRaw =
+                            decision &&
+                            'violations' in decision &&
+                            Array.isArray(decision.violations)
+                              ? decision.violations
+                              : []
+                          const violationCodes = violationsRaw
+                            .map((violation) => {
+                              if (
+                                violation &&
+                                typeof violation === 'object' &&
+                                'code' in violation &&
+                                typeof violation.code === 'string'
+                              ) {
+                                return violation.code
+                              }
+                              return null
+                            })
+                            .filter((code): code is string => code !== null)
+                          return {
+                            label: 'Risk summary',
+                            text: `allowed:${allowedRaw === null ? 'n/a' : allowedRaw ? 'yes' : 'no'} · violations:${violationsRaw.length} · codes:${violationCodes.length > 0 ? violationCodes.join('|') : 'none'}`,
+                          }
+                      })()
+                      : null
+                const rawPayloadViewerContent =
+                  blockKind === 'RawPayload'
+                    ? (() => {
+                        if (structuredPayload) {
+                          return JSON.stringify(structuredPayload, null, 2)
+                        }
+                        const telemetryStripped = stripBlockTelemetrySegment(block.content).trim()
+                        return telemetryStripped.length > 0 ? telemetryStripped : block.content
+                      })()
+                    : null
+                return (
+                  <article
+                    key={block.id}
+                    className={`block-card severity-${block.severity}`}
+                    data-block-kind={blockKind}
+                  >
+                    <h3>{block.title}</h3>
+                    <p className={`block-kind-label kind-${blockKind.toLowerCase()}`}>{blockKind}</p>
+                    {blockKind === 'Markdown' ? (
+                      <div className="block-markdown-preview">{markdownContent}</div>
+                    ) : (
+                      <pre>{block.content}</pre>
+                    )}
+                    {blockRenderSummary ? (
+                      <p className="block-render-summary">
+                        {blockRenderSummary.label}: {blockRenderSummary.text}
+                      </p>
+                    ) : null}
+                    {blockKind === 'RawPayload' ? (
+                      <>
+                        <p className="block-raw-hint">Unknown block type; showing raw payload.</p>
+                        <pre className="block-raw-json-viewer">{rawPayloadViewerContent}</pre>
+                      </>
+                    ) : null}
+                  </article>
+                )
+              })
+            )}
+          </div>
+        </section>
+
+        <section className="panel status-panel">
+          <h2>Account Status</h2>
+          <dl>
+            <div>
+              <dt>Session</dt>
+              <dd>{sessionId ?? 'not connected'}</dd>
+            </div>
+            <div>
+              <dt>Protocol</dt>
+              <dd>{protocolVersion ?? 'n/a'}</dd>
+            </div>
+            <div>
+              <dt>Gateway URL</dt>
+              <dd>{websocketUrl}</dd>
+            </div>
+            <div>
+              <dt>Accounts (last fetch)</dt>
+              <dd>{accountCount ?? 'n/a'}</dd>
+            </div>
+            <div>
+              <dt>Agents (last fetch)</dt>
+              <dd>{agentCount ?? 'n/a'}</dd>
+            </div>
+            <div>
+              <dt>Managed Agent</dt>
+              <dd>{managedAgentId}</dd>
+            </div>
+            <div>
+              <dt>Onboarding Checklist</dt>
+              <dd>
+                completed {onboardingCompletedCount}/3 · account:
+                {onboardingChecklist.account ? 'done' : 'pending'} · agent:
+                {onboardingChecklist.agent ? 'done' : 'pending'} · feed:
+                {onboardingChecklist.feed ? 'done' : 'pending'}
+              </dd>
+            </div>
+            <div>
+              <dt>Managed Account</dt>
+              <dd>{managedAccountId}</dd>
+            </div>
+            <div>
+              <dt>Account Connection</dt>
+              <dd>{accountConnectionStatus}</dd>
+            </div>
+            <div>
+              <dt>Risk Emergency</dt>
+              <dd>
+                {riskEmergencyStopActive === null
+                  ? 'n/a'
+                  : riskEmergencyStopActive
+                    ? 'active'
+                    : 'inactive'}
+              </dd>
+            </div>
+            <div>
+              <dt>Risk Last Action</dt>
+              <dd>{riskLastEmergencyAction ?? 'none'}</dd>
+            </div>
+            <div>
+              <dt>Risk Last Reason</dt>
+              <dd>{riskLastEmergencyReason ?? 'none'}</dd>
+            </div>
+            <div>
+              <dt>Risk Last Updated</dt>
+              <dd>{riskLastEmergencyUpdatedAt ?? 'never'}</dd>
+            </div>
+            <div>
+              <dt>Risk Action Counts</dt>
+              <dd>
+                pause:{riskEmergencyActionCounts.pause_trading}, cancel:{riskEmergencyActionCounts.cancel_all},
+                close:{riskEmergencyActionCounts.close_all}, disable:{riskEmergencyActionCounts.disable_live}
+              </dd>
+            </div>
+            <div>
+              <dt>Feeds (last fetch)</dt>
+              <dd>{feedCount ?? 'n/a'}</dd>
+            </div>
+            <div>
+              <dt>Devices (last fetch)</dt>
+              <dd>{deviceCount ?? 'n/a'}</dd>
+            </div>
+            <div>
+              <dt>Managed Device</dt>
+              <dd>{managedDeviceId}</dd>
+            </div>
+            <div>
+              <dt>Feed Subscriptions</dt>
+              <dd>{subscriptionCount ?? 'n/a'}</dd>
+            </div>
+            <div>
+              <dt>Candles (last fetch)</dt>
+              <dd>{lastFetchedCandlesCount ?? 'n/a'}</dd>
+            </div>
+            <div>
+              <dt>Marketplace Signals (last fetch)</dt>
+              <dd>{marketplaceSignalCount ?? 'n/a'}</dd>
+            </div>
+            <div>
+              <dt>Marketplace Follows</dt>
+              <dd>{marketplaceFollowsSummary}</dd>
+            </div>
+            <div>
+              <dt>Copytrade Preview</dt>
+              <dd>{copytradePreviewSummary}</dd>
+            </div>
+            <div>
+              <dt>Copytrade Control</dt>
+              <dd>{copytradeControlSummary}</dd>
+            </div>
+            <div>
+              <dt>Active Subscription</dt>
+              <dd>{activeSubscriptionId ?? 'none'}</dd>
+            </div>
+            <div>
+              <dt>Feed Lifecycle</dt>
+              <dd className="badge-row">
+                {feedLifecycle.length === 0 ? (
+                  <span className="lifecycle-badge">none</span>
+                ) : (
+                  feedLifecycle.map((item) => (
+                    <span key={item.id} className="lifecycle-badge">
+                      {item.action}
+                      {item.subscriptionId ? `:${item.subscriptionId}` : ''}
+                    </span>
+                  ))
+                )}
+              </dd>
+            </div>
+            <div>
+              <dt>Trade Controls</dt>
+              <dd className="badge-row">
+                {tradeControlEvents.length === 0 ? (
+                  <span className="lifecycle-badge">none</span>
+                ) : (
+                  tradeControlEvents.map((item) => (
+                    <span key={item.id} className="lifecycle-badge">
+                      {item.action}
+                      {item.status ? `:${item.status}` : ''}
+                    </span>
+                  ))
+                )}
+              </dd>
+            </div>
+            <div>
+              <dt>Risk Alerts</dt>
+              <dd className="badge-row">
+                {riskAlerts.length === 0 ? (
+                  <span className="lifecycle-badge">none</span>
+                ) : (
+                  riskAlerts.map((item) => (
+                    <span key={item.id} className="lifecycle-badge">
+                      {item.kind}
+                      {item.status ? `:${item.status}` : ''}
+                    </span>
+                  ))
+                )}
+              </dd>
+            </div>
+            <div>
+              <dt>Quick Action History</dt>
+              <dd>
+                <label className="history-filter">
+                  History Filter
+                  <select
+                    value={historyFilter}
+                    onChange={(event) => setHistoryFilter(event.target.value as HistoryFilter)}
+                  >
+                    <option value="all">all</option>
+                    <option value="sent">sent</option>
+                    <option value="ok">ok</option>
+                    <option value="error">error</option>
+                    <option value="debounced">debounced</option>
+                    <option value="skipped">skipped</option>
+                  </select>
+                </label>
+                <div className="history-tools">
+                  <button
+                    type="button"
+                    onClick={() => void copyHistoryToClipboard()}
+                  >
+                    Copy History
+                  </button>
+                </div>
+                <div className="history-legend" aria-label="History Legend">
+                  <span className="history-legend-title">Legend</span>
+                  <span className="history-status status-ok">ok</span>
+                  <span className="history-status status-error">error</span>
+                  <span className="history-status status-debounced">debounced</span>
+                  <span className="history-status status-skipped">skipped</span>
+                  <span className="history-status status-sent">sent</span>
+                </div>
+                <div className="history-legend lock-source-legend" aria-label="Lock Toggle Source Legend">
+                  <span className="history-legend-title">Lock Sources</span>
+                  <span
+                    className={`history-lock-source ${resolveLockCounterTone(
+                      helperResetLockSourceCounts['Alt+L'],
+                    )}`}
+                  >
+                    Alt+L:{helperResetLockSourceCounts['Alt+L']}
+                  </span>
+                  <span
+                    className={`history-lock-source ${resolveLockCounterTone(
+                      helperResetLockSourceCounts.controls,
+                    )}`}
+                  >
+                    controls:{helperResetLockSourceCounts.controls}
+                  </span>
+                  <span
+                    className={`history-lock-source ${resolveLockCounterTone(
+                      helperResetLockSourceCounts.snapshot,
+                    )}`}
+                  >
+                    snapshot:{helperResetLockSourceCounts.snapshot}
+                  </span>
+                </div>
+                {filteredHistory.length === 0 ? (
+                  <span className="history-empty">none</span>
+                ) : (
+                  <ul className="history-list">
+                    {filteredHistory.slice(0, 8).map((entry) => (
+                      <li key={entry.id}>
+                        <span className="history-method">{entry.method}</span>
+                        <span className={`history-status status-${entry.status}`}>{entry.status}</span>
+                        <span className="history-duration">{entry.durationMs ?? 0}ms</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </dd>
+            </div>
+            <div>
+              <dt>
+                Preset Import Snapshot{' '}
+                <span className="helper-lock-indicator">(lock:{isHelperResetLocked ? 'locked' : 'unlocked'})</span>
+              </dt>
+              <dd className="import-snapshot-badges">
+                {presetImportReport ? (
+                  <>
+                    <span className={`import-mode-badge mode-${presetImportReport.mode}`}>
+                      {presetImportReport.mode}
+                    </span>
+                    <span className="import-summary-badge badge-hint-mode">
+                      hint:{importHintMode}
+                    </span>
+                    <span className="import-summary-badge badge-accepted">
+                      accepted:{presetImportReport.accepted.length}
+                    </span>
+                    <span className="import-summary-badge badge-rejected">
+                      rejected:{presetImportReport.rejected.length}
+                    </span>
+                  </>
+                ) : (
+                  <span className="lifecycle-badge">none</span>
+                )}
+                <span className="import-summary-badge badge-hint-mode">
+                  diag:{helperDiagnosticsDisplayMode}
+                </span>
+                <span className="import-summary-badge badge-hint-mode">
+                  resetAge:
+                  {helperDiagnosticsLastResetAt
+                    ? formatTimestamp(helperDiagnosticsLastResetAt, 'relative')
+                    : 'never'}
+                </span>
+                <span
+                  className={`import-summary-badge badge-hint-mode helper-reset-lock-badge ${
+                    isHelperResetLocked ? 'lock-locked' : 'lock-unlocked'
+                  }`}
+                >
+                  resetLock:{isHelperResetLocked ? 'locked' : 'unlocked'}
+                </span>
+                <span className={`import-summary-badge badge-hint-mode ${helperResetLockToggleToneClass}`}>
+                  lockToggles:{helperResetLockToggleCount}
+                </span>
+                <span
+                  className={`import-summary-badge badge-hint-mode ${resolveLockCounterTone(
+                    helperResetLockSourceCounts['Alt+L'],
+                  )}`}
+                >
+                  srcAlt+L:{helperResetLockSourceCounts['Alt+L']}
+                </span>
+                <span
+                  className={`import-summary-badge badge-hint-mode ${resolveLockCounterTone(
+                    helperResetLockSourceCounts.controls,
+                  )}`}
+                >
+                  srcControls:{helperResetLockSourceCounts.controls}
+                </span>
+                <span
+                  className={`import-summary-badge badge-hint-mode ${resolveLockCounterTone(
+                    helperResetLockSourceCounts.snapshot,
+                  )}`}
+                >
+                  srcSnapshot:{helperResetLockSourceCounts.snapshot}
+                </span>
+                <span className="import-summary-badge badge-hint-mode">
+                  lockCounterReset:
+                  {helperLockCountersLastResetAt
+                    ? formatTimestamp(helperLockCountersLastResetAt, 'relative')
+                    : 'never'}
+                </span>
+                <div className="import-snapshot-toggles" aria-label="Import Snapshot Toggles">
+                  <span
+                    className={`quick-toggle-lock-summary ${
+                      isHelperResetLocked ? 'quick-lock-locked' : 'quick-lock-unlocked'
+                    }`}
+                    aria-label="Quick Toggle Lock Summary"
+                    title={`Quick lock summary: reset lock is ${
+                      isHelperResetLocked ? 'locked' : 'unlocked'
+                    }.`}
+                  >
+                    quickLock:{isHelperResetLocked ? 'locked' : 'unlocked'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setIsImportSnapshotTogglesExpanded((current) => !current)}
+                    title={
+                      isImportSnapshotTogglesExpanded
+                        ? `Quick toggles expanded; reset lock is ${
+                            isHelperResetLocked ? 'locked' : 'unlocked'
+                          }.`
+                        : `Quick toggles collapsed; expand to access quick actions; reset lock is ${
+                            isHelperResetLocked ? 'locked' : 'unlocked'
+                          }.`
+                    }
+                  >
+                    {isImportSnapshotTogglesExpanded ? 'Hide Quick Toggles' : 'Show Quick Toggles'}
+                    <span className="quick-toggle-lock-state" aria-hidden="true">
+                      {' '}
+                      (lock:{isHelperResetLocked ? 'locked' : 'unlocked'})
+                    </span>
+                  </button>
+                  {isImportSnapshotTogglesExpanded ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setIsImportHintVisible((current) => !current)}
+                      >
+                        {isImportHintVisible ? 'Quick Hide Hints' : 'Quick Show Hints'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowShortcutLegendInStatus((current) => !current)}
+                      >
+                        {showShortcutLegendInStatus ? 'Quick Hide Legend' : 'Quick Show Legend'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setIsHelperResetBadgeVisible((current) => !current)}
+                      >
+                        {isHelperResetBadgeVisible
+                          ? 'Quick Hide Reset Badge'
+                          : 'Quick Show Reset Badge'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => toggleHelperResetLock('snapshot')}
+                      >
+                        {isHelperResetLocked ? 'Quick Unlock Reset' : 'Quick Lock Reset'}
+                      </button>
+                    </>
+                  ) : null}
+                </div>
+              </dd>
+            </div>
+            <div>
+              <dt>
+                Helper Diagnostics{' '}
+                <span className="helper-lock-indicator">(lock:{isHelperResetLocked ? 'locked' : 'unlocked'})</span>
+              </dt>
+              <dd className="import-snapshot-badges">
+                <span className="import-summary-badge badge-hint-mode">
+                  enabled:{Number(isImportHintVisible) + Number(showShortcutLegendInStatus)}/2
+                </span>
+                <span className="import-summary-badge badge-hint-mode">
+                  density:{shortcutLegendDensity}
+                </span>
+                <span className="import-summary-badge badge-hint-mode">
+                  reset:
+                  {helperDiagnosticsLastResetAt
+                    ? formatTimestamp(helperDiagnosticsLastResetAt, helperResetTimestampFormat)
+                    : 'never'}
+                </span>
+                <span className="import-summary-badge badge-hint-mode">
+                  tone:{helperResetToneClass.replace('tone-', '')}
+                </span>
+                <span className="import-summary-badge badge-hint-mode">
+                  staleAfter:{helperResetStaleThresholdHours}h
+                </span>
+                <span
+                  className={`import-summary-badge badge-hint-mode helper-reset-lock-badge ${
+                    isHelperResetLocked ? 'lock-locked' : 'lock-unlocked'
+                  }`}
+                >
+                  lock:{isHelperResetLocked ? 'locked' : 'unlocked'}
+                </span>
+                <span className={`import-summary-badge badge-hint-mode ${helperResetLockToggleToneClass}`}>
+                  diagLockToggles:{helperResetLockToggleCount}
+                </span>
+                <span className="import-summary-badge badge-hint-mode">
+                  counterReset:
+                  {helperLockCountersLastResetAt
+                    ? formatTimestamp(helperLockCountersLastResetAt, 'relative')
+                    : 'never'}
+                </span>
+                <span className="import-summary-badge badge-hint-mode">
+                  blockTelemetry:{isBlockTelemetryVisible ? 'visible' : 'hidden'}
+                </span>
+                {helperDiagnosticsDisplayMode === 'verbose' ? (
+                  <>
+                    <span className="import-summary-badge badge-hint-mode">
+                      expanded:{isImportHelperDiagnosticsExpanded ? 'yes' : 'no'}
+                    </span>
+                    <span className="import-summary-badge badge-hint-mode">
+                      hintVisible:{isImportHintVisible ? 'yes' : 'no'}
+                    </span>
+                    <span className="import-summary-badge badge-hint-mode">
+                      legendVisible:{showShortcutLegendInStatus ? 'yes' : 'no'}
+                    </span>
+                    <span className="import-summary-badge badge-hint-mode">
+                      legendOrder:{shortcutLegendOrder}
+                    </span>
+                    <span className="import-summary-badge badge-hint-mode">
+                      resetBadge:{isHelperResetBadgeVisible ? 'yes' : 'no'}
+                    </span>
+                  </>
+                ) : null}
+                <button
+                  type="button"
+                  className="summary-copy-button"
+                  onClick={() =>
+                    setHelperDiagnosticsDisplayMode((current) =>
+                      current === 'compact' ? 'verbose' : 'compact',
+                    )
+                  }
+                >
+                  {helperDiagnosticsDisplayMode === 'compact'
+                    ? 'Use Verbose Diagnostics'
+                    : 'Use Compact Diagnostics'}
+                </button>
+                <button
+                  type="button"
+                  className="summary-copy-button"
+                  onClick={() => void copyHelperDiagnosticsSummary()}
+                >
+                  Copy Helper Summary
+                </button>
+                <button
+                  type="button"
+                  className="summary-copy-button"
+                  onClick={() => setIsBlockTelemetryVisible((current) => !current)}
+                >
+                  {isBlockTelemetryVisible ? 'Hide Block Telemetry' : 'Show Block Telemetry'}
+                </button>
+                <button
+                  type="button"
+                  className="summary-copy-button"
+                  onClick={resetHelperDiagnosticsPreferences}
+                  title={
+                    isHelperResetLocked
+                      ? 'Unlock reset controls to enable.'
+                      : 'Reset helper diagnostics preferences to defaults.'
+                  }
+                >
+                  Reset Helper Prefs
+                </button>
+                <button
+                  type="button"
+                  className="summary-copy-button"
+                  onClick={() => toggleHelperResetLock('controls')}
+                >
+                  {isHelperResetLocked ? 'Unlock Reset' : 'Lock Reset'}
+                </button>
+                <button
+                  type="button"
+                  className="summary-copy-button"
+                  onClick={resetHelperLockCounters}
+                  title={
+                    helperResetLockToggleCount === 0
+                      ? 'No lock toggles recorded yet.'
+                      : 'Clear helper reset lock toggle counters.'
+                  }
+                >
+                  Reset Lock Counters
+                </button>
+                <label className="helper-reset-format">
+                  Reset TS
+                  <select
+                    value={helperResetTimestampFormat}
+                    onChange={(event) =>
+                      setHelperResetTimestampFormat(event.target.value as TimestampFormat)
+                    }
+                  >
+                    <option value="absolute">absolute</option>
+                    <option value="relative">relative</option>
+                  </select>
+                </label>
+                <label className="helper-reset-format">
+                  Stale After
+                  <select
+                    value={String(helperResetStaleThresholdHours)}
+                    onChange={(event) =>
+                      setHelperResetStaleThresholdHours(Number.parseInt(event.target.value, 10))
+                    }
+                  >
+                    <option value="24">24h</option>
+                    <option value="72">72h</option>
+                  </select>
+                </label>
+              </dd>
+            </div>
+            {showShortcutLegendInStatus ? (
+              <div>
+                <dt>
+                  Import Shortcut Legend <span className="legend-mode-indicator">({importHintMode})</span>
+                </dt>
+                <dd className="import-snapshot-badges status-legend-hotkeys">
+                  {shortcutLegendDensity === 'chips' ? (
+                    statusLegendShortcuts.map((shortcut) => (
+                      <span key={shortcut.label} className="hotkey-chip" title={shortcut.title}>
+                        {shortcut.label}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="status-legend-inline">
+                      {statusLegendShortcuts.map((shortcut, index) => (
+                        <span key={shortcut.label} title={shortcut.title}>
+                          {index > 0 ? ' · ' : ''}
+                          {shortcut.inlineLabel}
+                        </span>
+                      ))}
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    className="summary-copy-button"
+                    onClick={() => void copyStatusShortcutLegend()}
+                  >
+                    Copy Status Legend
+                  </button>
+                </dd>
+              </div>
+            ) : null}
+            <div>
+              <dt>Quick Action Timestamps</dt>
+              <dd className="timestamp-grid">
+                <label className="timestamp-format">
+                  Timestamp Format
+                  <select
+                    value={timestampFormat}
+                    onChange={(event) => setTimestampFormat(event.target.value as TimestampFormat)}
+                  >
+                    <option value="absolute">absolute</option>
+                    <option value="relative">relative</option>
+                  </select>
+                </label>
+                <div>
+                  <strong>Success</strong>
+                  {Object.keys(lastSuccessByMethod).length === 0 ? (
+                    <div className="history-empty">none</div>
+                  ) : (
+                    <ul className="timestamp-list">
+                      {Object.entries(lastSuccessByMethod)
+                        .slice(0, 6)
+                        .map(([method, ts]) => (
+                          <li key={`ok_${method}`}>
+                            <span>{method}</span>
+                            <span>{formatTimestamp(ts, timestampFormat)}</span>
+                          </li>
+                        ))}
+                    </ul>
+                  )}
+                </div>
+                <div>
+                  <strong>Error</strong>
+                  {Object.keys(lastErrorByMethod).length === 0 ? (
+                    <div className="history-empty">none</div>
+                  ) : (
+                    <ul className="timestamp-list">
+                      {Object.entries(lastErrorByMethod)
+                        .slice(0, 6)
+                        .map(([method, ts]) => (
+                          <li key={`err_${method}`}>
+                            <span>{method}</span>
+                            <span>{formatTimestamp(ts, timestampFormat)}</span>
+                          </li>
+                        ))}
+                    </ul>
+                  )}
+                </div>
+              </dd>
+            </div>
+          </dl>
+        </section>
+      </main>
+    </div>
+  )
+}
+
+export default App

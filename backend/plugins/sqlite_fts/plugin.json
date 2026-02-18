@@ -1,0 +1,13 @@
+{
+  "id": "sqlite_fts",
+  "name": "SQLite FTS Memory Backend",
+  "version": "0.1.0",
+  "kinds": ["memory.backend"],
+  "entry": {
+    "type": "builtin.python"
+  },
+  "capabilities": {
+    "supportsKeywordSearch": true,
+    "supportsVectorSearch": false
+  }
+}
