@@ -200,6 +200,7 @@ const MARKET_OVERLAY_TIMELINE_ORDER_STORAGE_KEY = 'quick-action-market-overlay-t
 const MARKET_OVERLAY_MARKER_WRAP_STORAGE_KEY = 'quick-action-market-overlay-marker-wrap-v1'
 const MARKET_OVERLAY_SELECTION_MODE_STORAGE_KEY = 'quick-action-market-overlay-selection-mode-v1'
 const MARKET_OVERLAY_MARKER_FOCUS_SHORTCUTS = 'a/t/r/d'
+const MARKET_OVERLAY_MARKER_FOCUS_ORDER: MarketOverlayMarkerFocus[] = ['all', 'trade', 'risk', 'feed']
 const MARKET_OVERLAY_MARKER_AGE_FILTER_ORDER: MarketOverlayMarkerAgeFilter[] = [
   'all',
   'last-60s',
@@ -1911,6 +1912,18 @@ function App() {
     marketOverlayMarkerDivergencePreview,
     marketOverlayMarkerDeltaFilter,
   ])
+  const marketOverlayMarkerFocusShortcutSummary = useMemo(() => {
+    const currentIndex = MARKET_OVERLAY_MARKER_FOCUS_ORDER.indexOf(marketOverlayMarkerFocus)
+    const safeIndex = currentIndex < 0 ? 0 : currentIndex
+    const nextFocus =
+      MARKET_OVERLAY_MARKER_FOCUS_ORDER[(safeIndex + 1) % MARKET_OVERLAY_MARKER_FOCUS_ORDER.length]
+    const previousFocus =
+      MARKET_OVERLAY_MARKER_FOCUS_ORDER[
+        (safeIndex - 1 + MARKET_OVERLAY_MARKER_FOCUS_ORDER.length) %
+          MARKET_OVERLAY_MARKER_FOCUS_ORDER.length
+      ]
+    return `keys:z/Z · next:z=${nextFocus} · prev:Z=${previousFocus} · active:${marketOverlayMarkerFocus}`
+  }, [marketOverlayMarkerFocus])
   const marketOverlayMarkerModeShortcutSummary = useMemo(
     () => {
       const isLocked = marketOverlaySelectionMode === 'follow-latest'
@@ -3346,6 +3359,19 @@ function App() {
       if (normalizedKey === 'd') {
         event.preventDefault()
         setMarketOverlayMarkerFocus('feed')
+        return
+      }
+      if (normalizedKey === 'z') {
+        event.preventDefault()
+        setMarketOverlayMarkerFocus((current) => {
+          const currentIndex = MARKET_OVERLAY_MARKER_FOCUS_ORDER.indexOf(current)
+          const safeIndex = currentIndex < 0 ? 0 : currentIndex
+          const direction = event.shiftKey ? -1 : 1
+          return MARKET_OVERLAY_MARKER_FOCUS_ORDER[
+            (safeIndex + direction + MARKET_OVERLAY_MARKER_FOCUS_ORDER.length) %
+              MARKET_OVERLAY_MARKER_FOCUS_ORDER.length
+          ]
+        })
         return
       }
       if (normalizedKey === 'y') {
@@ -6291,6 +6317,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Delta Basis Agreement Items Summary">
               Delta basis agreement items: {marketOverlayMarkerDeltaBasisAgreementItemsSummary}
+            </p>
+            <p aria-label="Overlay Marker Focus Shortcut Summary">
+              Focus shortcuts: {marketOverlayMarkerFocusShortcutSummary}
             </p>
             <p aria-label="Overlay Marker Mode Shortcut Summary">
               Mode shortcuts: {marketOverlayMarkerModeShortcutSummary}
