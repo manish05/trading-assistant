@@ -128,6 +128,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Active Neighbor Magnitude Ratio Summary')).toHaveTextContent(
       'Active neighbor magnitude ratio: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Active Neighbor Magnitude Ratio Gap Summary')).toHaveTextContent(
+      'Active neighbor magnitude ratio gap: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Active Delta Neighbors')).toHaveTextContent(
       'Active delta neighbors: none',
     )
@@ -855,6 +858,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Active Neighbor Magnitude Ratio Summary')).toHaveTextContent(
       'Active neighbor magnitude ratio: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Active Neighbor Magnitude Ratio Gap Summary')).toHaveTextContent(
+      'Active neighbor magnitude ratio gap: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Active Delta Neighbors')).toHaveTextContent(
       'Active delta neighbors: none',
     )
@@ -1066,6 +1072,9 @@ describe('Dashboard shell', () => {
       )
       expect(screen.getByLabelText('Overlay Marker Active Neighbor Magnitude Ratio Summary')).toHaveTextContent(
         'Active neighbor magnitude ratio: active:risk:live_trading_disabled:raised · prev:latest:n/a|average:1.00 · next:latest:n/a|average:n/a · basis:latest · mode:all',
+      )
+      expect(screen.getByLabelText('Overlay Marker Active Neighbor Magnitude Ratio Gap Summary')).toHaveTextContent(
+        'Active neighbor magnitude ratio gap: active:risk:live_trading_disabled:raised · prev:latest:n/a|average:1.00|Δratio:n/a · next:latest:n/a|average:n/a|Δratio:n/a · basis:latest · mode:all',
       )
       expect(screen.getByLabelText('Overlay Marker Active Delta Neighbors')).toHaveTextContent(
         'Active delta neighbors: active:risk:live_trading_disabled:raised · prev:trade:closed:queued(Δl:-1.00|Δa:-0.50) · next:none · scope:all/all',
@@ -1364,6 +1373,9 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Overlay Marker Active Neighbor Magnitude Ratio Summary')).toHaveTextContent(
       'Active neighbor magnitude ratio: active:trade:closed:queued · prev:latest:n/a|average:n/a · next:latest:0.00|average:1.00 · basis:latest · mode:all',
+    )
+    expect(screen.getByLabelText('Overlay Marker Active Neighbor Magnitude Ratio Gap Summary')).toHaveTextContent(
+      'Active neighbor magnitude ratio gap: active:trade:closed:queued · prev:latest:n/a|average:n/a|Δratio:n/a · next:latest:0.00|average:1.00|Δratio:-1.00 · basis:latest · mode:all',
     )
     expect(screen.getByLabelText('Overlay Marker Active Delta Neighbors')).toHaveTextContent(
       'Active delta neighbors: active:trade:closed:queued · prev:none · next:risk:live_trading_disabled:raised(Δl:+0.00|Δa:+0.50) · scope:all/all',
