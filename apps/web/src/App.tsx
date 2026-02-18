@@ -4504,6 +4504,99 @@ function App() {
     marketOverlayMarkerDeltaFilter,
     marketOverlayScopedTimelineAnnotations,
   ])
+  const marketOverlayActiveMarkerNeighborMagnitudeSideRegimeSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const resolveDelta = (
+      annotation: MarketOverlayTimelineAnnotation | null,
+      basis: MarketOverlayMarkerDeltaBasis,
+    ): number | null => {
+      if (!annotation) {
+        return null
+      }
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point) {
+        return null
+      }
+      if (basis === 'latest') {
+        return latestPoint ? point.value - latestPoint.value : null
+      }
+      return baseline !== null ? point.value - baseline : null
+    }
+    const computeRatio = (neighbor: number | null, active: number | null) => {
+      if (neighbor === null || active === null || Math.abs(active) < 1e-9) {
+        return null
+      }
+      return Math.abs(neighbor) / Math.abs(active)
+    }
+    const describeBasis = (basis: MarketOverlayMarkerDeltaBasis) => {
+      const previousAnnotation =
+        marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+      const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+      const active = resolveDelta(marketOverlayActiveTimelineAnnotation, basis)
+      const previous = resolveDelta(previousAnnotation, basis)
+      const next = resolveDelta(nextAnnotation, basis)
+      const previousRatio = computeRatio(previous, active)
+      const nextRatio = computeRatio(next, active)
+      const availableCount = Number(previousRatio !== null) + Number(nextRatio !== null)
+      let side: 'none' | 'prev' | 'next' | 'balanced' = 'none'
+      if (previousRatio !== null && nextRatio === null) {
+        side = 'prev'
+      } else if (previousRatio === null && nextRatio !== null) {
+        side = 'next'
+      } else if (previousRatio !== null && nextRatio !== null) {
+        side = Math.abs(previousRatio - nextRatio) < 1e-9 ? 'balanced' : previousRatio > nextRatio ? 'prev' : 'next'
+      }
+      return { side, availableCount, confidence: availableCount / 2 }
+    }
+    const latestSummary = describeBasis('latest')
+    const averageSummary = describeBasis('average')
+    const agreement = latestSummary.side === averageSummary.side ? 'same' : 'split'
+    const dominantBasis =
+      latestSummary.availableCount === averageSummary.availableCount
+        ? 'balanced'
+        : latestSummary.availableCount > averageSummary.availableCount
+          ? 'latest'
+          : 'average'
+    const confidenceGap = latestSummary.confidence - averageSummary.confidence
+    const formatConfidence = (value: number) => value.toFixed(2)
+    const formatDelta = (value: number) => `${value >= 0 ? '+' : ''}${value.toFixed(2)}`
+    const coverage = (latestSummary.availableCount + averageSummary.availableCount) / 4
+    let regime: 'idle' | 'neutral' | 'emerging' | 'locked' | 'contested' = 'contested'
+    const latestDirectional = latestSummary.side === 'prev' || latestSummary.side === 'next'
+    const averageDirectional = averageSummary.side === 'prev' || averageSummary.side === 'next'
+    if (latestSummary.availableCount === 0 && averageSummary.availableCount === 0) {
+      regime = 'idle'
+    } else if (latestSummary.side === averageSummary.side && latestDirectional && averageDirectional) {
+      regime = 'locked'
+    } else if (
+      latestSummary.side === averageSummary.side &&
+      (latestSummary.side === 'none' || latestSummary.side === 'balanced')
+    ) {
+      regime = 'neutral'
+    } else if (!latestDirectional || !averageDirectional) {
+      regime = 'emerging'
+    } else {
+      regime = 'contested'
+    }
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · latest:side:${latestSummary.side}|available:${latestSummary.availableCount}/2|confidence:${formatConfidence(latestSummary.confidence)} · average:side:${averageSummary.side}|available:${averageSummary.availableCount}/2|confidence:${formatConfidence(averageSummary.confidence)} · regime:${regime}|agreement:${agreement}|dominant:${dominantBasis} · confidenceGap:${formatDelta(confidenceGap)}|coverage:${formatConfidence(coverage)} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
   const marketOverlayActiveMarkerNeighborDeltaSummary = useMemo(() => {
     if (
       !marketOverlayActiveTimelineAnnotation ||
@@ -7905,6 +7998,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Active Neighbor Magnitude Side Drift Summary">
               Active neighbor magnitude side drift: {marketOverlayActiveMarkerNeighborMagnitudeSideDriftSummary}
+            </p>
+            <p aria-label="Overlay Marker Active Neighbor Magnitude Side Regime Summary">
+              Active neighbor magnitude side regime: {marketOverlayActiveMarkerNeighborMagnitudeSideRegimeSummary}
             </p>
             <p aria-label="Overlay Marker Active Delta Neighbors">
               Active delta neighbors: {marketOverlayActiveMarkerNeighborDeltaSummary}
