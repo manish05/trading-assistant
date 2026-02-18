@@ -212,6 +212,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Visual Role Pulse Summary')).toHaveTextContent(
       'Marker visual role pulse: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Visual Role Balance Summary')).toHaveTextContent(
+      'Marker visual role balance: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
       'Timeline buckets: mode:none · scope:all-buckets · buckets:0 · latest:none · count:0',
     )
@@ -1008,6 +1011,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Visual Role Pulse Summary')).toHaveTextContent(
       'Marker visual role pulse: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Visual Role Balance Summary')).toHaveTextContent(
+      'Marker visual role balance: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
       'Timeline buckets: mode:none · scope:all-buckets · buckets:0 · latest:none · count:0',
     )
@@ -1318,6 +1324,9 @@ describe('Dashboard shell', () => {
       )
       expect(screen.getByLabelText('Overlay Marker Visual Role Pulse Summary')).toHaveTextContent(
         'Marker visual role pulse: active:flat|score:+0|weighted:+0 · prev:down|score:-1|weighted:-2 · next:n/a · pulse:-2|energy:2|normalized:-1.00|bias:down|conviction:strong · resolved:1/2 · basis:latest · mode:all',
+      )
+      expect(screen.getByLabelText('Overlay Marker Visual Role Balance Summary')).toHaveTextContent(
+        'Marker visual role balance: active:flat|score:+0 · prev:down|Δ:-1|cooler · next:n/a · drift:-1|bias:cooling|agreement:0/1|phase:tilted · basis:latest · mode:all',
       )
       expect(screen.getByLabelText('Overlay Marker Timeline Bucket Summary')).toHaveTextContent(
         'Timeline buckets: mode:none · scope:all-buckets · buckets:2 · latest:t2 · count:2',
@@ -1715,6 +1724,9 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Overlay Marker Visual Role Pulse Summary')).toHaveTextContent(
       'Marker visual role pulse: active:down|score:-1|weighted:-3 · prev:n/a · next:flat|score:+0|weighted:+0 · pulse:-3|energy:3|normalized:-1.00|bias:down|conviction:strong · resolved:1/2 · basis:latest · mode:all',
+    )
+    expect(screen.getByLabelText('Overlay Marker Visual Role Balance Summary')).toHaveTextContent(
+      'Marker visual role balance: active:down|score:-1 · prev:n/a · next:flat|Δ:+1|warmer · drift:+1|bias:warming|agreement:0/1|phase:tilted · basis:latest · mode:all',
     )
 
     fireEvent.keyDown(screen.getByRole('button', { name: 'trade:closed:queued' }), { key: '2' })

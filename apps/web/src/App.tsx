@@ -6494,6 +6494,61 @@ function App() {
     marketOverlayMarkerVisualProfiles,
     marketOverlayScopedTimelineAnnotations,
   ])
+  const marketOverlayMarkerVisualRoleBalanceSummary = useMemo(() => {
+    if (!marketOverlayActiveTimelineAnnotation || marketOverlayActiveTimelineIndex < 0) {
+      return 'none'
+    }
+    const activeProfile = marketOverlayMarkerVisualProfiles.get(marketOverlayActiveTimelineAnnotation.id) ?? null
+    if (!activeProfile) {
+      return 'none'
+    }
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    const previousProfile = previousAnnotation
+      ? marketOverlayMarkerVisualProfiles.get(previousAnnotation.id) ?? null
+      : null
+    const nextProfile = nextAnnotation ? marketOverlayMarkerVisualProfiles.get(nextAnnotation.id) ?? null : null
+    const toneScore = (tone: MarketOverlayMarkerVisualProfile['tone']) => {
+      if (tone === 'up') {
+        return 1
+      }
+      if (tone === 'down') {
+        return -1
+      }
+      return 0
+    }
+    const activeScore = toneScore(activeProfile.tone)
+    const formatSigned = (value: number) => `${value >= 0 ? '+' : ''}${value}`
+    const describeNeighbor = (label: 'prev' | 'next', profile: MarketOverlayMarkerVisualProfile | null) => {
+      if (!profile) {
+        return { summary: `${label}:n/a`, diff: null as number | null, aligned: false }
+      }
+      const diff = toneScore(profile.tone) - activeScore
+      const relation = diff === 0 ? 'aligned' : diff > 0 ? 'warmer' : 'cooler'
+      return {
+        summary: `${label}:${profile.tone}|Δ:${formatSigned(diff)}|${relation}`,
+        diff,
+        aligned: diff === 0,
+      }
+    }
+    const previousSummary = describeNeighbor('prev', previousProfile)
+    const nextSummary = describeNeighbor('next', nextProfile)
+    const availableCount = Number(previousSummary.diff !== null) + Number(nextSummary.diff !== null)
+    const agreementCount = Number(previousSummary.aligned) + Number(nextSummary.aligned)
+    const drift = (previousSummary.diff ?? 0) + (nextSummary.diff ?? 0)
+    const bias = drift === 0 ? 'balanced' : drift > 0 ? 'warming' : 'cooling'
+    const phase =
+      availableCount === 0 ? 'isolated' : agreementCount === availableCount ? 'locked' : drift === 0 ? 'contested' : 'tilted'
+    return `active:${activeProfile.tone}|score:${formatSigned(activeScore)} · ${previousSummary.summary} · ${nextSummary.summary} · drift:${formatSigned(drift)}|bias:${bias}|agreement:${agreementCount}/${availableCount}|phase:${phase} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayMarkerVisualProfiles,
+    marketOverlayScopedTimelineAnnotations,
+  ])
 
   useEffect(() => {
     if (marketOverlayScopedVisibleAnnotations.length === 0) {
@@ -9587,6 +9642,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Visual Role Pulse Summary">
               Marker visual role pulse: {marketOverlayMarkerVisualRolePulseSummary}
+            </p>
+            <p aria-label="Overlay Marker Visual Role Balance Summary">
+              Marker visual role balance: {marketOverlayMarkerVisualRoleBalanceSummary}
             </p>
             <p
               aria-label="Overlay Chart Runtime"
