@@ -1,3 +1,5 @@
+from datetime import UTC, datetime
+
 from fastapi.testclient import TestClient
 
 from app.main import create_app
@@ -874,7 +876,7 @@ def test_websocket_copytrade_preview_maps_and_blocks_signals(tmp_path) -> None:
                     "signal": {
                         "signalId": "sig_preview_allowed",
                         "strategyId": "strat_alpha",
-                        "ts": "2026-02-17T10:00:00Z",
+                            "ts": datetime.now(UTC).isoformat(),
                         "symbol": "ETHUSDm",
                         "timeframe": "5m",
                         "action": "OPEN",
@@ -905,7 +907,7 @@ def test_websocket_copytrade_preview_maps_and_blocks_signals(tmp_path) -> None:
                     "signal": {
                         "signalId": "sig_preview_blocked",
                         "strategyId": "strat_alpha",
-                        "ts": "2026-02-17T10:01:00Z",
+                            "ts": datetime.now(UTC).isoformat(),
                         "symbol": "ETHUSDm",
                         "timeframe": "5m",
                         "action": "OPEN",
