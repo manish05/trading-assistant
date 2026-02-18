@@ -6383,6 +6383,87 @@ function App() {
     marketOverlayMarkerDeltaBasis,
     marketOverlayMarkerDeltaFilter,
   ])
+  const marketOverlayMarkerEventTimelineCadenceSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const pointIndexByTime = new Map(
+      marketOverlayChartPoints.map((point, index) => [point.time, index] as const),
+    )
+    const activePoint = pointByTime.get(marketOverlayActiveTimelineAnnotation.time) ?? null
+    if (!activePoint) {
+      return 'none'
+    }
+    const activePointIndex = pointIndexByTime.get(activePoint.time) ?? -1
+    if (activePointIndex < 0) {
+      return 'none'
+    }
+    const previousPoint = activePointIndex > 0 ? marketOverlayChartPoints[activePointIndex - 1] : null
+    const nextPoint =
+      activePointIndex < marketOverlayChartPoints.length - 1
+        ? marketOverlayChartPoints[activePointIndex + 1]
+        : null
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    const previousPointGap = previousPoint ? Math.abs(activePoint.time - previousPoint.time) : null
+    const nextPointGap = nextPoint ? Math.abs(nextPoint.time - activePoint.time) : null
+    const previousMarkerGap = previousAnnotation
+      ? Math.abs(marketOverlayActiveTimelineAnnotation.time - previousAnnotation.time)
+      : null
+    const nextMarkerGap = nextAnnotation
+      ? Math.abs(nextAnnotation.time - marketOverlayActiveTimelineAnnotation.time)
+      : null
+    const toWeight = (markerGap: number | null, pointGap: number | null) => {
+      if (markerGap === null || pointGap === null || pointGap === 0) {
+        return null
+      }
+      return markerGap / pointGap
+    }
+    const previousWeight = toWeight(previousMarkerGap, previousPointGap)
+    const nextWeight = toWeight(nextMarkerGap, nextPointGap)
+    const coverage = Number(previousWeight !== null) + Number(nextWeight !== null)
+    const balance =
+      previousWeight !== null && nextWeight !== null ? nextWeight - previousWeight : null
+    const cadence =
+      coverage === 2
+        ? Math.abs(balance ?? 0) < 1e-9
+          ? 'symmetric'
+          : (balance ?? 0) > 0
+            ? 'forward-skew'
+            : 'backward-skew'
+        : coverage === 1
+          ? 'one-sided'
+          : 'isolated'
+    const vector = (nextWeight ?? 0) - (previousWeight ?? 0)
+    const direction =
+      coverage === 0 ? 'none' : Math.abs(vector) < 1e-9 ? 'balanced' : vector > 0 ? 'forward' : 'backward'
+    const phase =
+      direction === 'none'
+        ? 'isolated'
+        : direction === 'balanced'
+          ? 'centered'
+          : direction === 'forward'
+            ? 'forward-sync'
+            : 'backward-sync'
+    const formatStep = (value: number | null) => (value === null ? 'n/a' : String(value))
+    const formatWeight = (value: number | null) => (value === null ? 'n/a' : value.toFixed(2))
+    const formatSigned = (value: number | null) =>
+      value === null ? 'n/a' : `${value >= 0 ? '+' : ''}${value.toFixed(2)}`
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label}|slot:${marketOverlayActiveTimelineIndex + 1}/${marketOverlayScopedTimelineAnnotations.length} · prev:step:${formatStep(previousPointGap)}|marker:${formatStep(previousMarkerGap)}|weight:${formatWeight(previousWeight)} · next:step:${formatStep(nextPointGap)}|marker:${formatStep(nextMarkerGap)}|weight:${formatWeight(nextWeight)} · cadence:${cadence}|balance:${formatSigned(balance)}|direction:${direction}|phase:${phase}|coverage:${coverage}/2 · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
   const marketOverlayMarkerTimelineRows = useMemo(() => {
     if (marketOverlayScopedVisibleAnnotations.length === 0) {
       return [] as Array<{ id: string; text: string; isSelected: boolean }>
@@ -10576,6 +10657,9 @@ function App() {
             <p aria-label="Overlay Marker Event Candle Comparative Drift Summary">
               Marker event candle comparative drift:{' '}
               {marketOverlayMarkerEventCandleComparativeDriftSummary}
+            </p>
+            <p aria-label="Overlay Marker Event Timeline Cadence Summary">
+              Marker event timeline cadence: {marketOverlayMarkerEventTimelineCadenceSummary}
             </p>
             <p aria-label="Overlay Marker Visual Focus Summary">
               Marker visual focus: {marketOverlayMarkerVisualFocusSummary}

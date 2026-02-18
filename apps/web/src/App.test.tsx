@@ -206,6 +206,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Event Candle Comparative Drift Summary')).toHaveTextContent(
       'Marker event candle comparative drift: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Event Timeline Cadence Summary')).toHaveTextContent(
+      'Marker event timeline cadence: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Visual Focus Summary')).toHaveTextContent(
       'Marker visual focus: none',
     )
@@ -1041,6 +1044,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Event Candle Comparative Drift Summary')).toHaveTextContent(
       'Marker event candle comparative drift: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Event Timeline Cadence Summary')).toHaveTextContent(
+      'Marker event timeline cadence: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Visual Focus Summary')).toHaveTextContent(
       'Marker visual focus: none',
     )
@@ -1390,6 +1396,9 @@ describe('Dashboard shell', () => {
       )
       expect(screen.getByLabelText('Overlay Marker Event Candle Comparative Drift Summary')).toHaveTextContent(
         'Marker event candle comparative drift: active:risk:live_trading_disabled:raised · basis:latest:+0.00|alt:+0.50|drift:-0.50|agreement:diverge · neighbors:prevSlope:+1.00|nextSlope:n/a|vector:+1.00|direction:warming|coverage:1/2 · navBias:backward|home:on|end:off · mode:all',
+      )
+      expect(screen.getByLabelText('Overlay Marker Event Timeline Cadence Summary')).toHaveTextContent(
+        'Marker event timeline cadence: active:risk:live_trading_disabled:raised|slot:2/2 · prev:step:1|marker:1|weight:1.00 · next:step:n/a|marker:n/a|weight:n/a · cadence:one-sided|balance:n/a|direction:backward|phase:backward-sync|coverage:1/2 · basis:latest · mode:all',
       )
       expect(screen.getByLabelText('Overlay Marker Visual Focus Summary')).toHaveTextContent(
         'Marker visual focus: active:risk:live_trading_disabled:raised|role:active|tone:flat|color:#e5c453|shape:circle · prev:trade:closed:queued|role:prev|tone:down|color:#f2a5a5|shape:arrowDown · next:none · basis:latest · mode:all',
@@ -1835,6 +1844,9 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Overlay Marker Event Candle Comparative Drift Summary')).toHaveTextContent(
       'Marker event candle comparative drift: active:trade:closed:queued · basis:latest:-1.00|alt:-0.50|drift:-0.50|agreement:agree · neighbors:prevSlope:n/a|nextSlope:+1.00|vector:+1.00|direction:warming|coverage:1/2 · navBias:forward|home:off|end:on · mode:all',
+    )
+    expect(screen.getByLabelText('Overlay Marker Event Timeline Cadence Summary')).toHaveTextContent(
+      'Marker event timeline cadence: active:trade:closed:queued|slot:1/2 · prev:step:n/a|marker:n/a|weight:n/a · next:step:1|marker:1|weight:1.00 · cadence:one-sided|balance:n/a|direction:forward|phase:forward-sync|coverage:1/2 · basis:latest · mode:all',
     )
     expect(screen.getByLabelText('Overlay Marker Visual Focus Summary')).toHaveTextContent(
       'Marker visual focus: active:trade:closed:queued|role:active|tone:down|color:#e06f6f|shape:arrowDown · prev:none · next:risk:live_trading_disabled:raised|role:next|tone:flat|color:#f2dd98|shape:circle · basis:latest · mode:all',
