@@ -3836,6 +3836,68 @@ function App() {
     marketOverlayMarkerDeltaFilter,
     marketOverlayScopedTimelineAnnotations,
   ])
+  const marketOverlayActiveMarkerNeighborPolarityShiftSummary = useMemo(() => {
+    if (
+      !marketOverlayActiveTimelineAnnotation ||
+      marketOverlayActiveTimelineIndex < 0 ||
+      marketOverlayChartPoints.length === 0
+    ) {
+      return 'none'
+    }
+    const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
+    const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
+    const baseline = marketOverlayAverageClose
+    const resolveDelta = (
+      annotation: MarketOverlayTimelineAnnotation | null,
+      basis: MarketOverlayMarkerDeltaBasis,
+    ): number | null => {
+      if (!annotation) {
+        return null
+      }
+      const point = pointByTime.get(annotation.time) ?? null
+      if (!point) {
+        return null
+      }
+      if (basis === 'latest') {
+        return latestPoint ? point.value - latestPoint.value : null
+      }
+      return baseline !== null ? point.value - baseline : null
+    }
+    const toSignScore = (value: number | null): number | null => {
+      if (value === null) {
+        return null
+      }
+      if (Math.abs(value) < 1e-9) {
+        return 0
+      }
+      return value > 0 ? 1 : -1
+    }
+    const describeShift = (from: number | null, to: number | null) => {
+      if (from === null || to === null) {
+        return 'n/a'
+      }
+      const shift = to - from
+      return `${shift >= 0 ? '+' : ''}${shift.toFixed(0)}`
+    }
+    const previousAnnotation =
+      marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex - 1] ?? null
+    const nextAnnotation = marketOverlayScopedTimelineAnnotations[marketOverlayActiveTimelineIndex + 1] ?? null
+    const previousLatestSign = toSignScore(resolveDelta(previousAnnotation, 'latest'))
+    const activeLatestSign = toSignScore(resolveDelta(marketOverlayActiveTimelineAnnotation, 'latest'))
+    const nextLatestSign = toSignScore(resolveDelta(nextAnnotation, 'latest'))
+    const previousAverageSign = toSignScore(resolveDelta(previousAnnotation, 'average'))
+    const activeAverageSign = toSignScore(resolveDelta(marketOverlayActiveTimelineAnnotation, 'average'))
+    const nextAverageSign = toSignScore(resolveDelta(nextAnnotation, 'average'))
+    return `active:${marketOverlayActiveTimelineAnnotation.kind}:${marketOverlayActiveTimelineAnnotation.label} · latest:prev->active:${describeShift(previousLatestSign, activeLatestSign)}|active->next:${describeShift(activeLatestSign, nextLatestSign)} · average:prev->active:${describeShift(previousAverageSign, activeAverageSign)}|active->next:${describeShift(activeAverageSign, nextAverageSign)} · basis:${marketOverlayMarkerDeltaBasis} · mode:${marketOverlayMarkerDeltaFilter}`
+  }, [
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayAverageClose,
+    marketOverlayChartPoints,
+    marketOverlayMarkerDeltaBasis,
+    marketOverlayMarkerDeltaFilter,
+    marketOverlayScopedTimelineAnnotations,
+  ])
   const marketOverlayActiveMarkerNeighborDeltaSummary = useMemo(() => {
     if (
       !marketOverlayActiveTimelineAnnotation ||
@@ -7206,6 +7268,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Active Neighbor Polarity Transition Summary">
               Active neighbor polarity transition: {marketOverlayActiveMarkerNeighborPolarityTransitionSummary}
+            </p>
+            <p aria-label="Overlay Marker Active Neighbor Polarity Shift Summary">
+              Active neighbor polarity shift: {marketOverlayActiveMarkerNeighborPolarityShiftSummary}
             </p>
             <p aria-label="Overlay Marker Active Delta Neighbors">
               Active delta neighbors: {marketOverlayActiveMarkerNeighborDeltaSummary}

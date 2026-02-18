@@ -113,6 +113,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Active Neighbor Polarity Transition Summary')).toHaveTextContent(
       'Active neighbor polarity transition: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Active Neighbor Polarity Shift Summary')).toHaveTextContent(
+      'Active neighbor polarity shift: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Active Delta Neighbors')).toHaveTextContent(
       'Active delta neighbors: none',
     )
@@ -825,6 +828,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Active Neighbor Polarity Transition Summary')).toHaveTextContent(
       'Active neighbor polarity transition: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Active Neighbor Polarity Shift Summary')).toHaveTextContent(
+      'Active neighbor polarity shift: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Active Delta Neighbors')).toHaveTextContent(
       'Active delta neighbors: none',
     )
@@ -1021,6 +1027,9 @@ describe('Dashboard shell', () => {
       )
       expect(screen.getByLabelText('Overlay Marker Active Neighbor Polarity Transition Summary')).toHaveTextContent(
         'Active neighbor polarity transition: active:risk:live_trading_disabled:raised · latest:prev->active:neg->zero|active->next:n/a · average:prev->active:neg->pos|active->next:n/a · basis:latest · mode:all',
+      )
+      expect(screen.getByLabelText('Overlay Marker Active Neighbor Polarity Shift Summary')).toHaveTextContent(
+        'Active neighbor polarity shift: active:risk:live_trading_disabled:raised · latest:prev->active:+1|active->next:n/a · average:prev->active:+2|active->next:n/a · basis:latest · mode:all',
       )
       expect(screen.getByLabelText('Overlay Marker Active Delta Neighbors')).toHaveTextContent(
         'Active delta neighbors: active:risk:live_trading_disabled:raised · prev:trade:closed:queued(Δl:-1.00|Δa:-0.50) · next:none · scope:all/all',
@@ -1304,6 +1313,9 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Overlay Marker Active Neighbor Polarity Transition Summary')).toHaveTextContent(
       'Active neighbor polarity transition: active:trade:closed:queued · latest:prev->active:n/a|active->next:neg->zero · average:prev->active:n/a|active->next:neg->pos · basis:latest · mode:all',
+    )
+    expect(screen.getByLabelText('Overlay Marker Active Neighbor Polarity Shift Summary')).toHaveTextContent(
+      'Active neighbor polarity shift: active:trade:closed:queued · latest:prev->active:n/a|active->next:+1 · average:prev->active:n/a|active->next:+2 · basis:latest · mode:all',
     )
     expect(screen.getByLabelText('Overlay Marker Active Delta Neighbors')).toHaveTextContent(
       'Active delta neighbors: active:trade:closed:queued · prev:none · next:risk:live_trading_disabled:raised(Δl:+0.00|Δa:+0.50) · scope:all/all',
