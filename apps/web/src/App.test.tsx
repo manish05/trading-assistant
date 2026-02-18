@@ -92,6 +92,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Active Neighbor Basis Transition Summary')).toHaveTextContent(
       'Active neighbor basis transition: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Active Neighbor Delta Trend Summary')).toHaveTextContent(
+      'Active neighbor delta trend: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Active Delta Neighbors')).toHaveTextContent(
       'Active delta neighbors: none',
     )
@@ -783,6 +786,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Active Neighbor Basis Transition Summary')).toHaveTextContent(
       'Active neighbor basis transition: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Active Neighbor Delta Trend Summary')).toHaveTextContent(
+      'Active neighbor delta trend: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Active Delta Neighbors')).toHaveTextContent(
       'Active delta neighbors: none',
     )
@@ -956,6 +962,9 @@ describe('Dashboard shell', () => {
       )
       expect(screen.getByLabelText('Overlay Marker Active Neighbor Basis Transition Summary')).toHaveTextContent(
         'Active neighbor basis transition: active:diverge · prev:agree · next:n/a · transition:prev->active:enter-diverge|active->next:n/a · basis:latest · mode:all',
+      )
+      expect(screen.getByLabelText('Overlay Marker Active Neighbor Delta Trend Summary')).toHaveTextContent(
+        'Active neighbor delta trend: active:risk:live_trading_disabled:raised · latest:prev->active:improving(+1.00)|active->next:n/a · average:prev->active:improving(+1.00)|active->next:n/a · basis:latest · mode:all',
       )
       expect(screen.getByLabelText('Overlay Marker Active Delta Neighbors')).toHaveTextContent(
         'Active delta neighbors: active:risk:live_trading_disabled:raised · prev:trade:closed:queued(Δl:-1.00|Δa:-0.50) · next:none · scope:all/all',
@@ -1216,6 +1225,9 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Overlay Marker Active Neighbor Basis Transition Summary')).toHaveTextContent(
       'Active neighbor basis transition: active:agree · prev:n/a · next:diverge · transition:prev->active:n/a|active->next:enter-diverge · basis:latest · mode:all',
+    )
+    expect(screen.getByLabelText('Overlay Marker Active Neighbor Delta Trend Summary')).toHaveTextContent(
+      'Active neighbor delta trend: active:trade:closed:queued · latest:prev->active:n/a|active->next:improving(+1.00) · average:prev->active:n/a|active->next:improving(+1.00) · basis:latest · mode:all',
     )
     expect(screen.getByLabelText('Overlay Marker Active Delta Neighbors')).toHaveTextContent(
       'Active delta neighbors: active:trade:closed:queued · prev:none · next:risk:live_trading_disabled:raised(Δl:+0.00|Δa:+0.50) · scope:all/all',
