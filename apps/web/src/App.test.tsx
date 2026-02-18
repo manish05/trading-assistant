@@ -107,6 +107,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Active Neighbor Delta Relation Summary')).toHaveTextContent(
       'Active neighbor delta relation: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Active Neighbor Polarity Relation Summary')).toHaveTextContent(
+      'Active neighbor polarity relation: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Active Delta Neighbors')).toHaveTextContent(
       'Active delta neighbors: none',
     )
@@ -813,6 +816,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Active Neighbor Delta Relation Summary')).toHaveTextContent(
       'Active neighbor delta relation: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Active Neighbor Polarity Relation Summary')).toHaveTextContent(
+      'Active neighbor polarity relation: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Active Delta Neighbors')).toHaveTextContent(
       'Active delta neighbors: none',
     )
@@ -1003,6 +1009,9 @@ describe('Dashboard shell', () => {
       )
       expect(screen.getByLabelText('Overlay Marker Active Neighbor Delta Relation Summary')).toHaveTextContent(
         'Active neighbor delta relation: active:risk:live_trading_disabled:raised · prev:latest:lag|average:lag · next:latest:n/a|average:n/a · basis:latest · mode:all',
+      )
+      expect(screen.getByLabelText('Overlay Marker Active Neighbor Polarity Relation Summary')).toHaveTextContent(
+        'Active neighbor polarity relation: active:risk:live_trading_disabled:raised · prev:latest:neutralized(neg/zero)|average:opposite(neg/pos) · next:latest:n/a(n/a/zero)|average:n/a(n/a/pos) · basis:latest · mode:all',
       )
       expect(screen.getByLabelText('Overlay Marker Active Delta Neighbors')).toHaveTextContent(
         'Active delta neighbors: active:risk:live_trading_disabled:raised · prev:trade:closed:queued(Δl:-1.00|Δa:-0.50) · next:none · scope:all/all',
@@ -1280,6 +1289,9 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Overlay Marker Active Neighbor Delta Relation Summary')).toHaveTextContent(
       'Active neighbor delta relation: active:trade:closed:queued · prev:latest:n/a|average:n/a · next:latest:lead|average:lead · basis:latest · mode:all',
+    )
+    expect(screen.getByLabelText('Overlay Marker Active Neighbor Polarity Relation Summary')).toHaveTextContent(
+      'Active neighbor polarity relation: active:trade:closed:queued · prev:latest:n/a(n/a/neg)|average:n/a(n/a/neg) · next:latest:neutralized(zero/neg)|average:opposite(pos/neg) · basis:latest · mode:all',
     )
     expect(screen.getByLabelText('Overlay Marker Active Delta Neighbors')).toHaveTextContent(
       'Active delta neighbors: active:trade:closed:queued · prev:none · next:risk:live_trading_disabled:raised(Δl:+0.00|Δa:+0.50) · scope:all/all',
