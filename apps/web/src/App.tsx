@@ -2248,6 +2248,48 @@ function App() {
     marketOverlayPreviousSameKindIndex,
     marketOverlayTimelineCount,
   ])
+  const marketOverlayMarkerKindNavigationSummary = useMemo(() => {
+    if (isMarketOverlayNavigationLocked) {
+      return 'locked'
+    }
+    if (!marketOverlayActiveTimelineAnnotation || marketOverlayActiveTimelineIndex < 0) {
+      return 'none'
+    }
+    const activeKind = marketOverlayActiveTimelineAnnotation.kind
+    const kindScoped = marketOverlayScopedTimelineAnnotations.filter(
+      (annotation) => annotation.kind === activeKind,
+    )
+    if (kindScoped.length === 0) {
+      return 'none'
+    }
+    const activeKindIndex = kindScoped.findIndex(
+      (annotation) => annotation.id === marketOverlayActiveTimelineAnnotation.id,
+    )
+    const previousAnnotation =
+      marketOverlayPreviousSameKindIndex < 0
+        ? null
+        : marketOverlayScopedTimelineAnnotations[marketOverlayPreviousSameKindIndex] ?? null
+    const nextAnnotation =
+      marketOverlayNextSameKindIndex < 0
+        ? null
+        : marketOverlayScopedTimelineAnnotations[marketOverlayNextSameKindIndex] ?? null
+    const previousDistance =
+      marketOverlayPreviousSameKindIndex < 0
+        ? 'n/a'
+        : String(marketOverlayActiveTimelineIndex - marketOverlayPreviousSameKindIndex)
+    const nextDistance =
+      marketOverlayNextSameKindIndex < 0
+        ? 'n/a'
+        : String(marketOverlayNextSameKindIndex - marketOverlayActiveTimelineIndex)
+    return `kind:${activeKind} · slot:${activeKindIndex + 1}/${kindScoped.length} · prev:[=${previousAnnotation ? `${previousAnnotation.kind}:${previousAnnotation.label}` : 'none'}|Δ${previousDistance} · next:]=${nextAnnotation ? `${nextAnnotation.kind}:${nextAnnotation.label}` : 'none'}|Δ${nextDistance}`
+  }, [
+    isMarketOverlayNavigationLocked,
+    marketOverlayActiveTimelineAnnotation,
+    marketOverlayActiveTimelineIndex,
+    marketOverlayNextSameKindIndex,
+    marketOverlayPreviousSameKindIndex,
+    marketOverlayScopedTimelineAnnotations,
+  ])
   const marketOverlayMarkerIntervalSummary = useMemo(() => {
     if (marketOverlayScopedTimelineAnnotations.length < 2) {
       return 'none'
@@ -6394,6 +6436,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Distance Summary">
               Distance: {marketOverlayMarkerDistanceSummary}
+            </p>
+            <p aria-label="Overlay Marker Kind Navigation Summary">
+              Kind nav: {marketOverlayMarkerKindNavigationSummary}
             </p>
             <p aria-label="Overlay Marker Interval Summary">
               Intervals: {marketOverlayMarkerIntervalSummary}

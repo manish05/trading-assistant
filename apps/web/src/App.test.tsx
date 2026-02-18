@@ -176,6 +176,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Distance Summary')).toHaveTextContent(
       'Distance: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Kind Navigation Summary')).toHaveTextContent(
+      'Kind nav: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Interval Summary')).toHaveTextContent(
       'Intervals: none',
     )
@@ -774,6 +777,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Distance Summary')).toHaveTextContent(
       'Distance: none',
     )
+    expect(screen.getByLabelText('Overlay Marker Kind Navigation Summary')).toHaveTextContent(
+      'Kind nav: none',
+    )
     expect(screen.getByLabelText('Overlay Marker Interval Summary')).toHaveTextContent(
       'Intervals: none',
     )
@@ -1036,6 +1042,9 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Overlay Marker Distance Summary')).toHaveTextContent(
       'Distance: edges:o0/l1 · kind:n/a/n/a · bucket:n/a/n/a · step:2',
+    )
+    expect(screen.getByLabelText('Overlay Marker Kind Navigation Summary')).toHaveTextContent(
+      'Kind nav: kind:trade · slot:1/1 · prev:[=none|Δn/a · next:]=none|Δn/a',
     )
     expect(screen.getByLabelText('Overlay Marker Numeric Jump Summary')).toHaveTextContent(
       'Jump keys: keys:1-2 · selected:1/2',
@@ -1347,6 +1356,9 @@ describe('Dashboard shell', () => {
     })
     expect(screen.getByLabelText('Overlay Marker Navigation')).toHaveTextContent(
       'Marker nav: 2/2 · selected:risk:live_trading_disabled:raised',
+    )
+    expect(screen.getByLabelText('Overlay Marker Kind Navigation Summary')).toHaveTextContent(
+      'Kind nav: kind:risk · slot:1/1 · prev:[=none|Δn/a · next:]=none|Δn/a',
     )
     expect(screen.getByLabelText('Overlay Marker Interval Summary')).toHaveTextContent(
       'Intervals: count:2 · stepGap:min:1|max:1|avg:1.00 · active:prev:1|next:n/a',
@@ -2324,6 +2336,9 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Overlay Marker Distance Summary')).toHaveTextContent(
       'Distance: locked',
+    )
+    expect(screen.getByLabelText('Overlay Marker Kind Navigation Summary')).toHaveTextContent(
+      'Kind nav: locked',
     )
     expect(screen.getByLabelText('Overlay Marker Shortcut Hint')).toHaveTextContent(
       'Shortcuts: locked',
