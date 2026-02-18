@@ -1454,6 +1454,42 @@ function App() {
       ]
     return `keys:p/P · value:${marketOverlayMarkerDivergencePreview} · next:p=${nextValue} · prev:P=${previousValue}`
   }, [marketOverlayMarkerDivergencePreview])
+  const marketOverlayMarkerRangeShortcutSummary = useMemo(() => {
+    const ageIndex = MARKET_OVERLAY_MARKER_AGE_FILTER_ORDER.indexOf(marketOverlayMarkerAgeFilter)
+    const safeAgeIndex = ageIndex < 0 ? 0 : ageIndex
+    const nextAge =
+      MARKET_OVERLAY_MARKER_AGE_FILTER_ORDER[
+        (safeAgeIndex + 1) % MARKET_OVERLAY_MARKER_AGE_FILTER_ORDER.length
+      ]
+    const previousAge =
+      MARKET_OVERLAY_MARKER_AGE_FILTER_ORDER[
+        (safeAgeIndex - 1 + MARKET_OVERLAY_MARKER_AGE_FILTER_ORDER.length) %
+          MARKET_OVERLAY_MARKER_AGE_FILTER_ORDER.length
+      ]
+    const windowIndex = MARKET_OVERLAY_MARKER_WINDOW_ORDER.indexOf(marketOverlayMarkerWindow)
+    const safeWindowIndex = windowIndex < 0 ? MARKET_OVERLAY_MARKER_WINDOW_ORDER.indexOf(5) : windowIndex
+    const nextWindow =
+      MARKET_OVERLAY_MARKER_WINDOW_ORDER[
+        (safeWindowIndex + 1) % MARKET_OVERLAY_MARKER_WINDOW_ORDER.length
+      ]
+    const previousWindow =
+      MARKET_OVERLAY_MARKER_WINDOW_ORDER[
+        (safeWindowIndex - 1 + MARKET_OVERLAY_MARKER_WINDOW_ORDER.length) %
+          MARKET_OVERLAY_MARKER_WINDOW_ORDER.length
+      ]
+    const bucketIndex = MARKET_OVERLAY_MARKER_BUCKET_ORDER.indexOf(marketOverlayMarkerBucket)
+    const safeBucketIndex = bucketIndex < 0 ? 0 : bucketIndex
+    const nextBucket =
+      MARKET_OVERLAY_MARKER_BUCKET_ORDER[
+        (safeBucketIndex + 1) % MARKET_OVERLAY_MARKER_BUCKET_ORDER.length
+      ]
+    const previousBucket =
+      MARKET_OVERLAY_MARKER_BUCKET_ORDER[
+        (safeBucketIndex - 1 + MARKET_OVERLAY_MARKER_BUCKET_ORDER.length) %
+          MARKET_OVERLAY_MARKER_BUCKET_ORDER.length
+      ]
+    return `keys:y/Y/v/V/b/B · age:y=${nextAge}|Y=${previousAge}|active:${marketOverlayMarkerAgeFilter} · window:v=${nextWindow}|V=${previousWindow}|active:${marketOverlayMarkerWindow} · bucket:b=${nextBucket}|B=${previousBucket}|active:${marketOverlayMarkerBucket}`
+  }, [marketOverlayMarkerAgeFilter, marketOverlayMarkerBucket, marketOverlayMarkerWindow])
   const marketOverlayMarkerBasisPreviewCountSummary = useMemo(() => {
     const latestPoint = marketOverlayChartPoints[marketOverlayChartPoints.length - 1] ?? null
     const pointByTime = new Map(marketOverlayChartPoints.map((point) => [point.time, point] as const))
@@ -3316,11 +3352,11 @@ function App() {
         event.preventDefault()
         setMarketOverlayMarkerAgeFilter((current) => {
           const currentIndex = MARKET_OVERLAY_MARKER_AGE_FILTER_ORDER.indexOf(current)
-          if (currentIndex < 0) {
-            return 'all'
-          }
+          const safeIndex = currentIndex < 0 ? 0 : currentIndex
+          const direction = event.shiftKey ? -1 : 1
           return MARKET_OVERLAY_MARKER_AGE_FILTER_ORDER[
-            (currentIndex + 1) % MARKET_OVERLAY_MARKER_AGE_FILTER_ORDER.length
+            (safeIndex + direction + MARKET_OVERLAY_MARKER_AGE_FILTER_ORDER.length) %
+              MARKET_OVERLAY_MARKER_AGE_FILTER_ORDER.length
           ]
         })
         return
@@ -3329,11 +3365,11 @@ function App() {
         event.preventDefault()
         setMarketOverlayMarkerWindow((current) => {
           const currentIndex = MARKET_OVERLAY_MARKER_WINDOW_ORDER.indexOf(current)
-          if (currentIndex < 0) {
-            return 5
-          }
+          const safeIndex = currentIndex < 0 ? MARKET_OVERLAY_MARKER_WINDOW_ORDER.indexOf(5) : currentIndex
+          const direction = event.shiftKey ? -1 : 1
           return MARKET_OVERLAY_MARKER_WINDOW_ORDER[
-            (currentIndex + 1) % MARKET_OVERLAY_MARKER_WINDOW_ORDER.length
+            (safeIndex + direction + MARKET_OVERLAY_MARKER_WINDOW_ORDER.length) %
+              MARKET_OVERLAY_MARKER_WINDOW_ORDER.length
           ]
         })
         return
@@ -3342,11 +3378,11 @@ function App() {
         event.preventDefault()
         setMarketOverlayMarkerBucket((current) => {
           const currentIndex = MARKET_OVERLAY_MARKER_BUCKET_ORDER.indexOf(current)
-          if (currentIndex < 0) {
-            return 'none'
-          }
+          const safeIndex = currentIndex < 0 ? 0 : currentIndex
+          const direction = event.shiftKey ? -1 : 1
           return MARKET_OVERLAY_MARKER_BUCKET_ORDER[
-            (currentIndex + 1) % MARKET_OVERLAY_MARKER_BUCKET_ORDER.length
+            (safeIndex + direction + MARKET_OVERLAY_MARKER_BUCKET_ORDER.length) %
+              MARKET_OVERLAY_MARKER_BUCKET_ORDER.length
           ]
         })
         return
@@ -6228,6 +6264,9 @@ function App() {
             </p>
             <p aria-label="Overlay Marker Basis Preview Shortcut Summary">
               Basis preview shortcuts: {marketOverlayMarkerDivergencePreviewShortcutSummary}
+            </p>
+            <p aria-label="Overlay Marker Range Shortcut Summary">
+              Range shortcuts: {marketOverlayMarkerRangeShortcutSummary}
             </p>
             <p aria-label="Overlay Marker Basis Preview Count Summary">
               Basis preview counts: {marketOverlayMarkerBasisPreviewCountSummary}

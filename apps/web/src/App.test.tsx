@@ -98,6 +98,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Basis Preview Shortcut Summary')).toHaveTextContent(
       'Basis preview shortcuts: keys:p/P · value:3 · next:p=5 · prev:P=8',
     )
+    expect(screen.getByLabelText('Overlay Marker Range Shortcut Summary')).toHaveTextContent(
+      'Range shortcuts: keys:y/Y/v/V/b/B · age:y=last-60s|Y=last-300s|active:all · window:v=8|V=3|active:5 · bucket:b=30s|B=60s|active:none',
+    )
     expect(screen.getByLabelText('Overlay Marker Basis Preview Count Summary')).toHaveTextContent(
       'Basis preview counts: size:3 · diverge:show:0/0 · agree:show:0/0 · mode:all',
     )
@@ -517,6 +520,9 @@ describe('Dashboard shell', () => {
     )
     expect(screen.getByLabelText('Overlay Marker Basis Preview Shortcut Summary')).toHaveTextContent(
       'Basis preview shortcuts: keys:p/P · value:5 · next:p=8 · prev:P=3',
+    )
+    expect(screen.getByLabelText('Overlay Marker Range Shortcut Summary')).toHaveTextContent(
+      'Range shortcuts: keys:y/Y/v/V/b/B · age:y=last-60s|Y=last-300s|active:all · window:v=8|V=3|active:5 · bucket:b=30s|B=60s|active:none',
     )
     expect(screen.getByLabelText('Overlay Marker Basis Preview Count Summary')).toHaveTextContent(
       'Basis preview counts: size:5 · diverge:show:0/0 · agree:show:0/0 · mode:all',
@@ -1366,6 +1372,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Basis Preview Shortcut Summary')).toHaveTextContent(
       'Basis preview shortcuts: keys:p/P · value:3 · next:p=5 · prev:P=8',
     )
+    expect(screen.getByLabelText('Overlay Marker Range Shortcut Summary')).toHaveTextContent(
+      'Range shortcuts: keys:y/Y/v/V/b/B · age:y=last-60s|Y=last-300s|active:all · window:v=8|V=3|active:5 · bucket:b=30s|B=60s|active:none',
+    )
     expect(screen.getByLabelText('Overlay Marker Basis Preview Count Summary')).toHaveTextContent(
       'Basis preview counts: size:3 · diverge:show:1/1 · agree:show:1/1 · mode:all',
     )
@@ -1631,6 +1640,9 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Overlay Marker Mode Shortcut Summary')).toHaveTextContent(
       'Mode shortcuts: focus:a/t/r/d=all · age:y=last-60s · window:v=5 · bucket:b=none · order:o/l=newest-first · scope:g=all-buckets · wrap:w=bounded · selection:s=sticky · agreement:q/e/x=all · basis:k=latest · delta:u/j/f/n/0/+/-=all · nav:manual',
     )
+    expect(screen.getByLabelText('Overlay Marker Range Shortcut Summary')).toHaveTextContent(
+      'Range shortcuts: keys:y/Y/v/V/b/B · age:y=last-300s|Y=all|active:last-60s · window:v=8|V=3|active:5 · bucket:b=30s|B=60s|active:none',
+    )
     fireEvent.keyDown(
       within(screen.getByLabelText('Overlay Markers')).getByRole('button', {
         name: 'risk:live_trading_disabled:raised',
@@ -1638,6 +1650,29 @@ describe('Dashboard shell', () => {
       { key: 'y' },
     )
     expect(screen.getByLabelText('Marker Age')).toHaveValue('last-300s')
+    fireEvent.keyDown(
+      within(screen.getByLabelText('Overlay Markers')).getByRole('button', {
+        name: 'risk:live_trading_disabled:raised',
+      }),
+      { key: 'y' },
+    )
+    expect(screen.getByLabelText('Marker Age')).toHaveValue('all')
+    expect(screen.getByLabelText('Overlay Marker Range Shortcut Summary')).toHaveTextContent(
+      'Range shortcuts: keys:y/Y/v/V/b/B · age:y=last-60s|Y=last-300s|active:all · window:v=8|V=3|active:5 · bucket:b=30s|B=60s|active:none',
+    )
+    fireEvent.keyDown(
+      within(screen.getByLabelText('Overlay Markers')).getByRole('button', {
+        name: 'risk:live_trading_disabled:raised',
+      }),
+      { key: 'Y', shiftKey: true },
+    )
+    expect(screen.getByLabelText('Marker Age')).toHaveValue('last-300s')
+    expect(window.localStorage.getItem('quick-action-market-overlay-marker-age-filter-v1')).toBe(
+      'last-300s',
+    )
+    expect(screen.getByLabelText('Overlay Marker Range Shortcut Summary')).toHaveTextContent(
+      'Range shortcuts: keys:y/Y/v/V/b/B · age:y=all|Y=last-60s|active:last-300s · window:v=8|V=3|active:5 · bucket:b=30s|B=60s|active:none',
+    )
     fireEvent.keyDown(
       within(screen.getByLabelText('Overlay Markers')).getByRole('button', {
         name: 'risk:live_trading_disabled:raised',
@@ -1670,6 +1705,24 @@ describe('Dashboard shell', () => {
       { key: 'v' },
     )
     expect(screen.getByLabelText('Marker Window')).toHaveValue('5')
+    fireEvent.keyDown(
+      within(screen.getByLabelText('Overlay Markers')).getByRole('button', {
+        name: 'risk:live_trading_disabled:raised',
+      }),
+      { key: 'V', shiftKey: true },
+    )
+    expect(screen.getByLabelText('Marker Window')).toHaveValue('3')
+    expect(window.localStorage.getItem('quick-action-market-overlay-marker-window-v1')).toBe('3')
+    expect(screen.getByLabelText('Overlay Marker Range Shortcut Summary')).toHaveTextContent(
+      'Range shortcuts: keys:y/Y/v/V/b/B · age:y=last-60s|Y=last-300s|active:all · window:v=5|V=8|active:3 · bucket:b=30s|B=60s|active:none',
+    )
+    fireEvent.keyDown(
+      within(screen.getByLabelText('Overlay Markers')).getByRole('button', {
+        name: 'risk:live_trading_disabled:raised',
+      }),
+      { key: 'v' },
+    )
+    expect(screen.getByLabelText('Marker Window')).toHaveValue('5')
     expect(screen.getByLabelText('Marker Bucket')).toHaveValue('none')
     fireEvent.keyDown(
       within(screen.getByLabelText('Overlay Markers')).getByRole('button', {
@@ -1687,6 +1740,24 @@ describe('Dashboard shell', () => {
     expect(screen.getByLabelText('Marker Bucket')).toHaveValue('60s')
     expect(screen.getByLabelText('Overlay Marker Mode Shortcut Summary')).toHaveTextContent(
       'Mode shortcuts: focus:a/t/r/d=all · age:y=all · window:v=5 · bucket:b=60s · order:o/l=newest-first · scope:g=all-buckets · wrap:w=bounded · selection:s=sticky · agreement:q/e/x=all · basis:k=latest · delta:u/j/f/n/0/+/-=all · nav:manual',
+    )
+    fireEvent.keyDown(
+      within(screen.getByLabelText('Overlay Markers')).getByRole('button', {
+        name: 'risk:live_trading_disabled:raised',
+      }),
+      { key: 'b' },
+    )
+    expect(screen.getByLabelText('Marker Bucket')).toHaveValue('none')
+    fireEvent.keyDown(
+      within(screen.getByLabelText('Overlay Markers')).getByRole('button', {
+        name: 'risk:live_trading_disabled:raised',
+      }),
+      { key: 'B', shiftKey: true },
+    )
+    expect(screen.getByLabelText('Marker Bucket')).toHaveValue('60s')
+    expect(window.localStorage.getItem('quick-action-market-overlay-marker-bucket-v1')).toBe('60s')
+    expect(screen.getByLabelText('Overlay Marker Range Shortcut Summary')).toHaveTextContent(
+      'Range shortcuts: keys:y/Y/v/V/b/B · age:y=last-60s|Y=last-300s|active:all · window:v=8|V=3|active:5 · bucket:b=none|B=30s|active:60s',
     )
     fireEvent.keyDown(
       within(screen.getByLabelText('Overlay Markers')).getByRole('button', {
